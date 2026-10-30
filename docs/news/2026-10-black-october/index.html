@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cyber in the News: Black October</title>
+<meta name="description" content="Cyber in the News, October 2026: the Binance heist, eMudhra's weak CA keys, PHP2Shell, LiteLLM, GitLab and Ruby, Railway and Zeabur, and the Brotli bug. What broke, the idea behind each, and what to do. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Cyber in the News: Black October">
+<meta property="og:description" content="October 2026's security news, explained: what broke, the idea behind it, and what you should actually do.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Black October in neon, beside a bingo card of the month's security news.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Crect x='5' y='7' width='22' height='18' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M9 13h14M9 18h9' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "news-2026-10-black-october", "title": "Cyber in the News: Black October", "footer": "NEWS · OCT 2026", "subtitle": "CYBER IN THE NEWS · OCTOBER 2026",
+  "parts": [{ "name": "Keys and trust", "minutes": 17 }, { "name": "Patch season", "minutes": 24 },
+            { "name": "Stolen secrets", "minutes": 14 }, { "name": "Wrap-up", "minutes": 12 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../" class="brand hub-back" title="All episodes">‹ NEWS</a>
+  <a href="#title" class="brand">BLACK <span>OCT</span></a>
+  <div class="scroll-parts">
+    <a href="#binance" data-part="1"><b>01</b>Keys</a>
+    <a href="#php2shell" data-part="2"><b>02</b>Patches</a>
+    <a href="#litellm" data-part="3"><b>03</b>Secrets</a>
+    <a href="#myth" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// OCTOBER 2026 · THE MONTH THE INTERNET NAMED</p>
+      <h1><span class="pre">Cyber in the News</span> <span class="glitch" data-text="Black October">Black October</span></h1>
+      <p class="lede">The biggest crypto theft ever, weak certificate keys, a poisoned AI library, and patches for everything. What broke, the idea behind it, and what to actually do.</p>
+      <p class="muted">For everyone · Crypto 101 helps, but isn't required</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>black october bingo</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="bingo" id="bingo" role="group" aria-label="Bingo card: tick a square when it comes up in the talk"></div>
+      <p class="comment" id="bingo-note"># tick a square when it comes up. Get a line? Shout "Black October!"</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome to Cyber in the News. October 2026 earned a name: r/cybersecurity's megathread called it "Black October". Seven stories, about an hour, one checkpoint.</span></li><li><b class="show">Show</b><span>The bingo card. Everyone can play along on their phone with the QR code; the first person with a line shouts "Black October!"</span></li><li><b class="tip">Eggs</b><span>Bingo (a line, then a full card); sign "send everything to me" on the Binance slide; slide the randomness to 4 bits on the eMudhra slide; type "broccoli" (or anything) into the nickname generator on the Brotli slide; spot the lookalike on the LiteLLM slide; the 12 days of cybermas; the console has a hint.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Seven stories, four parts</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#binance"><small>PART 1 · 17 MIN</small><b>Keys and trust</b></a><span>Binance: $6.3 billion in 20 minutes</span><span>eMudhra: CA keys without enough randomness</span></li>
+      <li><a href="#php2shell"><small>PART 2 · 24 MIN</small><b>Patch season</b></a><span>PHP2Shell</span><span>GitLab and a Ruby regex bug</span><span>Brotli: one bug, three names</span></li>
+      <li><a href="#litellm"><small>PART 3 · 14 MIN</small><b>Stolen secrets</b></a><span>LiteLLM: the poisoned release</span><span>Railway and Zeabur</span></li>
+      <li><a href="#myth"><small>PART 4 · 12 MIN</small><b>Wrap-up</b></a><span>Myth of the month</span><span>What should you do?</span><span>Sources and questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINT</b> after part 2: 5 minutes to discuss with a neighbour. Every story is tagged with who it matters to: <span class="tag tag-c">General</span> <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Four parts. The tags tell you which stories are for you: General for everyone, Developer for people who write code, Security for IT and security teams.</span></li><li><b class="next">Next</b><span>"First, a word about where all this comes from."</span></li></ul></div>
+</section>
+
+<section class="slide" id="reading" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// BEFORE WE START</p><h2>How to read a megathread</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <blockquote class="quote">"There's also a fair amount of speculation and outright BS getting mixed in with legitimate reporting."<cite><a href="https://www.reddit.com/r/cybersecurity/comments/1xdx8k7/megathread_october_2026_cybersecurity_incidents/" target="_blank" rel="noopener">r/cybersecurity moderators</a>, October 23</cite></blockquote>
+      <p class="note">This episode started from that megathread. Then every claim was checked against the people who actually know: the vendor, the project, the browser, the government advisory.</p>
+      <p class="callout"><b>THE RULE</b> Every story slide lists its sources at the bottom. A claim with no official source is marked, or left out.</p>
+    </div>
+    <ol class="ladder-src">
+      <li><b>Official</b><span>The vendor's advisory, the project's release notes, CISA, the CVE record</span></li>
+      <li><b>News</b><span>Professional reporting, quoting named people</span></li>
+      <li><b>Independent</b><span>Security firms and researchers: great detail, often selling something</span></li>
+      <li><b>Forum</b><span>Comments: fast and sometimes right, never a source on its own</span></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>The moderators said it themselves: real reporting mixed with rumour. Checking the megathread against official posts changed several details in this talk, including some I'd been telling people about eMudhra.</span></li><li><b class="ask">Ask</b><span>Where did you first hear about any of these stories? <em>Usually a feed or a forum, which is fine, as long as you go one step closer to the source before acting.</em></span></li><li><b class="next">Next</b><span>"Let's start with the big one."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 · KEYS AND TRUST -->
+<section class="slide" id="binance" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// KEYS AND TRUST 01 · <span class="tag tag-c">General</span> <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>Binance: the biggest crypto heist ever, in 20 minutes</h2></header>
+  <div class="slide-body stack">
+    <div class="stats stats-4">
+      <div class="stat"><b>$6.3B</b><span>drained from Binance's hot wallets</span></div>
+      <div class="stat"><b>~20 min</b><span>for most of it, from about 20:00 UTC on 29 October</span></div>
+      <div class="stat"><b>10+</b><span>blockchains, including Bitcoin, Ethereum, Tron and Solana</span></div>
+      <div class="stat"><b>~half</b><span>frozen since, almost all of it stablecoins</span></div>
+    </div>
+    <div class="cols-2">
+      <ul class="rules">
+        <li>Binance first thought a <b>compromised laptop</b> was involved, then found "additional points of breach".</li>
+        <li>TRM Labs: the attackers took over Binance's <b>signing infrastructure</b>, the system that authorises transactions.</li>
+        <li>They <b>rehearsed</b>: test code on two wallets, a dry run on a third, then the real thing four hours later.</li>
+      </ul>
+      <ul class="rules">
+        <li>Binance says it will cover all losses from its $1 billion user fund and its own money.</li>
+        <li>Tracing firms see the hallmarks of North Korea's <b>TraderTraitor</b> group. Binance and law enforcement haven't named anyone.</li>
+        <li><b>Hot wallet</b>: an online wallet that pays out customer withdrawals. Fast, so it's the target.</li>
+      </ul>
+    </div>
+    <p class="src">SOURCES <a href="https://www.reuters.com/legal/government/gone-20-minutes-how-biggest-heist-crypto-history-unfolded-2026-10-30/" target="_blank" rel="noopener">Reuters</a> (30 Oct) · <a href="https://www.wired.com/story/the-dollar63-billion-binance-hack-was-pulled-off-in-just-20-minutes/" target="_blank" rel="noopener">WIRED</a> (30 Oct), quoting Binance, TRM Labs, Chainalysis and Elliptic · breaking news: numbers will move</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Thursday 29 October, around 4pm US Eastern: about $6.3 billion left Binance's hot wallets across at least ten blockchains, most of it in about 20 minutes. Reuters calls it a record; WIRED, "what appears to be the largest crypto heist of all time".</span></li><li><b class="say">Say</b><span>The rehearsal detail is from TRM Labs via WIRED: preparation started at least 36 hours earlier, and the test runs were visible on the blockchain.</span></li><li><b class="tip">Tip</b><span>Attribution: say "tracing firms say", never "North Korea did it". Binance and law enforcement hadn't named anyone when this was written. For scale, Elliptic says if it is North Korea, "this one theft would almost double everything the regime has stolen in crypto to date".</span></li><li><b class="tip">Check</b><span>Breaking news (articles from 30 October). Re-check the total, the frozen share (sources say "roughly half" or $2.8 billion / 44%), and that it's still the record, on the day.</span></li></ul></div>
+</section>
+
+<section class="slide" id="binance-sign" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// KEYS AND TRUST 02</p><h2>A signature proves the key said yes, not that anyone meant it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">The wallet is asked to sign <input id="sig-msg" value="withdraw 0.5 BTC to customer #4417" spellcheck="false" autocomplete="off"></label></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="sig-go">Sign it</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sig-evil">Hijack the request</button>
+      </div>
+      <pre class="term" id="sig-out"></pre>
+    </div>
+    <div class="stack">
+      <p class="quote-sm">"The attacker may not have stolen the vault key, they may have hijacked the system that tells the vault to release money."<cite>Joshua Chu, lawyer, quoted by Reuters</cite></p>
+      <ul class="rules">
+        <li>The maths worked perfectly. It signed exactly what it was asked to.</li>
+        <li><b>No undo button</b>: a signed blockchain transaction is final. Only stablecoin issuers and exchanges in the middle can freeze funds.</li>
+        <li>Nobody can freeze Bitcoin or Ether.</li>
+      </ul>
+      <p class="callout"><b>THE LESSON</b> A key is only as safe as whatever decides what it signs.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Sign the normal withdrawal: it verifies. Press "Hijack the request": the message changes to sending everything to the attacker, and that signature verifies too. Real P-256 ECDSA, the same as Crypto 101's signatures slide.</span></li><li><b class="say">Say</b><span>Nobody broke the cryptography. They took over the thing that tells the key what to sign. Same lesson as Railway later: encryption and signatures protect you exactly as well as the systems around the key.</span></li><li><b class="ask">Ask</b><span>How could a signing system protect itself? <em>Limits on amount and speed, a second approval for big transfers, showing humans exactly what is being signed, and alerts on new destinations.</em></span></li><li><b class="tip">Egg</b><span>Type a message that mentions sending "everything" to "me".</span></li><li><b class="next">Next</b><span>"Keys made badly are a different failure. Which brings us to eMudhra."</span></li></ul></div>
+</section>
+
+<section class="slide" id="emudhra" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// KEYS AND TRUST 03 · <span class="tag tag-c">General</span> <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>eMudhra: certificate authority keys without enough randomness</h2></header>
+  <div class="slide-body stack">
+    <p class="big-lede">A researcher found that eight eMudhra intermediate CA keys were "generated with insufficient randomness". With those keys, anyone could have made a trusted HTTPS certificate for <b>any</b> website.</p>
+    <ol class="timeline timeline-5">
+      <li><b>18:05</b>Sat 17 Oct (UTC): the report reaches Google's Chrome Root Program</li>
+      <li><b>19:45</b>Chrome blocks the intermediates, no update or restart needed</li>
+      <li><b>22:59</b>Every standard Firefox has the block, under 3 hours after Mozilla's report</li>
+      <li><b>Oct 19–21</b>Android, Cloudflare, Node.js and others follow</li>
+      <li><b>Root removed</b>Chrome and Mozilla drop the root that signed them</li>
+    </ol>
+    <div class="cols-2">
+      <p class="callout"><b>GOOD NEWS</b> Google says no certificates from these intermediates had appeared in Certificate Transparency logs, so none could be used against Chrome.</p>
+      <p class="callout"><b>SITE OWNERS</b> If your certificate chains to emSign ECC Root CA - G3, replace it with one from another CA now.</p>
+    </div>
+    <p class="src">SOURCES <a href="https://blog.google/security/protecting-chrome-and-android-users-from-compromised-emudhra-intermediate-ca-certificates/" target="_blank" rel="noopener">Google</a> (20 Oct) · <a href="https://blog.mozilla.org/security/2026/10/20/protecting-firefox-users-following-the-compromise-of-emudhra-intermediate-certificates/" target="_blank" rel="noopener">Mozilla</a> (20 Oct) · <a href="https://blog.cloudflare.com/emudhra-certificate-compromise/" target="_blank" rel="noopener">Cloudflare</a> · <a href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases" target="_blank" rel="noopener">Node.js</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>A certificate authority vouches for websites. Its intermediate keys sign the certificates your browser trusts. eMudhra's were generated with too little randomness, according to Google, so they could be worked out and used to forge certificates for any site.</span></li><li><b class="say">Say</b><span>The response was fast: Chrome blocked them under two hours after the report; Firefox reached every standard user in under three. Neither needed you to update or restart.</span></li><li><b class="tip">Check</b><span>Google's post says "eight" certificates once and "six" later without explaining; Mozilla and Cloudflare say eight. Nobody official published the key sizes, so don't quote any. Google was still reviewing eMudhra's other certificates.</span></li><li><b class="tip">Tip</b><span>Cloudflare: update cloudflared to 2026.10.2, redeploy containers with the fixed image, and never fix certificate errors by turning verification off.</span></li></ul></div>
+</section>
+
+<section class="slide" id="emudhra-ideas" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// KEYS AND TRUST 04</p><h2>A key is only as strong as the randomness that made it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">Bits of real randomness in the key <input type="range" id="rnd-bits" min="4" max="256" step="4" value="128"></label><output id="rnd-bits-out">128</output></div>
+      <pre class="term term-big" id="rnd-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A 256-bit key with only 40 bits of randomness behind it is a 40-bit key.</li>
+        <li>Attackers don't guess the key. They guess the <b>random numbers</b> that made it.</li>
+        <li>Certificate Transparency is why a forged certificate can't hide: every trusted certificate must be in public logs.</li>
+      </ul>
+      <div class="links">
+        <a href="../../talks/crypto-101/#randomness"><b>Crypto 101 · Randomness</b><span>Why keys need good randomness</span></a>
+        <a href="../../talks/how-https-works/#transparency"><b>HTTPS · Transparency</b><span>Public logs of every certificate</span></a>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Drag the slider down. At 128 bits, guessing takes longer than the universe has existed. Somewhere around 60 bits a well-funded attacker gets there. Below 40, a laptop does.</span></li><li><b class="say">Say</b><span>We don't know how much randomness eMudhra's keys had; nobody official has said. The point is that the key's length doesn't matter if the randomness behind it is thin.</span></li><li><b class="tip">Egg</b><span>Slide all the way to 4 bits.</span></li><li><b class="next">Next</b><span>"Part 2: patch season. Starting with PHP."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 · PATCH SEASON -->
+<section class="slide" id="php2shell" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// PATCH SEASON 01 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>PHP2Shell: two bugs, every PHP web server</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>CVE-2026-109618</b> and <b>CVE-2026-109619</b>: unauthenticated remote code execution. Each rated 9.2.</li>
+        <li>Exposed: every PHP install serving web requests (PHP-FPM, Apache mod_php, php-cgi, FrankenPHP, LiteSpeed). Riskiest: mod_php.</li>
+        <li>Fixed on <b>21 October</b>. CISA listed both as <b>known exploited</b> on 26 October.</li>
+        <li>PHP's own words: config tweaks "do not make an installation safe… updating is the only safe choice."</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table">
+        <thead><tr><th>Branch</th><th>Fixed in</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><th>8.5</th><td class="y">8.5.12</td><td></td></tr>
+          <tr><th>8.4</th><td class="y">8.4.27</td><td></td></tr>
+          <tr><th>8.3</th><td class="y">8.3.36</td><td></td></tr>
+          <tr><th>8.2</th><td class="y">8.2.35</td><td>end of life 31 Dec 2026</td></tr>
+          <tr><th>8.1 and older</th><td class="bad">no release</td><td>source backports for 7.4–8.1, or your vendor</td></tr>
+        </tbody>
+      </table></div>
+      <p class="callout"><b>RESTART</b> An updated PHP that hasn't been restarted is still the old one in memory.</p>
+    </div>
+    <p class="src span-2">SOURCES <a href="https://www.php.net/archive/2026.php" target="_blank" rel="noopener">php.net</a> (21 and 23 Oct) · <a href="https://www.cisa.gov/news-events/alerts/2026/10/21/critical-vulnerabilities-php-require-immediate-patching" target="_blank" rel="noopener">CISA</a> (updated 26 Oct)</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Two bugs in PHP itself, before any application code runs. On Apache with mod_php there was a demonstrated exploit from a single unauthenticated request. We stay at that level: no details on how it's triggered.</span></li><li><b class="say">Say</b><span>CISA: inventory everything running PHP, including PHP embedded in other software; patch internet-facing systems first; take unsupported (8.1 and older) systems offline until they're fixed.</span></li><li><b class="tip">Check</b><span>The megathread said exploitation began before disclosure; php.net doesn't say that. Stick to "CISA lists it as known exploited".</span></li><li><b class="next">Next</b><span>"The hard part isn't the patch. It's finding every PHP."</span></li></ul></div>
+</section>
+
+<section class="slide" id="php-scan" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// PATCH SEASON 02</p><h2>You can't patch what you don't know you run</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="quote-sm">"Literally nothing on our platform uses PHP."<cite>a relieved commenter</cite></p>
+      <p class="quote-sm bad">"…until our firewall vendor informed us that some obscure function of the SSL VPN portal uses PHP."<cite>the reply</cite></p>
+      <p class="note">CISA's first step was <b>inventory</b>: every system running PHP, including PHP built into appliances and other software.</p>
+    </div>
+    <div class="stack">
+      <p class="mini-label">Would the scan catch it? Click a card.</p>
+      <div class="flip-cards" id="scan-quiz">
+        <details><summary><b>PHP bundled inside an app</b><span>The scanner checks the system's PHP version.</span></summary><p><b class="bad">Missed.</b> The app's own copy isn't the one being checked. Ask the vendor, or scan the app's files.</p></details>
+        <details><summary><b>Updated, not restarted</b><span>The new PHP is installed. The workers are still running.</span></summary><p><b class="bad">Missed.</b> The old code is still in memory. Restart every worker after patching.</p></details>
+        <details><summary><b>Version hidden</b><span>The server doesn't announce its PHP version.</span></summary><p><b class="bad">Missed.</b> An outside scan shows "no finding". No finding isn't the same as fixed.</p></details>
+      </div>
+      <p id="scan-score" class="comment"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Two comments from the megathread make the point better than I can. PHP hides in appliances, VPN portals and admin pages.</span></li><li><b class="show">Show</b><span>Click each card. All three are ways a scan can say "no finding" on a box that's still vulnerable. The scanner examples come from practitioners in the thread, not from a vendor, so treat them as experience, not documentation.</span></li><li><b class="say">Say</b><span>And "patched" doesn't tell you whether you were hit before you patched. CISA says to watch for suspicious activity too.</span></li><li><b class="next">Next</b><span>"Next: a bug in Ruby that GitLab found the hard way."</span></li></ul></div>
+</section>
+
+<section class="slide" id="gitlab-ruby" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// PATCH SEASON 03 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>GitLab and Ruby: a regex is code, not data</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>GitLab, 21 October: <b>CVE-2026-110264</b>, CVSS <b>10.0</b>. An integer overflow in the regex compiler could let an unauthenticated user run code, under certain conditions.</li>
+        <li>Fixed in GitLab 19.5.1, 19.4.3, 19.3.6, 19.2.9, 19.1.9, 19.0.10 and 18.11.13. GitLab.com was already patched.</li>
+        <li>Ruby, 23 October: four bugs in compiling regexes, fixed in <b>4.0.9, 3.4.12, 3.3.13</b>.</li>
+        <li>Affected: apps that build a regex from text an attacker controls. <code>Regexp.timeout</code> doesn't help; length limits aren't reliable.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="controls"><label class="grow">Search issues for <input id="rx-in" value="v1.2" spellcheck="false" autocomplete="off"></label></div>
+      <pre class="term" id="rx-out"></pre>
+      <p class="callout"><b>RULE</b> User input is <strong>data</strong>. A regex pattern is <strong>code</strong>. Escape it, or offer fixed filters.</p>
+    </div>
+    <p class="src span-2">SOURCES <a href="https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-5-1-released/" target="_blank" rel="noopener">GitLab</a> (21 Oct) · <a href="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/" target="_blank" rel="noopener">ruby-lang.org</a> (23 Oct)</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>GitLab lets users write patterns, in CI rules for example, and compiles them. Bugs in Ruby's regex engine made that dangerous. GitLab reported them to Ruby and assigned four CVEs: 2026-89078, 93577, 97229 and 110264.</span></li><li><b class="show">Show</b><span>The demo searches some issue titles. "As a pattern" treats the dot in v1.2 as "any character", so v1x2 matches too. "As text" escapes it first. In Ruby that's Regexp.escape. JavaScript's engine isn't affected by these bugs; this shows the idea, not the exploit.</span></li><li><b class="ask">Ask</b><span>Where do your users type patterns? <em>Search filters, CI rules, alert rules, log queries.</em></span></li><li><b class="next">Next</b><span>"And then a bug that was in everything."</span></li></ul></div>
+</section>
+
+<section class="slide" id="brotli" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// PATCH SEASON 04 · <span class="tag tag-c">General</span> <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>Brotli: one bug, three names, every ecosystem</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="note"><b>CVE-2026-111497</b>: an out-of-bounds write in Google's Brotli decoder, versions 1.0.3 to 1.2.0. A crafted compressed stream can crash a program, leak memory, or possibly run code. Rated 9.2. Found by OpenAI Codex Security. CISA's data marks it as actively exploited.</p>
+      <div class="table-wrap"><table class="grid-table fixes">
+        <thead><tr><th>Where</th><th>Fixed in</th><th>Exposed if…</th></tr></thead>
+        <tbody>
+          <tr><th>Brotli (C)</th><td class="y">1.0.10, 1.1.1, 1.2.1</td><td>anything decodes untrusted Brotli</td></tr>
+          <tr><th>Node.js</th><td class="y">22.23.4, 24.22.1, 26.12.1</td><td>your app fetches URLs or decompresses untrusted Brotli</td></tr>
+          <tr><th>.NET</th><td class="y">8.0.33, 9.0.22, 10.0.14</td><td>you turned Brotli decompression on (off by default)</td></tr>
+          <tr><th>PHP (Windows)</th><td class="y">rebuilt, e.g. 8.4.27-1</td><td>cURL auto-decompression is on (off by default)</td></tr>
+          <tr><th>Firefox</th><td class="ok">patched 9 April</td><td>six months before anyone named the bug</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="stack">
+      <div class="names"><span>Node2Shell</span><span>HTTP2Shell</span><span>Broccoli2Shell</span><b>= CVE-2026-111497</b></div>
+      <p class="note">The CVE number is the name. Nicknames are for headlines.</p>
+      <div class="controls"><label class="grow">Name your own bug <input id="nick-in" value="toaster" spellcheck="false" autocomplete="off" maxlength="24"></label></div>
+      <pre class="term" id="nick-out"></pre>
+    </div>
+    <p class="src span-2">SOURCES <a href="https://www.cve.org/CVERecord?id=CVE-2026-111497" target="_blank" rel="noopener">CVE record</a> · <a href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases" target="_blank" rel="noopener">Node.js</a> (21 Oct) · <a href="https://github.com/dotnet/announcements/issues/494" target="_blank" rel="noopener">.NET</a> (25 Oct) · <a href="https://www.php.net/archive/2026.php" target="_blank" rel="noopener">php.net</a> (26 Oct) · <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2029458" target="_blank" rel="noopener">Mozilla bug 2029458</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Brotli is the compression behind "Content-Encoding: br" on the web, so Google's C decoder is built into runtimes everywhere. One bug, shipped in Node, Python packages, .NET, PHP's Windows builds, distro libraries, a firewall, archive tools…</span></li><li><b class="say">Say</b><span>It got three nicknames: Node2Shell (it was first reported to Node.js), HTTP2Shell (Mozilla's bug points to this CVE), and Broccoli2Shell, from a site that renamed it because the flaw is in Brotli, not Node.</span></li><li><b class="say">Say</b><span>Python: Brotli 1.2.1 and brotlicffi 1.2.1.0. If either is installed, requests, aiohttp and httpx use it automatically. Palo Alto PAN-OS 11.2–12.2 firewalls with Brotli inspection on were affected too (via the Broccoli2Shell summary; check Palo Alto's advisory for hotfixes).</span></li><li><b class="tip">Egg</b><span>Type "broccoli" into the nickname generator. Or your own name.</span></li><li><b class="tip">Tip</b><span>A public proof of concept exists. Don't link it.</span></li></ul></div>
+</section>
+
+<section class="slide" id="brotli-ideas" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// PATCH SEASON 05</p><h2>The fix isn't in until the running thing is replaced</h2></header>
+  <div class="slide-body stack">
+    <div class="issues">
+      <div><b>Old code isn't safe code</b><p>The bug traces to a 2018 change that first shipped in Brotli 1.0.3: about eight years in widely used code. Versions before 1.0.3 were vulnerable in a different way, so downgrading isn't a fix.</p><em>Bugsink</em></div>
+      <div><b>Your scanner may not know</b><p>At first, Python's audit tools didn't flag the Brotli packages: the CVE named Google's repository, not the packages. GitHub's advisory added them a day later.</p><em>via Broccoli2Shell's summary</em></div>
+      <div><b>Same bug, different scores</b><p>9.2 from the CVE record, "high" from Node.js, 8.1 from Microsoft. Each one rates its own exposure. Prioritise by how you use it, not the number alone.</p><em>CVE record · Node.js · .NET</em></div>
+      <div><b>Restart, rebuild, raise the pin</b><p>A running process keeps the old decoder until it restarts. A container keeps it until you rebuild the image. Self-contained .NET apps must be republished. A lock file reinstalls the old version.</p><em>.NET advisory</em></div>
+    </div>
+    <p class="callout"><b>HOPEFUL PART</b> The fix landed in Brotli's source in February. Projects that track upstream closely, like Firefox, were patched months before anyone gave the bug a name.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Third time this month that "installed" didn't mean "fixed": PHP needed restarts, cloudflared containers needed a new image, and now Brotli. This is the lesson of the month.</span></li><li><b class="say">Say</b><span>Bonus: the same Node.js release fixed randomUUID() values repeating when baked into snapshots (CVE-2026-106074): randomness again, as in eMudhra.</span></li><li><b class="next">Next</b><span>"Time to talk to your neighbour."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A commenter asked: "Can we be good Samaritans by hacking the PHP websites and patching them?" Why not?</p><details><summary>Hint</summary><p>Whose permission do you have? What if you break something?</p></details><details class="answer"><summary>Answer</summary><p>It's unauthorised access, illegal almost everywhere, and you can break a system you don't understand. The right route is to tell the owner, or report it.</p></details></li>
+      <li><p>Name one system at home or at work that would be missing from an inventory.</p><details><summary>Hint</summary><p>Think of anything with a web admin page.</p></details><details class="answer"><summary>Answer</summary><p>Routers, printers, NAS boxes, VPN appliances, smart TVs, the old internal app nobody owns. Each has software inside that needs patching.</p></details></li>
+      <li><p>Binance's keys and eMudhra's keys both failed. What was different about how?</p><details><summary>Hint</summary><p>One was made badly. One was used badly.</p></details><details class="answer"><summary>Answer</summary><p>eMudhra's keys were weak from the start (too little randomness). Binance's keys may have been fine; the attackers controlled what got signed.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 · STOLEN SECRETS -->
+<section class="slide" id="litellm" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 01 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>LiteLLM: a forgotten key, then a poisoned release</h2></header>
+  <div class="slide-body stack">
+    <p class="note">LiteLLM is a popular gateway that apps use to talk to many AI providers, so it tends to hold every provider's API key.</p>
+    <ol class="timeline timeline-5">
+      <li><b>27 May</b>An admin key is committed to a public repository, and never revoked</li>
+      <li><b>10 Oct</b>The key unlocks an API that returns a GitHub token; CI secrets are stolen</li>
+      <li><b>21 Oct 11:39</b>litellm 1.107.0 is published to PyPI, Docker Hub and GHCR, built from a lookalike repo</li>
+      <li><b>12:06</b>A researcher flags it publicly</li>
+      <li><b>13:23</b>PyPI frozen; Docker tags cleared by 14:20</li>
+    </ol>
+    <div class="cols-2">
+      <ul class="rules">
+        <li>Three developers' GitHub tokens were taken, one an organisation owner's: enough to push past branch protection and approve a release.</li>
+        <li>The malware stole credentials. If 1.107.0 ran with internet access, assume they're gone.</li>
+      </ul>
+      <ul class="rules">
+        <li>Affected: unpinned <code>pip install litellm</code> or the affected image tags during those hours.</li>
+        <li>Fix: pin to <b>1.106.2</b>, rebuild from scratch, and rotate every key the proxy held, plus anything in its environment.</li>
+      </ul>
+    </div>
+    <p class="src">SOURCES <a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026-attack-chain" target="_blank" rel="noopener">LiteLLM attack chain</a> (canonical) · <a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026" target="_blank" rel="noopener">LiteLLM incident report</a> (21 Oct) · times UTC</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This one started five months earlier, with a key committed to a public repository and never revoked. On 10 October it was used against LiteLLM's own platform, which returned an organisation owner's GitHub token. Eleven days later the attacker used three developers' tokens to publish a release from a lookalike repository: Berri-AI instead of BerriAI.</span></li><li><b class="say">Say</b><span>It was live for under two hours on PyPI. A researcher spotted it within half an hour. Enterprise customers on LiteLLM's private registry weren't affected.</span></li><li><b class="tip">Check</b><span>LiteLLM says its first post had assumptions that "were later proven to be inaccurate or incomplete"; the attack-chain post is the canonical one.</span></li><li><b class="next">Next</b><span>"Two things that would have helped: noticing the lookalike, and a hash pin."</span></li></ul></div>
+</section>
+
+<section class="slide" id="litellm-ideas" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 02</p><h2>Spot the lookalike, pin the hash</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="mini-label">Which one is the real project? Click it.</p>
+      <div class="lookalike" id="look">
+        <button type="button" data-real="0">github.com/<b>Berri-AI</b>/litellm</button>
+        <button type="button" data-real="1">github.com/<b>BerriAI</b>/litellm</button>
+      </div>
+      <p class="comment" id="look-out"></p>
+      <p class="note">The release workflow was changed to build from the lookalike, then the change was hidden with a revert and force-push. Requiring two approvals didn't help when both approving accounts were compromised.</p>
+    </div>
+    <div class="stack">
+      <div class="controls"><label class="grow">The package you download <input id="pin-in" value="litellm-1.106.2: the release you tested" spellcheck="false" autocomplete="off"></label></div>
+      <pre class="term" id="pin-out"></pre>
+      <p class="callout"><b>THE CATCH</b> A hash pin stops a swapped file. It doesn't stop you upgrading to a bad release: don't jump to brand-new versions automatically.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click the lookalike game. Then edit the package text by one character: the SHA-256 changes completely and no longer matches the lock file, so the install stops. That's Crypto 101's avalanche effect doing supply-chain work.</span></li><li><b class="say">Say</b><span>People who pinned 1.106.2 with a hash were never at risk. People who ran an unpinned install that morning got the malware.</span></li><li><b class="say">Say</b><span>LiteLLM's own lessons: use scoped tokens, not developers' GitHub CLI tokens, for automation; and revisit a rule, relaxed just before the incident, that let any two engineers trigger and approve a release.</span></li><li><b class="next">Next</b><span>"Keys left lying around: two hosting platforms learned the same lesson."</span></li></ul></div>
+</section>
+
+<section class="slide" id="platforms" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 03 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>Railway and Zeabur: your platform's secrets are your secrets</h2></header>
+  <div class="slide-body stack">
+    <div class="cols-2">
+      <div class="vs">
+        <b>Zeabur · 14–15 Oct</b>
+        <span>Never-expiring admin tokens sat in plaintext in a private config repo; the admin interface was on the internet.</span>
+        <span>Valid credentials, normal access paths: <strong>16+ hours</strong> of activity raised no alerts.</span>
+        <span>Read <strong>3,218,965</strong> environment-variable records and 321,810 accounts; root on 101 servers.</span>
+        <span>Leading guess: a key from its August incident, whose clean-up missed these tokens.</span>
+      </div>
+      <div class="vs vs-c">
+        <b>Railway · 20–22 Oct</b>
+        <span>Per Railway, the attacker wanted <strong>AI provider API keys</strong>.</span>
+        <span>Privilege escalation in build infrastructure, then CI credentials.</span>
+        <span>Used those to decrypt a subset of customers' <strong>encrypted</strong> environment variables.</span>
+        <span>Up to ~1.85% of workspaces (~100,000) may have had variables exposed.</span>
+      </div>
+    </div>
+    <p class="callout"><b>NOT CONNECTED</b> Two separate incidents. Neither report links them to each other, or to LiteLLM. Both reports are preliminary.</p>
+    <p class="src">SOURCES <a href="https://zeabur.com/blogs/october-2026-security-incident" target="_blank" rel="noopener">Zeabur</a> (19 Oct, preliminary) · <a href="https://blog.railway.com/p/preliminary-report-october-security-incident" target="_blank" rel="noopener">Railway</a> (preliminary)</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Hosting platforms keep your app's environment variables: database passwords, API keys, signing keys. Both platforms lost some of them in October.</span></li><li><b class="say">Say</b><span>Customers were told to rotate every secret stored on the platform (revoke the old one with the provider first), check GitHub audit logs and app access, and take databases off the public internet. Zeabur advises rebuilding its GCP dedicated servers.</span></li><li><b class="tip">Check</b><span>Railway hadn't ruled out access to customers' source code; look for both final reports.</span></li><li><b class="next">Next</b><span>"What do all these stolen-secret stories have in common?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="forgotten-keys" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 04</p><h2>Forgotten keys, and the keys everyone wanted</h2></header>
+  <div class="slide-body stack">
+    <div class="issues">
+      <div><b>Encryption needs a locked key</b><p>Railway's secrets were encrypted. Stolen credentials decrypted them anyway. Whoever holds the key reads the data.</p><em>Crypto 101 · symmetric vs asymmetric</em></div>
+      <div><b>Hash what you only need to check</b><p>Zeabur stored access tokens as hashes, like passwords. Environment variables can't be hashed: the app needs the real value back. That's why they're the prize.</p><em>Passwords · how sites store them</em></div>
+      <div><b>Keys you forgot still work</b><p>LiteLLM's admin key from May. Zeabur's tokens from January 2024, missed in August's clean-up. Short-lived credentials, and rotate everything after an incident.</p><em>Secrets management</em></div>
+      <div><b>Valid logins don't trip alarms</b><p>Look for unusual use instead: bulk reads, new admin activity, unfamiliar cloud keys. That's the list Zeabur says it's adding.</p><em>Detection engineering</em></div>
+    </div>
+    <p class="callout"><b>THE LOOT</b> AI provider API keys: Railway's attacker was after them, Zeabur saw a stolen OpenAI key used for image requests, and LiteLLM holds them all. Set spending limits on AI accounts.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Four ideas, each with a talk behind it. The links on the hub take you to the Crypto 101 and Passwords slides; the secrets-management and detection talks are on the way.</span></li><li><b class="say">Say</b><span>AI keys are worth stealing because they turn straight into money: someone else's compute, billed to you.</span></li><li><b class="next">Next</b><span>"Wrap-up. First, the myth of the month."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 · WRAP-UP -->
+<section class="slide" id="myth" data-part="4" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01 · MYTH OF THE MONTH</p><h2>"The scanner found nothing, so we're fine"</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Three ways this month's scans said "no finding" on something still vulnerable:</p>
+      <ul class="rules">
+        <li><b>Bundled copies</b>: PHP inside an appliance, Brotli inside Node, Python wheels, firmware tools.</li>
+        <li><b>Not restarted or rebuilt</b>: the fix is on disk, the old code is in memory or in the image.</li>
+        <li><b>Not in the database yet</b>: the Brotli CVE named Google's repo, so the Python packages weren't flagged at first.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <p class="callout"><b>AND</b> "Patched" answers "are we safe now?", not "were we hit before we patched?" PHP and Brotli were both known exploited.</p>
+      <p class="note">A scanner is a smoke alarm, not a building inspection. Keep an inventory of what you run, and where its copies live.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Not a knock on scanners: they're essential. They just answer a narrower question than people think.</span></li><li><b class="next">Next</b><span>"So what should you actually do?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="what-to-do" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>What should you do?</h2></header>
+  <div class="slide-body">
+    <div class="take-grid">
+      <div><b>General</b><span>Update your browser and devices: that's how the eMudhra block reached you. PHP, LiteLLM, GitLab and Brotli bugs mostly live on servers. After a big theft, expect fake "support" and paid "fund recovery" scams; nobody legitimate charges to recover stolen crypto.</span></div>
+      <div><b>Developer</b><span>Pin dependencies with hashes. Rotate anything an affected package could reach. Never build regexes from user input. Upgrade PHP, Ruby, Node.js or .NET, then restart and rebuild. On Railway or Zeabur, rotate every variable, AI keys first.</span></div>
+      <div><b>Security</b><span>Inventory first, including appliances and containers. Restart after patching, and hunt back over the exposure window. Replace certificates chaining to emSign ECC Root CA - G3. Find long-lived plaintext tokens, and alert on unusual use of valid ones.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>One column each. For General: "keep updating" is the honest answer for most of this month, plus watching for scams that ride on the headlines.</span></li><li><b class="next">Next</b><span>"And now, a song."</span></li></ul></div>
+</section>
+
+<section class="slide" id="cybermas" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 03</p><h2>On the 12th day of cybermas, my CISO gave to me…</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <ol class="carol" reversed>
+      <li>breaches on Wednesday</li>
+      <li>Tailscale findings</li>
+      <li>Node.js CVEs</li>
+      <li>supply chain attacks</li>
+      <li>CA keys compromised</li>
+      <li>hackers arrested</li>
+      <li>perfect ten CVSS scores</li>
+      <li><b>FIIIIIVE AI EXPLOIT CHAINS!</b></li>
+      <li class="hl">as a private key</li>
+      <li>MCP disclosures</li>
+      <li>PHP shells</li>
+      <li>And a backdoor in LiteLLM!</li>
+    </ol>
+    <div class="stack">
+      <p class="note">By u/petitlita on the r/cybersecurity megathread, 28 October. Sung, not sourced.</p>
+      <p class="callout"><b>FACT CHECK</b> "4 as a private key" is the internet's joke, not the official record: Google says eMudhra's keys had insufficient randomness, and no key size was published. Still: please don't use 4.</p>
+      <p class="callout"><b>NEXT MONTH</b> <i>Little Bit More Black November?</i> <span class="muted">(u/skynetcoder)</span></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Credit to u/petitlita, who summed up the month better than any of us. Count down from twelve.</span></li><li><b class="say">Say</b><span>Practising what we preach: line four isn't in any official source. It's a great joke anyway.</span></li><li><b class="next">Next</b><span>"Every source from tonight."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sources" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 04</p><h2>Sources</h2></header>
+  <div class="slide-body stack">
+    <div class="src-grid">
+      <div><b>Binance</b><a href="https://www.reuters.com/legal/government/gone-20-minutes-how-biggest-heist-crypto-history-unfolded-2026-10-30/" target="_blank" rel="noopener">Reuters</a>, "Gone in 20 minutes" · <a href="https://www.wired.com/story/the-dollar63-billion-binance-hack-was-pulled-off-in-just-20-minutes/" target="_blank" rel="noopener">WIRED</a>, "The $6.3 Billion Binance Hack…" · both 30 Oct</div>
+      <div><b>eMudhra</b><a href="https://blog.google/security/protecting-chrome-and-android-users-from-compromised-emudhra-intermediate-ca-certificates/" target="_blank" rel="noopener">Google</a> · <a href="https://blog.mozilla.org/security/2026/10/20/protecting-firefox-users-following-the-compromise-of-emudhra-intermediate-certificates/" target="_blank" rel="noopener">Mozilla</a> · <a href="https://blog.cloudflare.com/emudhra-certificate-compromise/" target="_blank" rel="noopener">Cloudflare</a></div>
+      <div><b>PHP2Shell</b><a href="https://www.php.net/archive/2026.php" target="_blank" rel="noopener">php.net</a> · <a href="https://www.cisa.gov/news-events/alerts/2026/10/21/critical-vulnerabilities-php-require-immediate-patching" target="_blank" rel="noopener">CISA</a></div>
+      <div><b>GitLab and Ruby</b><a href="https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-5-1-released/" target="_blank" rel="noopener">GitLab 19.5.1</a> · <a href="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/" target="_blank" rel="noopener">ruby-lang.org</a></div>
+      <div><b>Brotli</b><a href="https://www.cve.org/CVERecord?id=CVE-2026-111497" target="_blank" rel="noopener">CVE-2026-111497</a> · <a href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases" target="_blank" rel="noopener">Node.js</a> · <a href="https://github.com/dotnet/announcements/issues/494" target="_blank" rel="noopener">.NET</a> · <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2029458" target="_blank" rel="noopener">Mozilla</a> · <a href="https://www.bugsink.com/blog/brotli-stale-table-read/" target="_blank" rel="noopener">Bugsink</a> · <a href="https://broccoli2shell.com" target="_blank" rel="noopener">Broccoli2Shell</a> (summary)</div>
+      <div><b>LiteLLM</b><a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026-attack-chain" target="_blank" rel="noopener">Attack chain</a> · <a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026" target="_blank" rel="noopener">Incident report</a></div>
+      <div><b>Railway and Zeabur</b><a href="https://blog.railway.com/p/preliminary-report-october-security-incident" target="_blank" rel="noopener">Railway</a> · <a href="https://zeabur.com/blogs/october-2026-security-incident" target="_blank" rel="noopener">Zeabur</a> · both preliminary</div>
+      <div><b>The megathread</b><a href="https://www.reddit.com/r/cybersecurity/comments/1xdx8k7/megathread_october_2026_cybersecurity_incidents/" target="_blank" rel="noopener">r/cybersecurity</a>, 23 Oct · where this started</div>
+    </div>
+    <p class="note">Checked on 30 October 2026. Stories move: corrections and follow-ups are welcome in GitHub Discussions.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Everything tonight came from these. The deck stays online, so you can click through to every one.</span></li><li><b class="next">Next</b><span>"Questions?"</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body stack">
+    <p class="glitch big-q" data-text="Questions?">Questions?</p>
+    <p class="contact">Send stories for next month to <a href="https://github.com/zevaryx/cybersec-hub/discussions">github.com/zevaryx/cybersec-hub/discussions</a> or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    <div class="links">
+      <a href="../../talks/crypto-101/"><b>Crypto 101</b><span>Keys, signatures, randomness, hashing</span></a>
+      <a href="../../talks/how-https-works/"><b>How HTTPS Really Works</b><span>Certificates and transparency, step by step</span></a>
+    </div>
+    <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. Ask for stories for next month's episode.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

@@ -53,7 +53,7 @@
   function passwordEgg(s) {
     const t = s.trim().toLowerCase().replace(/\s+/g, " ");
     if (t === "hunter2") return `\n\n${sp("m", "hunter2? funny, all I see is *******")}`;
-    if (t === "4") return `\n\n${sp("m", "A private key of 4? Even eMudhra regrets that one.")}`;
+    if (t === "4") return `\n\n${sp("m", "A private key of 4? Even eMudhra regrets weak keys.")}`;
     if (t.includes("correct horse battery staple"))
       return `\n\n${sp("y", "xkcd 936:")} ${sp("m", "four random words beat a short, complex password. Just don't use these four: everyone knows them now.")}`;
     return "";
@@ -874,7 +874,7 @@
     $("ecc-toy-out").innerHTML = `G = (5, 1), the starting point. Each step adds G again:\n${list}19G = point at infinity  ${sp("m", "(this toy curve has only 19 points)")}\n\n` +
       `Alice: secret number ${sp("k", a)}, public point ${a}G = ${sp("y", `(${tgt[0]}, ${tgt[1]})`)}\n` +
       `forward is easy: add G to itself ${a} times.\nbackward, an attacker tries 1G, 2G, 3G… and finds a match after ${sp("bad", a)} tries.\n${sp("m", "Easy here; a real curve has about 2^256 points, too many to ever guess through.")}` +
-      (a === 4 ? `\n\n${sp("y", "A private key of 4? Bold choice. eMudhra made it too.")}` : "");
+      (a === 4 ? `\n\n${sp("y", "A private key of 4? Bold choice. eMudhra's CA keys weren't random enough either.")}` : "");
   }
 
   // --------------------------------------------------------------------------- ECDH (slide 30)

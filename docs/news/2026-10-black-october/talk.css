@@ -1,0 +1,105 @@
+/* talk.css: styles for "Cyber in the News: Black October". The shared theme is in ../../shared/deck.css. */
+
+.roadmap-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid-table td.y { color: var(--yellow); font-family: var(--mono); font-size: .9em; }
+.grid-table td.ok { color: var(--ok); } .grid-table td.bad { color: var(--bad); }
+.span-2 { grid-column: 1 / -1; }
+.eyebrow .tag { margin-left: 4px; font-size: .9em; }
+.controls output { font: 700 1.1em var(--mono); color: var(--yellow); min-width: 3ch; }
+code { font: .9em var(--mono); color: var(--yellow); }
+
+/* sources under every story */
+.src { font: .62em/1.5 var(--mono); letter-spacing: .06em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; margin-top: auto; }
+.src a { color: var(--cyan); }
+.slide-body.stack:has(> .src) { grid-template-rows: auto; align-content: stretch; }
+
+/* links as cards (shared .links styles <li>; here the cards are links) */
+.links > a { display: grid; gap: 4px; align-content: start; padding: 12px 16px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); text-decoration: none; color: var(--fg); }
+.links > a:hover { border-color: var(--cyan); }
+.links > a b { color: var(--cyan); }
+.links > a span { color: var(--muted); font-size: .85em; }
+
+/* title: bingo */
+.bingo { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 8px; }
+.bingo button {
+  min-height: 62px; padding: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  font: 600 .62em/1.25 var(--mono); letter-spacing: .02em; text-transform: uppercase; cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+}
+.bingo button:hover { border-color: var(--cyan); color: var(--fg); }
+.bingo button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: var(--void); box-shadow: 0 0 14px var(--pink-glow); }
+.bingo.won { animation: bingo-won .9s steps(2) 3; }
+@keyframes bingo-won { 50% { filter: hue-rotate(160deg) brightness(1.3); } }
+
+/* reading the news */
+.quote { margin: 0; padding: 16px 20px; border-left: 3px solid var(--pink); background: rgba(21, 18, 51, .7); font-size: 1.15em; line-height: 1.4; }
+.quote cite, .quote-sm cite { display: block; margin-top: 8px; font: normal .62em var(--mono); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.quote-sm { margin: 0; padding: 10px 14px; border-left: 3px solid var(--cyan); background: rgba(21, 18, 51, .7); font-size: .92em; }
+.quote-sm.bad { border-left-color: var(--bad); color: var(--fg); }
+.ladder-src { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: src; }
+.ladder-src li { display: grid; gap: 4px; padding: 12px 16px 12px 52px; position: relative; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); counter-increment: src; }
+.ladder-src li::before { content: counter(src); position: absolute; left: 16px; top: 12px; font: 700 1.3em var(--mono); color: var(--pink); }
+.ladder-src b { color: var(--cyan); font-size: 1.05em; }
+.ladder-src span { color: var(--muted); font-size: .85em; }
+.ladder-src li:first-child { border-color: var(--ok); } .ladder-src li:first-child b { color: var(--ok); }
+.ladder-src li:last-child { opacity: .7; }
+
+/* stats and timelines */
+.stats-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.timeline-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 4px; }
+.timeline-5 b { font-size: 1.05em; }
+
+/* PHP: would the scan catch it? */
+.flip-cards { display: grid; gap: 10px; }
+.flip-cards details { border: 1px solid var(--line); background: rgba(21, 18, 51, .7); }
+.flip-cards details[open] { border-color: var(--bad); }
+.flip-cards summary { display: grid; gap: 2px; padding: 10px 14px; cursor: pointer; list-style: none; }
+.flip-cards summary::-webkit-details-marker { display: none; }
+.flip-cards summary b { color: var(--cyan); }
+.flip-cards summary span { color: var(--muted); font-size: .85em; }
+.flip-cards details p { padding: 0 14px 12px; font-size: .9em; }
+
+/* Brotli */
+.names { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.names span { padding: 6px 12px; border: 1px solid var(--pink); color: var(--pink); font: 600 .85em var(--mono); }
+.names b { flex-basis: 100%; font: 700 1.25em var(--mono); color: var(--yellow); }
+
+/* LiteLLM */
+.lookalike { display: grid; gap: 10px; }
+.lookalike button { padding: 12px 16px; border: 1px solid var(--line); background: var(--void); color: var(--fg); font: 1em var(--mono); text-align: left; cursor: pointer; }
+.lookalike button b { color: var(--yellow); }
+.lookalike button:hover { border-color: var(--cyan); }
+.lookalike button.right { border-color: var(--ok); box-shadow: 0 0 12px rgba(71, 255, 163, .2); }
+.lookalike button.wrong { border-color: var(--bad); box-shadow: 0 0 12px rgba(255, 91, 58, .2); }
+
+/* the 12 days of cybermas */
+.carol { margin: 0; padding-left: 2.6em; display: grid; gap: 2px; font-size: .98em; }
+.carol li::marker { font: 700 1em var(--mono); color: var(--pink); }
+.carol li.hl { color: var(--yellow); }
+.carol li.hl::after { content: "  ← fact check"; font: .7em var(--mono); color: var(--muted); }
+
+/* sources slide */
+.src-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
+.src-grid > div { display: block; line-height: 1.6; padding: 10px 14px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); font-size: .8em; color: var(--muted); }
+.src-grid b { display: block; color: var(--cyan); font-size: 1.1em; margin-bottom: 2px; }
+.src-grid a { color: var(--fg); }
+
+/* narrow screens (scroll view) */
+@media (max-width: 900px) {
+  .mode-scroll .roadmap-4, .mode-scroll .stats-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mode-scroll .timeline-5 { grid-template-columns: minmax(0, 1fr); border-top: 0; border-left: 2px solid var(--line); padding-left: 14px; }
+  .mode-scroll .timeline-5 li { padding-top: 6px; }
+  .mode-scroll .timeline-5 li::before { left: -21px; top: 10px; }
+  .mode-scroll .src-grid, .mode-scroll .links { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .mode-scroll .fixes thead { display: none; }
+  .mode-scroll .fixes tr { display: grid; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .mode-scroll .fixes th, .mode-scroll .fixes td { border: 0; padding: 0; }
+  .mode-scroll .controls input[type="range"] { min-width: 0; }
+  .mode-scroll .controls label.grow { flex-basis: 100%; }
+  .mode-scroll .roadmap-4, .mode-scroll .stats-4 { grid-template-columns: minmax(0, 1fr); }
+  .mode-scroll .bingo button { min-height: 54px; font-size: .55em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bingo.won { animation: none; }
+}

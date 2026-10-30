@@ -352,7 +352,7 @@
         <li>Every publicly trusted certificate must be written to public, append-only <b>logs</b>, or browsers reject it.</li>
         <li>Anyone can watch the logs. Sites get alerts when a certificate appears for their name.</li>
         <li>Each entry is chained to the previous ones by hashes, so entries can't be quietly removed.</li>
-        <li>Browsers remove CAs that misbehave. In October 2026 they blocked eMudhra's dangerously weak certificates within days of researchers reporting them.</li>
+        <li>Browsers remove CAs that misbehave. In October 2026 a researcher found eMudhra CA keys made with too little randomness; Chrome and Firefox blocked them within hours, and Google says none had been used for certificates in the logs.</li>
       </ul>
     </div>
   </div>

@@ -20,6 +20,23 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 
 The Developer and Security tracks have no finished talks yet.
 
+**Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
+
+| Episode | Length | Link |
+| --- | --- | --- |
+| **October 2026: Black October** | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/) |
+
+### Cyber in the News · Black October (October 2026)
+
+Four parts, with a checkpoint after part 2:
+
+1. **Keys and trust** (17 min): the $6.3 billion Binance heist and a live demo of why a signature proves the key said yes, not that anyone meant it; eMudhra's CA keys "generated with insufficient randomness", with a randomness-to-guesses slider
+2. **Patch season** (24 min): PHP2Shell and why scans miss things; GitLab and Ruby's regex bugs (a regex is code); Brotli, one bug with three names in every runtime
+3. **Stolen secrets** (14 min): LiteLLM's forgotten key and poisoned release (spot the lookalike, pin the hash); the Railway and Zeabur breaches
+4. **Wrap-up** (12 min): the myth of the month, what to do for each track, the 12 days of cybermas, and every source
+
+The facts were checked against official sources on 30 October 2026. The Binance story was a day old then, so its numbers may have moved.
+
 ### How HTTPS Really Works
 
 Four parts, with checkpoints after parts 1, 2 and 3:
@@ -108,6 +125,7 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 1. Write the slides in its `index.html` (each has its speaker notes in a `.notes` block) and its demos in `app.js`.
 2. Set the parts and their minutes in the page's `deck-config` block; the presenter window builds its timing plan from them.
 3. Add a card for it to its track in `docs/index.html`, in the order to take the talks, and a row to the table above.
+   For a **Cyber in the News** episode, create it the same way, then move the folder to `docs/news/YYYY-MM-slug/` (same depth, so its links to `shared/` still work; point links into other talks at `../../talks/`). Add a card to `docs/news/index.html` with `data-date="YYYY-MM"` (the page sorts itself), and replace the latest-episode card on `docs/index.html`.
 4. Optionally add a 1200×630 `og-image.png` for link previews.
 5. Hide a few easter eggs in the demos (jokes for special inputs, a console hint, a reward for finishing something) and list them in the title slide's speaker notes. Every talk has some.
 
@@ -115,8 +133,10 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 
 ```
 docs/
-  index.html          the hub's front page (Crypto 101, then one section per track)
-  hub.css             front-page styles
+  index.html          the hub's front page (Crypto 101, one section per track, then Cyber in the News)
+  hub.css             front-page styles (also used by news/)
+  news/               the Cyber in the News page: every episode, sortable (news.js)
+    YYYY-MM-slug/     one folder per episode, laid out like a talk folder
   shared/
     deck.css          the cyberpunk theme, slide layout, scroll view, print layout, timers
     deck.js           slide navigation, notes, overview, presenter window, checkpoint timers
