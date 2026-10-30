@@ -24,7 +24,7 @@ The Developer and Security tracks have no finished talks yet.
 
 | Episode | Length | Link |
 | --- | --- | --- |
-| **October 2026: Black October** | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/) |
+| **October 2026: Black October** | about 75 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/news/2026-10-black-october/) |
 
 ### Cyber in the News · Black October (October 2026)
 
@@ -32,7 +32,7 @@ Four parts, with a checkpoint after part 2:
 
 1. **Keys and trust** (17 min): the $6.3 billion Binance heist and a live demo of why a signature proves the key said yes, not that anyone meant it; eMudhra's CA keys "generated with insufficient randomness", with a randomness-to-guesses slider
 2. **Patch season** (24 min): PHP2Shell and why scans miss things; GitLab and Ruby's regex bugs (a regex is code); Brotli, one bug with three names in every runtime
-3. **Stolen secrets** (14 min): LiteLLM's forgotten key and poisoned release (spot the lookalike, pin the hash); the Railway and Zeabur breaches
+3. **Stolen secrets** (18 min): LiteLLM's forgotten key and poisoned release (spot the lookalike, pin the hash); a malicious Claude Code extension version in Cursor's marketplace; the Railway and Zeabur breaches
 4. **Wrap-up** (12 min): the myth of the month, what to do for each track, the 12 days of cybermas, and every source
 
 The facts were checked against official sources on 30 October 2026. The Binance story was a day old then, so its numbers may have moved.

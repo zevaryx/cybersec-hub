@@ -26,7 +26,7 @@
 <script type="application/json" id="deck-config">
 { "id": "news-2026-10-black-october", "title": "Cyber in the News: Black October", "footer": "NEWS · OCT 2026", "subtitle": "CYBER IN THE NEWS · OCTOBER 2026",
   "parts": [{ "name": "Keys and trust", "minutes": 17 }, { "name": "Patch season", "minutes": 24 },
-            { "name": "Stolen secrets", "minutes": 14 }, { "name": "Wrap-up", "minutes": 12 }] }
+            { "name": "Stolen secrets", "minutes": 18 }, { "name": "Wrap-up", "minutes": 12 }] }
 </script>
 <script>
   /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
@@ -79,12 +79,12 @@
 </section>
 
 <section class="slide" id="roadmap" data-part="0" data-num="02">
-  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Seven stories, four parts</h2></header>
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Eight stories, four parts</h2></header>
   <div class="slide-body">
     <ol class="roadmap roadmap-4">
       <li><a href="#binance"><small>PART 1 · 17 MIN</small><b>Keys and trust</b></a><span>Binance: $6.3 billion in 20 minutes</span><span>eMudhra: CA keys without enough randomness</span></li>
       <li><a href="#php2shell"><small>PART 2 · 24 MIN</small><b>Patch season</b></a><span>PHP2Shell</span><span>GitLab and a Ruby regex bug</span><span>Brotli: one bug, three names</span></li>
-      <li><a href="#litellm"><small>PART 3 · 14 MIN</small><b>Stolen secrets</b></a><span>LiteLLM: the poisoned release</span><span>Railway and Zeabur</span></li>
+      <li><a href="#litellm"><small>PART 3 · 18 MIN</small><b>Stolen secrets</b></a><span>LiteLLM: the poisoned release</span><span>A poisoned Claude Code extension</span><span>Railway and Zeabur</span></li>
       <li><a href="#myth"><small>PART 4 · 12 MIN</small><b>Wrap-up</b></a><span>Myth of the month</span><span>What should you do?</span><span>Sources and questions</span></li>
     </ol>
     <p class="callout"><b>CHECKPOINT</b> after part 2: 5 minutes to discuss with a neighbour. Every story is tagged with who it matters to: <span class="tag tag-c">General</span> <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p>
@@ -374,11 +374,38 @@
       <p class="callout"><b>THE CATCH</b> A hash pin stops a swapped file. It doesn't stop you upgrading to a bad release: don't jump to brand-new versions automatically.</p>
     </div>
   </div>
-  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click the lookalike game. Then edit the package text by one character: the SHA-256 changes completely and no longer matches the lock file, so the install stops. That's Crypto 101's avalanche effect doing supply-chain work.</span></li><li><b class="say">Say</b><span>People who pinned 1.106.2 with a hash were never at risk. People who ran an unpinned install that morning got the malware.</span></li><li><b class="say">Say</b><span>LiteLLM's own lessons: use scoped tokens, not developers' GitHub CLI tokens, for automation; and revisit a rule, relaxed just before the incident, that let any two engineers trigger and approve a release.</span></li><li><b class="next">Next</b><span>"Keys left lying around: two hosting platforms learned the same lesson."</span></li></ul></div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click the lookalike game. Then edit the package text by one character: the SHA-256 changes completely and no longer matches the lock file, so the install stops. That's Crypto 101's avalanche effect doing supply-chain work.</span></li><li><b class="say">Say</b><span>People who pinned 1.106.2 with a hash were never at risk. People who ran an unpinned install that morning got the malware.</span></li><li><b class="say">Say</b><span>LiteLLM's own lessons: use scoped tokens, not developers' GitHub CLI tokens, for automation; and revisit a rule, relaxed just before the incident, that let any two engineers trigger and approve a release.</span></li><li><b class="next">Next</b><span>"Eight days later, an AI coding tool's extension went the same way."</span></li></ul></div>
 </section>
 
-<section class="slide" id="platforms" data-part="3" data-num="16">
-  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 03 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>Railway and Zeabur: your platform's secrets are your secrets</h2></header>
+<section class="slide" id="claude-extension" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 03 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>A poisoned Claude Code extension in Cursor's marketplace</h2></header>
+  <div class="slide-body stack">
+    <div class="stats stats-4">
+      <div class="stat"><b>2.1.313</b><span>a malicious version of <code>anthropic.claude-code</code>, "not developed by Anthropic"</span></div>
+      <div class="stat"><b>~11 hours</b><span>available on 29 October, about 2:27am to 1:35pm PT</span></div>
+      <div class="stat"><b>≤5,000</b><span>users affected; Cursor is contacting them directly</span></div>
+      <div class="stat"><b>1</b><span>marketplace: Cursor's own. No other extensions were tampered with</span></div>
+    </div>
+    <div class="cols-2">
+      <ul class="rules">
+        <li>On install or update, it tried to add an attacker's SSH key (<code>svc-telemetry</code>), open a reverse SSH tunnel, and survive restarts.</li>
+        <li>It also sent host and user details to the attacker's server, which is now offline.</li>
+        <li>Cursor pulled it, rebuilt its marketplace, audited access and rotated its keys.</li>
+      </ul>
+      <ul class="rules">
+        <li>Check <code>~/.ssh/authorized_keys</code> for a <code>svc-telemetry</code> key.</li>
+        <li><b>Uninstalling may not be enough</b>: remove the key, the persistence and the tunnel, or rebuild the machine.</li>
+        <li>Rotate credentials and sessions the machine could reach, from a different, trusted machine.</li>
+      </ul>
+    </div>
+    <p class="callout"><b>NOT YET KNOWN</b> How the bad version got into the marketplace. Cursor hasn't said, so neither will we.</p>
+    <p class="src">SOURCES <a href="https://cursor.com/blog/claude-code-extension-security-notice" target="_blank" rel="noopener">Cursor security notice</a> (29 Oct) · <a href="https://thehackernews.com/2026/10/official-claude-code-vs-code-extension.html" target="_blank" rel="noopener">The Hacker News</a>: no evidence it reached Microsoft's VS Code Marketplace or Open VSX · times PT</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Same day as the Binance theft, a second AI-tool supply-chain story. Cursor runs its own marketplace of VS Code extensions. For about eleven hours on 29 October it served a malicious version, 2.1.313, of the Claude Code extension. Cursor says that version was "not developed by Anthropic".</span></li><li><b class="say">Say</b><span>Like LiteLLM: a trusted name, a short window, and a fix that's more than uninstalling. Anyone who installed or updated during the window should treat the machine as compromised. The SSH step usually fails without admin rights, according to Cursor, but the key and the persistence can still land.</span></li><li><b class="tip">Check</b><span>Only Cursor's marketplace is confirmed affected; The Hacker News found no evidence it reached Microsoft's VS Code Marketplace or Open VSX, and reports Anthropic published 2.1.314 there. Don't repeat headlines that say more than Cursor does, and don't guess how it was published.</span></li><li><b class="ask">Ask</b><span>Who checks the extensions in your editor? <em>Usually nobody. They run with your permissions, and update by themselves.</em></span></li><li><b class="next">Next</b><span>"Keys left lying around: two hosting platforms learned the same lesson."</span></li></ul></div>
+</section>
+
+<section class="slide" id="platforms" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 04 · <span class="tag tag-y">Developer</span> <span class="tag tag-ok">Security</span></p><h2>Railway and Zeabur: your platform's secrets are your secrets</h2></header>
   <div class="slide-body stack">
     <div class="cols-2">
       <div class="vs">
@@ -402,8 +429,8 @@
   <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Hosting platforms keep your app's environment variables: database passwords, API keys, signing keys. Both platforms lost some of them in October.</span></li><li><b class="say">Say</b><span>Customers were told to rotate every secret stored on the platform (revoke the old one with the provider first), check GitHub audit logs and app access, and take databases off the public internet. Zeabur advises rebuilding its GCP dedicated servers.</span></li><li><b class="tip">Check</b><span>Railway hadn't ruled out access to customers' source code; look for both final reports.</span></li><li><b class="next">Next</b><span>"What do all these stolen-secret stories have in common?"</span></li></ul></div>
 </section>
 
-<section class="slide" id="forgotten-keys" data-part="3" data-num="17">
-  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 04</p><h2>Forgotten keys, and the keys everyone wanted</h2></header>
+<section class="slide" id="forgotten-keys" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// STOLEN SECRETS 05</p><h2>Forgotten keys, and the keys everyone wanted</h2></header>
   <div class="slide-body stack">
     <div class="issues">
       <div><b>Encryption needs a locked key</b><p>Railway's secrets were encrypted. Stolen credentials decrypted them anyway. Whoever holds the key reads the data.</p><em>Crypto 101 · symmetric vs asymmetric</em></div>
@@ -417,7 +444,7 @@
 </section>
 
 <!-- ======================================================================= PART 4 · WRAP-UP -->
-<section class="slide" id="myth" data-part="4" data-num="18">
+<section class="slide" id="myth" data-part="4" data-num="19">
   <header class="slide-head"><p class="eyebrow">// WRAP-UP 01 · MYTH OF THE MONTH</p><h2>"The scanner found nothing, so we're fine"</h2></header>
   <div class="slide-body cols-2">
     <div class="stack">
@@ -436,19 +463,19 @@
   <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Not a knock on scanners: they're essential. They just answer a narrower question than people think.</span></li><li><b class="next">Next</b><span>"So what should you actually do?"</span></li></ul></div>
 </section>
 
-<section class="slide" id="what-to-do" data-part="4" data-num="19">
+<section class="slide" id="what-to-do" data-part="4" data-num="20">
   <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>What should you do?</h2></header>
   <div class="slide-body">
     <div class="take-grid">
       <div><b>General</b><span>Update your browser and devices: that's how the eMudhra block reached you. PHP, LiteLLM, GitLab and Brotli bugs mostly live on servers. After a big theft, expect fake "support" and paid "fund recovery" scams; nobody legitimate charges to recover stolen crypto.</span></div>
-      <div><b>Developer</b><span>Pin dependencies with hashes. Rotate anything an affected package could reach. Never build regexes from user input. Upgrade PHP, Ruby, Node.js or .NET, then restart and rebuild. On Railway or Zeabur, rotate every variable, AI keys first.</span></div>
+      <div><b>Developer</b><span>Pin dependencies with hashes. Rotate anything an affected package could reach. Never build regexes from user input. Know which editor extensions you run. Upgrade PHP, Ruby, Node.js or .NET, then restart and rebuild. On Railway or Zeabur, rotate every variable, AI keys first.</span></div>
       <div><b>Security</b><span>Inventory first, including appliances and containers. Restart after patching, and hunt back over the exposure window. Replace certificates chaining to emSign ECC Root CA - G3. Find long-lived plaintext tokens, and alert on unusual use of valid ones.</span></div>
     </div>
   </div>
   <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>One column each. For General: "keep updating" is the honest answer for most of this month, plus watching for scams that ride on the headlines.</span></li><li><b class="next">Next</b><span>"And now, a song."</span></li></ul></div>
 </section>
 
-<section class="slide" id="cybermas" data-part="4" data-num="20">
+<section class="slide" id="cybermas" data-part="4" data-num="21">
   <header class="slide-head"><p class="eyebrow">// WRAP-UP 03</p><h2>On the 12th day of cybermas, my CISO gave to me…</h2></header>
   <div class="slide-body cols-2 cols-wide-left">
     <ol class="carol" reversed>
@@ -474,7 +501,7 @@
   <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Credit to u/petitlita, who summed up the month better than any of us. Count down from twelve.</span></li><li><b class="say">Say</b><span>Practising what we preach: line four isn't in any official source. It's a great joke anyway.</span></li><li><b class="next">Next</b><span>"Every source from tonight."</span></li></ul></div>
 </section>
 
-<section class="slide" id="sources" data-part="4" data-num="21">
+<section class="slide" id="sources" data-part="4" data-num="22">
   <header class="slide-head"><p class="eyebrow">// WRAP-UP 04</p><h2>Sources</h2></header>
   <div class="slide-body stack">
     <div class="src-grid">
@@ -483,6 +510,7 @@
       <div><b>PHP2Shell</b><a href="https://www.php.net/archive/2026.php" target="_blank" rel="noopener">php.net</a> · <a href="https://www.cisa.gov/news-events/alerts/2026/10/21/critical-vulnerabilities-php-require-immediate-patching" target="_blank" rel="noopener">CISA</a></div>
       <div><b>GitLab and Ruby</b><a href="https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-5-1-released/" target="_blank" rel="noopener">GitLab 19.5.1</a> · <a href="https://www.ruby-lang.org/en/news/2026/10/23/regexp-fixes-for-gitlab-cves/" target="_blank" rel="noopener">ruby-lang.org</a></div>
       <div><b>Brotli</b><a href="https://www.cve.org/CVERecord?id=CVE-2026-111497" target="_blank" rel="noopener">CVE-2026-111497</a> · <a href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases" target="_blank" rel="noopener">Node.js</a> · <a href="https://github.com/dotnet/announcements/issues/494" target="_blank" rel="noopener">.NET</a> · <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2029458" target="_blank" rel="noopener">Mozilla</a> · <a href="https://www.bugsink.com/blog/brotli-stale-table-read/" target="_blank" rel="noopener">Bugsink</a> · <a href="https://broccoli2shell.com" target="_blank" rel="noopener">Broccoli2Shell</a> (summary)</div>
+      <div><b>Claude Code extension</b><a href="https://cursor.com/blog/claude-code-extension-security-notice" target="_blank" rel="noopener">Cursor security notice</a>, 29 Oct · <a href="https://thehackernews.com/2026/10/official-claude-code-vs-code-extension.html" target="_blank" rel="noopener">The Hacker News</a></div>
       <div><b>LiteLLM</b><a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026-attack-chain" target="_blank" rel="noopener">Attack chain</a> · <a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026" target="_blank" rel="noopener">Incident report</a></div>
       <div><b>Railway and Zeabur</b><a href="https://blog.railway.com/p/preliminary-report-october-security-incident" target="_blank" rel="noopener">Railway</a> · <a href="https://zeabur.com/blogs/october-2026-security-incident" target="_blank" rel="noopener">Zeabur</a> · both preliminary</div>
       <div><b>The megathread</b><a href="https://www.reddit.com/r/cybersecurity/comments/1xdx8k7/megathread_october_2026_cybersecurity_incidents/" target="_blank" rel="noopener">r/cybersecurity</a>, 23 Oct · where this started</div>
@@ -492,7 +520,7 @@
   <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Everything tonight came from these. The deck stays online, so you can click through to every one.</span></li><li><b class="next">Next</b><span>"Questions?"</span></li></ul></div>
 </section>
 
-<section class="slide slide-end" id="questions" data-part="4" data-num="22">
+<section class="slide slide-end" id="questions" data-part="4" data-num="23">
   <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
   <div class="slide-body stack">
     <p class="glitch big-q" data-text="Questions?">Questions?</p>
