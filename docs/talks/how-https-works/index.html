@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How HTTPS Really Works</title>
+<meta name="description" content="How HTTPS Really Works: follow one web request from the address bar to the padlock, with a live TLS 1.3 handshake you can step through. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/how-https-works/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="How HTTPS Really Works">
+<meta property="og:description" content="One web request, from the address bar to the padlock. Step through a real TLS 1.3 handshake in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/how-https-works/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/how-https-works/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: How HTTPS Really Works in neon, beside a terminal showing what the network can and can't see.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M10 14v-3a6 6 0 0 1 12 0v3' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Crect x='7' y='14' width='18' height='13' fill='%2347ffa3'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "how-https-works", "title": "How HTTPS Really Works", "footer": "HTTPS", "subtitle": "FROM ADDRESS BAR TO PADLOCK",
+  "parts": [{ "name": "Before any encryption", "minutes": 20 }, { "name": "The handshake", "minutes": 30 },
+            { "name": "After the handshake", "minutes": 25 }, { "name": "Wrap-up", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">HTTP<span>S</span></a>
+  <div class="scroll-parts">
+    <a href="#journey" data-part="1"><b>01</b>Before</a>
+    <a href="#handshake-overview" data-part="2"><b>02</b>Handshake</a>
+    <a href="#records" data-part="3"><b>03</b>After</a>
+    <a href="#inspect" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= TITLE -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// FROM ADDRESS BAR TO PADLOCK</p>
+      <h1><span class="pre">How HTTPS</span> <span class="glitch" data-text="Really Works">Really Works</span></h1>
+      <p class="lede">Follow one web request from typing an address to seeing the padlock, and find out exactly what a stranger on café Wi-Fi can and can't learn.</p>
+      <p class="muted">No background needed · Crypto 101 helps, but isn't required</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/how-https-works/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-url">$ visit(<input id="hero-url" value="https://example.com/account?id=7" spellcheck="false" autocomplete="off">)</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes, four parts, three checkpoints. We'll follow one request all the way through.</span></li><li><b class="show">Show</b><span>The terminal: with HTTPS, the network sees which site you visit, but not the page, your cookies or what's on it. Change https to http and watch everything become visible.</span></li><li><b class="tip">Eggs</b><span>Try http://anything, localhost, or example.com in the terminal; type "dns" on the DNS slide; open the café demo's /coffee page; break all four certificate checks; max out the latency slider; make 10 new connections. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= ROADMAP -->
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#journey"><small>PART 1 · 20 MIN</small><b>Before any encryption</b></a><span>The journey of a request</span><span>Finding the server (DNS)</span><span>Plain HTTP on café Wi-Fi</span></li>
+      <li><a href="#handshake-overview"><small>PART 2 · 30 MIN</small><b>The handshake</b></a><span>A live TLS 1.3 handshake</span><span>Agreeing on keys</span><span>Certificates and trust</span><span>Why TLS 1.3 is faster</span></li>
+      <li><a href="#records"><small>PART 3 · 25 MIN</small><b>After the handshake</b></a><span>Encrypted records</span><span>What still leaks</span><span>Warnings and HSTS</span><span>Certificate Transparency</span></li>
+      <li><a href="#inspect"><small>PART 4 · 15 MIN</small><b>Wrap-up</b></a><span>Inspect a real connection</span><span>The whole journey</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Four parts: what happens before encryption, the handshake, what happens after, and a wrap-up where we inspect this very page.</span></li><li><b class="next">Next</b><span>"So what actually happens when you press Enter?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="journey" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// BEFORE 01</p><h2>What happens when you press Enter?</h2></header>
+  <div class="slide-body stack">
+    <div class="journey">
+      <a href="#dns"><b>1</b><span>Find the server</span><small>DNS turns example.com into an address</small></a>
+      <a href="#http-plain"><b>2</b><span>Connect</span><small>TCP opens a line to that address</small></a>
+      <a href="#handshake"><b>3</b><span>Handshake</span><small>TLS agrees on keys and checks the certificate</small></a>
+      <a href="#records"><b>4</b><span>Talk securely</span><small>HTTP requests and pages, encrypted</small></a>
+      <a href="#what-leaks"><b>5</b><span>Show the page</span><small>…and the padlock</small></a>
+    </div>
+    <p class="big-lede">HTTPS is just HTTP, the language of the web, sent inside an encrypted tunnel called <b>TLS</b>.</p>
+    <p class="note">Every stop on this map is a slide in this talk; click one to jump there.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Five stops: find the server, connect, handshake, talk securely, show the page. Most of this happens in under a tenth of a second.</span></li><li><b class="say">Say</b><span>HTTPS = HTTP + TLS. The "S" is the tunnel.</span></li><li><b class="next">Next</b><span>"Step one: finding the server."</span></li></ul></div>
+</section>
+
+<section class="slide" id="dns" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// BEFORE 02</p><h2>Finding the server: DNS</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Look up <input id="dns-name" value="example.com" class="mid" spellcheck="false" autocomplete="off"></label>
+        <label class="check"><input type="checkbox" id="dns-doh"> Encrypted DNS</label>
+        <button type="button" class="btn" id="dns-go">Look it up</button>
+      </div>
+      <ol class="dns-steps" id="dns-steps"></ol>
+    </div>
+    <div class="stack">
+      <h3>Who saw the name?</h3>
+      <div class="who" id="dns-who"></div>
+      <p class="note">Plain DNS questions travel unencrypted, so your Wi-Fi and internet provider can read every site name you look up. Encrypted DNS ("DNS over HTTPS") hides them from the network, but the resolver you choose still sees them.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Computers connect to numbers, not names. DNS is the internet's phone book.</span></li><li><b class="show">Show</b><span>Press "Look it up": the resolver asks the root, then .com, then example.com's own name server, and caches the answer. Then tick "Encrypted DNS" and look again: the Wi-Fi and internet provider drop off the "who saw" list.</span></li><li><b class="say">Say</b><span>Encrypted DNS moves trust; it doesn't remove it. Someone still answers the question.</span></li><li><b class="tip">Tip</b><span>The IP shown is a documentation address, not example.com's real one.</span></li></ul></div>
+</section>
+
+<section class="slide" id="http-plain" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// BEFORE 03</p><h2>The café Wi-Fi view</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <label class="check"><input type="radio" name="cafe-mode" id="cafe-http" value="http" checked> http://</label>
+      <label class="check"><input type="radio" name="cafe-mode" id="cafe-https" value="https"> https://</label>
+      <label>Page <input id="cafe-path" value="/login" class="short-mid" spellcheck="false" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" id="cafe-evil"> Someone on the Wi-Fi edits pages</label>
+    </div>
+    <div class="cols-2">
+      <div class="stack"><h3>What you see</h3><div class="browser" id="cafe-browser"></div></div>
+      <div class="stack"><h3>What the network sees <small>simplified capture</small></h3><pre class="term" id="cafe-capture"></pre></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Plain http://: the capture shows the whole login, password included. Tick "edits pages": the page you see changes, because nothing proves it's untouched.</span></li><li><b class="show">Show</b><span>Switch to https://: the capture is unreadable except the site name, and edits make the connection fail instead of fooling you.</span></li><li><b class="say">Say</b><span>HTTPS gives three things: privacy (no reading), integrity (no editing), and authentication (it's really that site).</span></li><li><b class="ask">Ask</b><span>Which of those three would you miss most on public Wi-Fi? <em>Answer: all three matter; editing is the one people forget.</em></span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers. Guesses are welcome.</p>
+    <ol class="checkpoint">
+      <li><p>On café Wi-Fi without HTTPS, what could someone nearby see, and what could they change?</p><details><summary>Hint</summary><p>Think about both reading and writing.</p></details><details class="answer"><summary>Answer</summary><p>They could read everything (pages, forms, passwords, cookies) and change anything (inject ads, swap download links, add fake login forms).</p></details></li>
+      <li><p>Even before the page loads, what has your device already revealed?</p><details><summary>Hint</summary><p>What's the very first thing it asks?</p></details><details class="answer"><summary>Answer</summary><p>The site's name, through the DNS lookup (unless DNS is encrypted), plus the server's address it then connects to.</p></details></li>
+      <li><p>Encrypted DNS hides site names from your Wi-Fi. Who can still see them?</p><details><summary>Hint</summary><p>Somebody has to answer the question.</p></details><details class="answer"><summary>Answer</summary><p>The encrypted DNS resolver you use. It moves trust from the network to the resolver.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>Timing: Part 1 should finish around minute 22.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="handshake-overview" data-part="2" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// HANDSHAKE 01</p><h2>The handshake's three jobs</h2></header>
+  <div class="slide-body stack">
+    <div class="goal-grid goal-grid-3">
+      <div class="goal"><b>Agree on keys</b><span>Make a shared secret in public, over a network anyone can watch.</span><small>HOW</small><em>Key exchange (ECDH, plus ML-KEM)</em></div>
+      <div class="goal"><b>Prove who it is</b><span>Show that this really is example.com, not an impostor in the café.</span><small>HOW</small><em>A certificate and a signature</em></div>
+      <div class="goal"><b>Detect meddling</b><span>Make sure nobody altered the handshake messages along the way.</span><small>HOW</small><em>A "Finished" checksum over everything</em></div>
+    </div>
+    <p class="big-lede">TLS 1.3 does all three in a single round trip: one message from your browser, one reply from the server, and the browser can already send its request.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three jobs: agree on keys, prove identity, detect meddling. If any fails, no page.</span></li><li><b class="say">Say</b><span>Crypto 101 covered each piece: key exchange, signatures, and tags. The handshake glues them together.</span></li><li><b class="next">Next</b><span>"Let's run one for real."</span></li></ul></div>
+</section>
+
+<section class="slide" id="handshake" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// HANDSHAKE 02</p><h2>A live TLS 1.3 handshake</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Step <span class="range"><input type="range" id="hs-step" min="0" max="7" value="0"><output id="hs-step-out">1 / 8</output></span></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="hs-new">New connection</button>
+      </div>
+      <ol class="ladder" id="hs-ladder"></ol>
+    </div>
+    <div class="stack">
+      <p class="step-name" id="hs-title"></p>
+      <p class="note" id="hs-desc"></p>
+      <pre class="term" id="hs-detail"></pre>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~10 min</p><ul><li><b class="say">Say</b><span>Every value here is real: a real P-256 key exchange, real HKDF key derivation as TLS 1.3 does it, real signatures and real AES-GCM. Only the message formats are simplified.</span></li><li><b class="show">Show</b><span>Drag through the 8 steps. 1–2: hellos, sent in the clear, each with a public key share; the site name is visible. 3: both sides compute the same secret. 4: keys are derived; everything after this is encrypted.</span></li><li><b class="show">Show</b><span>5: the certificate chain, checked signature by signature. 6: the server signs the whole conversation so far with the certificate's private key. 7: both send "Finished" checksums. 8: the actual request, encrypted.</span></li><li><b class="tip">Tip</b><span>"New connection" makes fresh keys every time: that's forward secrecy.</span></li></ul></div>
+</section>
+
+<section class="slide" id="key-exchange" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// HANDSHAKE 03</p><h2>Agreeing on keys, today and after quantum</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="chain chain-sm"><span>browser's key share</span><i></i><span class="hot">combined secret</span><i></i><span>server's key share</span></div>
+      <ul class="rules">
+        <li><b>ECDH</b> (usually X25519): both sides mix their secret with the other's public share and reach the same value. Crypto 101's paint demo, for real.</li>
+        <li><b>Fresh keys every connection</b>: steal the server's long-term key later and old recordings still stay locked (forward secrecy).</li>
+        <li><b>Hybrid with ML-KEM</b>: major browsers now combine X25519 with the post-quantum ML-KEM, so traffic recorded today stays safe from future quantum computers.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>What each side knows</h3>
+      <div class="table-wrap"><table class="grid-table">
+        <thead><tr><th></th><th>Browser</th><th>Network</th><th>Server</th></tr></thead>
+        <tbody>
+          <tr><th>Browser's secret</th><td class="y">yes</td><td>no</td><td>no</td></tr>
+          <tr><th>Both public shares</th><td>yes</td><td class="k">yes</td><td>yes</td></tr>
+          <tr><th>Server's secret</th><td>no</td><td>no</td><td class="y">yes</td></tr>
+          <tr><th>Shared session keys</th><td class="ok">yes</td><td>no</td><td class="ok">yes</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">The network sees both public shares, but turning them back into the secret is the hard puzzle from Crypto 101.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>The key exchange is the paint-mixing idea from Crypto 101, done with elliptic curves.</span></li><li><b class="say">Say</b><span>Forward secrecy: every connection uses throwaway keys, so a stolen server key later can't unlock old traffic.</span></li><li><b class="say">Say</b><span>Hybrid post-quantum: browsers already send an ML-KEM share alongside X25519. Breaking the connection would need breaking both.</span></li></ul></div>
+</section>
+
+<section class="slide" id="certificates" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// HANDSHAKE 04</p><h2>Certificates: proving it's really the site</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="note">Break something and watch what your browser does.</p>
+      <div class="controls controls-col">
+        <label class="check"><input type="checkbox" id="cert-name"> Visit <span class="mono-y">examp1e.com</span> instead</label>
+        <label class="check"><input type="checkbox" id="cert-expired"> The certificate has expired</label>
+        <label class="check"><input type="checkbox" id="cert-root"> The root isn't in your browser's store</label>
+        <label class="check"><input type="checkbox" id="cert-tamper"> Someone edited the certificate</label>
+      </div>
+      <div class="chainvis" id="cert-chain"></div>
+    </div>
+    <div class="stack">
+      <pre class="term" id="cert-checks"></pre>
+      <div class="verdict" id="cert-verdict"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The browser ships with a list of trusted root authorities. A root signs an intermediate, which signs the site's certificate. The browser checks every link, the name, and the dates.</span></li><li><b class="show">Show</b><span>Tick each problem one at a time and read the warning it causes. Then untick them all: padlock.</span></li><li><b class="say">Say</b><span>These signatures are real P-256 signatures, made fresh when the page loaded.</span></li></ul></div>
+</section>
+
+<section class="slide" id="rtt" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// HANDSHAKE 05</p><h2>Why TLS 1.3 is faster</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <label class="grow">Round-trip time to the server <span class="range"><input type="range" id="rtt-ms" min="10" max="600" step="10" value="80"><output id="rtt-ms-out">80 ms</output></span></label>
+    </div>
+    <div class="rtt" id="rtt-bars"></div>
+    <p class="note" id="rtt-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Each back-and-forth costs one round trip. TLS 1.2 needed two before the request; TLS 1.3 needs one; HTTP/3 (QUIC) merges the connection and the handshake.</span></li><li><b class="show">Show</b><span>Drag the slider up to a slow mobile or satellite link: the savings grow with distance.</span></li><li><b class="say">Say</b><span>Security got stronger and faster at the same time: TLS 1.3 also removed old, weak options.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers. Guesses are welcome.</p>
+    <ol class="checkpoint">
+      <li><p>Why does the browser need a certificate at all, if the key exchange already creates a shared secret?</p><details><summary>Hint</summary><p>Who did you exchange keys with?</p></details><details class="answer"><summary>Answer</summary><p>Without it you could have a perfectly secret conversation with an impostor. The certificate and signature prove the other end is really the site.</p></details></li>
+      <li><p>An attacker records your encrypted traffic today and steals the server's private key next year. Can they read today's traffic?</p><details><summary>Hint</summary><p>Which key encrypted the conversation?</p></details><details class="answer"><summary>Answer</summary><p>No, with forward secrecy: the session keys came from throwaway key shares that were deleted. The server's key only proves identity.</p></details></li>
+      <li><p>Why are browsers adding ML-KEM to the key exchange now, before big quantum computers exist?</p><details><summary>Hint</summary><p>Harvest now, decrypt later.</p></details><details class="answer"><summary>Answer</summary><p>Traffic recorded today could be decrypted later by a quantum computer. Adding ML-KEM now protects today's recordings.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share.</span></li><li><b class="say">Say</b><span>Q1 is the big one: encryption without authentication is a private chat with a stranger.</span></li><li><b class="tip">Tip</b><span>Timing: Part 2 should finish around minute 52.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="records" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// AFTER 01</p><h2>Encrypted records</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">Your browser sends <input id="rec-in" value="GET /account HTTP/1.1  Host: example.com  Cookie: session=7f3a" spellcheck="false" autocomplete="off"></label></div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="rec-pad"> Pad to hide the length</label>
+        <button type="button" class="btn btn-ghost btn-sm" id="rec-tamper">Flip one bit on the way</button>
+      </div>
+      <div class="record" id="rec-bytes"></div>
+      <pre class="term" id="rec-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Everything after the handshake travels in <b>records</b>: a 5-byte header, then encrypted bytes, then a 16-byte tag.</li>
+        <li>The header is readable: it says "application data" and the length.</li>
+        <li>Each record uses a new nonce (a counter), so nothing repeats.</li>
+        <li>One flipped bit and the tag fails: the connection closes.</li>
+      </ul>
+      <p class="callout"><b>LENGTH LEAKS</b> Encryption hides content, not size. Sites can pad records, but most don't.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Type a longer request: the record grows by exactly as much. Tick "pad": now different requests look the same size.</span></li><li><b class="show">Show</b><span>Flip a bit: decryption fails and TLS closes the connection with a "bad_record_mac" alert. AES-GCM from Crypto 101, doing its job.</span></li><li><b class="next">Next</b><span>"So what can the network still learn?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="what-leaks" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// AFTER 02</p><h2>What the network still learns</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <label class="check"><input type="checkbox" id="leak-doh"> Encrypted DNS</label>
+      <label class="check"><input type="checkbox" id="leak-ech"> Encrypted ClientHello (ECH)</label>
+      <label class="check"><input type="checkbox" id="leak-vpn"> A VPN</label>
+    </div>
+    <div class="table-wrap"><table class="grid-table leaks" id="leak-table"></table></div>
+    <p class="note" id="leak-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>With plain HTTPS, your Wi-Fi and internet provider still see which site, its IP address, and how much and when. Never the page, your cookies or your data.</span></li><li><b class="show">Show</b><span>Tick encrypted DNS and ECH: the site name disappears from the network's view, though the IP address can still hint at it. Tick VPN: everything moves to the VPN company instead.</span></li><li><b class="say">Say</b><span>Every tool moves trust somewhere. The question is always "hidden from whom?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="warnings" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// AFTER 03</p><h2>Certificate warnings: when to stop</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-3">
+      <div class="card card-bad"><b>"Your connection is not private"</b><span>The certificate failed a check: wrong name, expired, untrusted issuer, or tampered. On a public site, stop. Don't click through, especially for banking or logins.</span></div>
+      <div class="card"><b>Why it happens innocently</b><span>A site forgot to renew, a device's clock is wrong, or café Wi-Fi is showing its sign-in page. Check the date, then try again later or on another network.</span></div>
+      <div class="card card-ok"><b>Some sites won't let you click through</b><span>Sites that use HSTS tell the browser "always HTTPS, no exceptions", so the warning has no "continue" button at all.</span></div>
+    </div>
+    <p class="callout"><b>THE PADLOCK MEANS</b> "this connection is encrypted and the certificate matches this name". It doesn't mean the site is honest: scam sites get certificates too.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Warnings are rare now, so when one appears, take it seriously.</span></li><li><b class="say">Say</b><span>Most innocent causes: an expired certificate, a wrong device clock, or a Wi-Fi sign-in page.</span></li><li><b class="say">Say</b><span>The padlock is about the connection, not the company. A phishing site can have a perfectly valid padlock for its own look-alike name.</span></li></ul></div>
+</section>
+
+<section class="slide" id="hsts" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// AFTER 04</p><h2>HSTS: never take the unencrypted road</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <button type="button" class="btn btn-ghost btn-sm" data-hsts="none">First visit, no HSTS</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-hsts="remembered">HSTS remembered</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-hsts="preload">On the preload list</button>
+    </div>
+    <ol class="hsts-steps" id="hsts-steps"></ol>
+    <p class="note">You type <span class="mono-y">bank.example</span>, with no https://. What happens next depends on whether the browser already knows to use HTTPS.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>If you type a bare name, the browser may start with plain http:// and get redirected. That first unencrypted step is a gap: someone on the network could keep you on http.</span></li><li><b class="show">Show</b><span>The three scenarios. HSTS: the site told your browser "always HTTPS", so it upgrades before sending anything. Preload: browsers ship with a list of HSTS sites, protecting even the very first visit.</span></li><li><b class="tip">Tip</b><span>Fun fact: whole domain endings like .app and .dev are on the preload list, so every site under them must use HTTPS.</span></li></ul></div>
+</section>
+
+<section class="slide" id="transparency" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// AFTER 05</p><h2>Certificate Transparency: catching bad certificates</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="ct-normal">Bank renews its certificate</button>
+        <button type="button" class="btn btn-sm" id="ct-rogue">A CA mis-issues one for bank.example</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ct-edit">Try to quietly delete an entry</button>
+      </div>
+      <ol class="ctlog" id="ct-log"></ol>
+      <pre class="term" id="ct-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Every publicly trusted certificate must be written to public, append-only <b>logs</b>, or browsers reject it.</li>
+        <li>Anyone can watch the logs. Sites get alerts when a certificate appears for their name.</li>
+        <li>Each entry is chained to the previous ones by hashes, so entries can't be quietly removed.</li>
+        <li>Browsers remove CAs that misbehave. In October 2026 they blocked eMudhra's dangerously weak certificates within days of researchers reporting them.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>CAs can make mistakes, or be hacked. Transparency logs make every certificate public so mistakes get spotted fast.</span></li><li><b class="show">Show</b><span>Renew normally: the bank's monitor sees an expected entry. Mis-issue one: the monitor raises an alarm. Try to delete an entry: every later hash breaks.</span></li><li><b class="say">Say</b><span>Certificates are also getting much shorter lifetimes, so mistakes expire faster; renewals are automated.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers. Guesses are welcome.</p>
+    <ol class="checkpoint">
+      <li><p>With HTTPS, can the network see which site you visit? Which page? Your password?</p><details><summary>Hint</summary><p>Think DNS, the ClientHello, and the encrypted records.</p></details><details class="answer"><summary>Answer</summary><p>Usually the site (through DNS and the ClientHello name), but not the page, and not your password, cookies or content. Encrypted DNS and ECH can hide the site name too.</p></details></li>
+      <li><p>A scam site shows a valid padlock. How is that possible?</p><details><summary>Hint</summary><p>What does a certificate actually vouch for?</p></details><details class="answer"><summary>Answer</summary><p>A certificate only proves control of that domain name. Scammers can get one for their own look-alike name; the padlock says nothing about honesty.</p></details></li>
+      <li><p>Why can't a site's HSTS warning page be clicked through?</p><details><summary>Hint</summary><p>What did the site promise the browser earlier?</p></details><details class="answer"><summary>Answer</summary><p>The site told the browser it always uses valid HTTPS, so any problem must be an attack or a serious fault. Removing the button stops people being talked past it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share.</span></li><li><b class="tip">Tip</b><span>Timing: Part 3 should finish around minute 77.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="inspect" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>Inspect this connection, right now</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>See the certificate</h3>
+      <ul class="rules">
+        <li><b>Chrome / Edge:</b> click the icon left of the address, then "Connection is secure", then "Certificate is valid".</li>
+        <li><b>Firefox:</b> click the padlock, then "Connection secure", then "More information", then "View Certificate".</li>
+        <li><b>Safari:</b> click the padlock, then "Show Certificate".</li>
+      </ul>
+      <p class="note">Crypto 101's <a href="../crypto-101/#certificates">certificate slide</a> explains every field.</p>
+    </div>
+    <div class="stack">
+      <h3>See the handshake</h3>
+      <ul class="rules">
+        <li>Open your browser's developer tools (F12) and find the <b>security</b> section: it shows the TLS version, the key exchange and the cipher this page is using.</li>
+        <li>Look for TLS 1.3, a key exchange like <span class="mono-y">X25519MLKEM768</span> (the hybrid from earlier), and AES-GCM or ChaCha20.</li>
+      </ul>
+      <pre class="term" id="inspect-out"></pre>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Open this page's certificate live, and the developer tools' security view. Invite people with laptops to do the same.</span></li><li><b class="say">Say</b><span>Everything from today is on that screen: the protocol version, the hybrid key exchange, the cipher, and the certificate chain.</span></li><li><b class="tip">Tip</b><span>Menu names move between browser versions; rehearse with the browser you'll present on.</span></li></ul></div>
+</section>
+
+<section class="slide" id="recap" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>The whole journey, in one picture</h2></header>
+  <div class="slide-body stack">
+    <div class="journey journey-full">
+      <a href="#dns"><b>DNS</b><span>example.com → address</span><small>Leaks the name, unless encrypted</small></a>
+      <a href="#http-plain"><b>TCP</b><span>open a connection</span><small>Leaks the address</small></a>
+      <a href="#handshake"><b>Hello</b><span>key shares + site name</span><small>Name visible, unless ECH</small></a>
+      <a href="#certificates"><b>Certificate</b><span>prove identity</span><small>Signed chain, checked by the browser</small></a>
+      <a href="#records"><b>Records</b><span>encrypted HTTP</span><small>Content secret, size visible</small></a>
+    </div>
+    <div class="cards-3">
+      <div class="card card-ok"><b>Secret</b><span>Pages, paths, form data, passwords, cookies, downloads.</span></div>
+      <div class="card"><b>Visible to the network</b><span>Which site (usually), the server's address, how much and when.</span></div>
+      <div class="card card-bad"><b>Not covered by HTTPS</b><span>Whether the site itself is honest, and what it does with your data.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Walk the five stops one last time, and what each one leaks.</span></li><li><b class="ask">Ask</b><span>Which slide from Crypto 101 powers each stop? <em>Answer: key exchange (paint, ECDH), signatures and certificates, AES-GCM tags, hashing in the transcript and transparency logs.</em></span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today: DNS, the handshake, certificates, or that warning you clicked through once.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>Step through the handshake again any time.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://badssl.com/" target="_blank" rel="noopener">badssl.com</a><span>Deliberately broken HTTPS sites, to see every warning safely.</span></li>
+        <li><a href="https://tls13.xargs.org/" target="_blank" rel="noopener">The Illustrated TLS 1.3 Connection</a><span>Every byte of a real handshake, explained.</span></li>
+        <li><a href="https://crt.sh/" target="_blank" rel="noopener">crt.sh</a><span>Search Certificate Transparency logs for any domain.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>The maths: key exchange, signatures, AES-GCM and hashing.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser with simplified message formats; nothing you type is sent anywhere.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min or more</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li><li><b class="say">Say</b><span>badssl.com is a safe place to see every kind of warning; crt.sh lets them look up certificates for their own sites.</span></li><li><b class="tip">Tip</b><span>Press O to jump back to the handshake if someone wants to see it again.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

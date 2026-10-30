@@ -187,6 +187,24 @@
   }
   const hmacSha256 = (key, msg) => hmac(sha256, key, msg);
 
+  // --------------------------------------------------------------------------- HKDF (RFC 5869) and TLS 1.3's HKDF-Expand-Label (RFC 8446 §7.1)
+  const hkdfExtract = (salt, ikm) => hmacSha256(salt.length ? salt : new Uint8Array(32), ikm);
+  function hkdfExpand(prk, info, len) {
+    const out = new Uint8Array(len);
+    let t = new Uint8Array(0);
+    for (let i = 0, off = 0; off < len; i++) {
+      t = hmacSha256(prk, concat(t, info, Uint8Array.of(i + 1)));
+      out.set(t.subarray(0, Math.min(32, len - off)), off);
+      off += 32;
+    }
+    return out;
+  }
+  function hkdfExpandLabel(secret, label, context, len) {
+    const l = utf8("tls13 " + label);
+    const info = concat(Uint8Array.of(len >> 8, len & 255, l.length), l, Uint8Array.of(context.length), context);
+    return hkdfExpand(secret, info, len);
+  }
+
   // --------------------------------------------------------------------------- SHA-1 (broken for collisions, still what authenticator apps use inside HMAC)
   function sha1(msg) {
     const p = sha256Pad(msg), dv = new DataView(p.buffer), H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0], W = new Uint32Array(80);
@@ -491,7 +509,7 @@
   root.Lab = {
     utf8, text, hex, fromHex, bits, randBytes, concat, xor, chunks, bitDiff, equalBytes, randInt,
     ALPHA, FREQ, SAMPLE, letters, mod, caesar, counts, chi2, vigenere, ic, breakVigenere, Enigma,
-    sha256, sha256Pad, hmac, hmacSha256, sha1, hmacSha1, base32Encode, base32Decode, hotp, totp,
+    sha256, sha256Pad, hmac, hmacSha256, hkdfExtract, hkdfExpand, hkdfExpandLabel, sha1, hmacSha1, base32Encode, base32Decode, hotp, totp,
     SBOX, expandKey, subBytes, shiftRows, mixColumns, addKey, aesBlock, pad, aesEcb, aesCbc, ctrCrypt, gcmEncrypt, gcmDecrypt, toBig, fromBig,
     modPow, gcd, modInv, randBits, randBelow, isPrime, genPrime, rsaKeygen, iroot, Curve, TOY, P256, ecdsaSign, ecdsaVerify, hashInt,
     derSig, spkiP256, verifyPasskey,

@@ -538,3 +538,10 @@ pre.code { margin: 0; font: .72em/1.55 var(--mono); color: var(--yellow); backgr
 .deck-ui .hub-link:hover { color: var(--cyan); border-color: var(--line); }
 .scroll-nav .hub-back { font: 600 13px var(--mono); color: var(--pink); letter-spacing: .1em; }
 .title-copy h1 .glitch { justify-self: start; }   /* keep the glitch copies inside the slide */
+
+/* Show text exactly as typed: no ligatures or contextual alternates. JetBrains Mono otherwise merges
+   or re-spaces runs like //, ///, => and !=, which can make a character look like it vanished.
+   Form fields set their font with the "font" shorthand, which resets these, hence !important. */
+*, *::before, *::after, input, textarea, select, button, output {
+  font-variant-ligatures: none !important; font-feature-settings: "liga" 0, "clig" 0, "calt" 0 !important;
+}

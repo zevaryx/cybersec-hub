@@ -8,8 +8,18 @@ Talks on cryptography and cybersecurity by [zevaryx](https://github.com/zevaryx)
 
 | Talk | Level | Length | Link |
 | --- | --- | --- | --- |
+| **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
 | **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
 | **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
+
+### How HTTPS Really Works
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Before any encryption** (20 min): the journey of a request, DNS lookups and who sees them, the café Wi-Fi view of plain HTTP vs HTTPS
+2. **The handshake** (30 min): a live TLS 1.3 handshake with real P-256 key exchange, the real TLS 1.3 key schedule (HKDF), a certificate chain and signatures; hybrid post-quantum key exchange; breaking certificates on purpose; why TLS 1.3 is faster
+3. **After the handshake** (25 min): encrypted records and tamper detection, what the network still learns (with encrypted DNS, ECH and VPNs), certificate warnings, HSTS, Certificate Transparency
+4. **Wrap-up** (15 min): inspect this page's own connection, the whole journey in one picture
 
 ### Passwords and Accounts
 
@@ -102,12 +112,12 @@ docs/
   shared/
     deck.css          the cyberpunk theme, slide layout, scroll view, print layout, timers
     deck.js           slide navigation, notes, overview, presenter window, checkpoint timers
-    crypto.js         the maths: classical ciphers, SHA-256, SHA-1, HMAC, authenticator codes (HOTP/TOTP), Base32,
+    crypto.js         the maths: classical ciphers, SHA-256, SHA-1, HMAC, HKDF (incl. TLS 1.3 labels), HOTP/TOTP, Base32,
                       AES (ECB/CBC/CTR/GCM), RSA, elliptic curves, passkey signature checks, toy lattice encryption
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/
+    crypto-101/, passwords-and-accounts/, how-https-works/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos
