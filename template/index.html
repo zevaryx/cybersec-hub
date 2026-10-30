@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{TITLE}}: a talk by zevaryx, with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/{{SLUG}}/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/{{SLUG}}/">
+<!-- Add a 1200x630 og-image.png of the title slide, then uncomment:
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/{{SLUG}}/og-image.png">
+<meta name="twitter:card" content="summary_large_image"> -->
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "{{SLUG}}", "title": "{{TITLE}}", "footer": "{{FOOTER}}", "subtitle": "ZEVARYX · CYBERSEC HUB",
+  "parts": [{ "name": "Part one", "minutes": 25 }, { "name": "Part two", "minutes": 25 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">{{TITLE}}</a>
+  <div class="scroll-parts">
+    <a href="#part-1" data-part="1"><b>01</b>Part one</a>
+    <a href="#part-2" data-part="2"><b>02</b>Part two</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- Each slide: <section class="slide" id="unique-id" data-part="N" data-num="NN">, a .slide-head, a .slide-body and a .notes block.
+     data-part 0 = intro/outro, 1.. = the parts in deck-config. Add data-skip="1" to mark a slide skippable. -->
+
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// ZEVARYX · CYBERSEC HUB</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="{{TITLE}}">{{TITLE}}</span></h1>
+      <p class="lede">One sentence on what this talk covers and who it's for.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="demo-in">$ sha256(<input id="demo-in" value="hello" spellcheck="false" autocomplete="off">)</label>
+      <output class="hashout" id="demo-out"></output>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome, and what the talk covers.</span></li><li><b class="show">Show</b><span>The live demo on the right.</span></li></ul></div>
+</section>
+
+<section class="slide" id="part-1" data-part="1" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// PART ONE 01</p><h2>A content slide</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>Point one</li>
+        <li><b>Point two</b>, emphasised</li>
+      </ul>
+    </div>
+    <div class="card"><b>A card</b><span>Use .card, .cols-2, .stack, .term, .chain and the other shared blocks from shared/deck.css.</span></div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The point to make.</span></li><li><b class="ask">Ask</b><span>A question for the room. <em>Answer: the answer.</em></span></li><li><b class="next">Next</b><span>"A line into the next slide."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Question one?</p><details><summary>Hint</summary><p>A hint.</p></details><details class="answer"><summary>Answer</summary><p>The answer.</p></details></li>
+      <li><p>Question two?</p><details><summary>Hint</summary><p>A hint.</p></details><details class="answer"><summary>Answer</summary><p>The answer.</p></details></li>
+      <li><p>Question three?</p><details><summary>Hint</summary><p>A hint.</p></details><details class="answer"><summary>Answer</summary><p>The answer.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="part-2" data-part="2" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// PART TWO 01</p><h2>Another slide</h2></header>
+  <div class="slide-body stack"><p class="big-lede">Replace these slides with your own.</p></div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>The point to make.</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="2" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body stack">
+    <p class="glitch big-q" data-text="Questions?">Questions?</p>
+    <p class="contact">Ask later at <a href="https://github.com/zevaryx/cybersec-hub/discussions">github.com/zevaryx/cybersec-hub/discussions</a> or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
