@@ -202,8 +202,8 @@ input[type="range"] { accent-color: var(--pink); width: 240px; max-width: 60vw; 
 .controls label.grow .range, .controls label.grow input[type="range"] { width: 100%; max-width: none; }
 input[type="checkbox"] { accent-color: var(--pink); width: 18px; height: 18px; }
 .btn {
-  font: 600 .78em var(--display); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; justify-self: start;
-  color: var(--void); background: var(--pink); border: 0; padding: 11px 18px;
+  font: 700 .84em var(--display); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; justify-self: start;
+  color: var(--void); background: #ff66a8; border: 0; padding: 11px 18px;   /* lighter than --pink: dark text stays readable on a projector */
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
   transition: background .15s;
 }
