@@ -51,3 +51,60 @@ body.hub::after {                                  /* CRT scanlines, as on the s
   .talk, .hub-info { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .talk-shot img { transition: none; } }
+
+/* tracks: Crypto 101 sits above them, then each track lists its talks in order */
+.track-lede { color: var(--muted); max-width: 46em; margin: -6px 0 18px; }
+ol.talk-list { list-style: none; margin: 0; padding: 0; }
+.track { margin-top: clamp(40px, 6vw, 64px); scroll-margin-top: 16px; }
+.track-nav { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: clamp(32px, 5vw, 48px); font-family: var(--mono); font-size: .85rem; }
+.track-nav span { color: var(--muted); margin-right: 4px; }
+.track-nav a { padding: 6px 14px; border: 1px solid var(--cyan); color: var(--cyan); text-decoration: none; letter-spacing: .1em; text-transform: uppercase; }
+.track-nav a:hover { background: var(--cyan); color: var(--void); }
+.talk-step {
+  position: absolute; top: 0; left: 0; z-index: 1; padding: 6px 12px; line-height: 1;
+  font: 700 1.1rem var(--mono); color: var(--void); background: var(--yellow) !important;
+}
+.talk-prereq { font: .75rem var(--mono); color: var(--muted); letter-spacing: .06em; }
+.talk-prereq a { color: var(--cyan); }
+.track-empty { color: var(--muted); margin-top: 14px; }
+
+/* empty tracks: a "no signal" screen with torn colour bars, static and a rolling scan band */
+.no-signal {
+  position: relative; height: clamp(180px, 26vw, 260px); overflow: hidden; container-type: inline-size;
+  clip-path: var(--cutpath); border: 1px solid var(--line); background: var(--void);
+}
+.ns-bars { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, 1fr); opacity: .35; filter: saturate(1.2); }
+.ns-bars i:nth-child(1) { background: var(--fg); } .ns-bars i:nth-child(2) { background: var(--yellow); }
+.ns-bars i:nth-child(3) { background: var(--cyan); }  .ns-bars i:nth-child(4) { background: var(--ok); }
+.ns-bars i:nth-child(5) { background: var(--pink); }  .ns-bars i:nth-child(6) { background: var(--bad); }
+.ns-bars i:nth-child(7) { background: var(--panel-2); }
+.ns-bars { animation: ns-tear 4.3s steps(1) infinite; }
+@keyframes ns-tear {
+  0%, 70%, 100% { clip-path: none; transform: none; }
+  72% { clip-path: polygon(0 0, 100% 0, 100% 38%, 0 38%, 0 46%, 100% 46%, 100% 100%, 0 100%); transform: translateX(14px); }
+  75% { transform: translateX(-22px) skewX(-4deg); }
+  78% { clip-path: polygon(0 0, 100% 0, 100% 70%, 0 70%); transform: translateX(6px); }
+}
+.ns-static {
+  position: absolute; inset: -50%; opacity: .22; mix-blend-mode: screen; animation: ns-noise .5s steps(4) infinite;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes ns-noise { 0% { transform: translate(0, 0); } 25% { transform: translate(-7%, 4%); } 50% { transform: translate(5%, -6%); } 75% { transform: translate(-3%, -2%); } }
+.no-signal::after {                                    /* the rolling band */
+  content: ""; position: absolute; left: 0; right: 0; height: 22%; top: -25%;
+  background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, .12) 45%, rgba(255, 255, 255, .18) 50%, transparent);
+  animation: ns-roll 3.6s linear infinite;
+}
+@keyframes ns-roll { to { top: 105%; } }
+.ns-text {
+  position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center;
+  background: radial-gradient(closest-side, rgba(7, 6, 15, .9), rgba(7, 6, 15, .55) 70%, transparent);
+}
+.ns-text .glitch { font-size: clamp(2rem, 9cqi, 4rem); }
+.ns-text small { font: .75rem var(--mono); color: var(--cyan); letter-spacing: .14em; text-transform: uppercase; animation: ns-blink 1.2s steps(1) infinite; }
+@keyframes ns-blink { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .ns-bars, .ns-static, .no-signal::after, .ns-text small { animation: none; }
+}
+.track-nav a[aria-pressed="true"] { background: var(--cyan); color: var(--void); box-shadow: 0 0 16px var(--cyan-glow); }
+.track[hidden] { display: none; }

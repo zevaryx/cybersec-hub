@@ -6,11 +6,19 @@ Talks on cryptography and cybersecurity by [zevaryx](https://github.com/zevaryx)
 
 ## Talks
 
-| Talk | Level | Length | Link |
-| --- | --- | --- | --- |
-| **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
-| **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
-| **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
+Start with **Crypto 101**: every track builds on it. Then pick the track that fits you and take its talks in order.
+
+- **General**: for everyone; protecting yourself, your accounts and your data
+- **Developer**: for people who write and ship code
+- **Security**: for IT and security professionals
+
+| Order | Talk | Level | Length | Link |
+| --- | --- | --- | --- | --- |
+| Start here | **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
+| General 1 | **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
+| General 2 | **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
+
+The Developer and Security tracks have no finished talks yet.
 
 ### How HTTPS Really Works
 
@@ -99,7 +107,7 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 
 1. Write the slides in its `index.html` (each has its speaker notes in a `.notes` block) and its demos in `app.js`.
 2. Set the parts and their minutes in the page's `deck-config` block; the presenter window builds its timing plan from them.
-3. Add a card for it to `docs/index.html` and a row to the table above.
+3. Add a card for it to its track in `docs/index.html`, in the order to take the talks, and a row to the table above.
 4. Optionally add a 1200×630 `og-image.png` for link previews.
 5. Hide a few easter eggs in the demos (jokes for special inputs, a console hint, a reward for finishing something) and list them in the title slide's speaker notes. Every talk has some.
 
@@ -107,7 +115,7 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 
 ```
 docs/
-  index.html          the hub's front page (one card per talk)
+  index.html          the hub's front page (Crypto 101, then one section per track)
   hub.css             front-page styles
   shared/
     deck.css          the cyberpunk theme, slide layout, scroll view, print layout, timers

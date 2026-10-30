@@ -33,38 +33,14 @@
 </header>
 
 <main class="hub-wrap">
-  <section aria-labelledby="talks-h">
-    <h2 id="talks-h" class="hub-h2">Talks</h2>
+  <section class="start" aria-labelledby="start-h">
+    <h2 id="start-h" class="hub-h2">Start here</h2>
+    <p class="track-lede">Every track builds on this one. It covers the ideas the other talks assume you know: hashing, encryption, keys and signatures.</p>
     <div class="talk-list">
-      <!-- One <article class="talk"> per talk. Newest first. -->
-      <article class="talk">
-        <a class="talk-shot" href="talks/how-https-works/" tabindex="-1" aria-hidden="true"><img src="talks/how-https-works/og-image.png" alt="" width="1200" height="630" loading="lazy"></a>
-        <div class="talk-body">
-          <p class="talk-tags"><span class="tag tag-c">Beginner</span><span class="tag">About 90 minutes</span><span class="tag">21 slides</span><span class="tag tag-y">Live demos</span></p>
-          <h3><a href="talks/how-https-works/">How HTTPS Really Works</a></h3>
-          <p>Follow one web request from the address bar to the padlock: DNS, what café Wi-Fi can see, a real TLS 1.3 handshake you can step through, certificates and their warnings, and what still leaks. The natural sequel to Crypto 101.</p>
-          <p class="talk-actions">
-            <a class="btn" href="talks/how-https-works/">Open the slides</a>
-            <a class="btn btn-ghost btn-sm" href="talks/how-https-works/?view=scroll">Read as one page</a>
-          </p>
-        </div>
-      </article>
-      <article class="talk">
-        <a class="talk-shot" href="talks/passwords-and-accounts/" tabindex="-1" aria-hidden="true"><img src="talks/passwords-and-accounts/og-image.png" alt="" width="1200" height="630" loading="lazy"></a>
-        <div class="talk-body">
-          <p class="talk-tags"><span class="tag tag-c">Beginner</span><span class="tag">About 70 minutes</span><span class="tag">21 slides</span><span class="tag tag-y">Live demos</span></p>
-          <h3><a href="talks/passwords-and-accounts/">Passwords and Accounts, done properly</a></h3>
-          <p>How accounts actually get broken into, and the few habits that stop almost all of it: unique passwords, password managers, two-factor codes (scan a live one with your phone), passkeys and recovery. Ends with a checklist you can do tonight.</p>
-          <p class="talk-actions">
-            <a class="btn" href="talks/passwords-and-accounts/">Open the slides</a>
-            <a class="btn btn-ghost btn-sm" href="talks/passwords-and-accounts/?view=scroll">Read as one page</a>
-          </p>
-        </div>
-      </article>
       <article class="talk">
         <a class="talk-shot" href="talks/crypto-101/" tabindex="-1" aria-hidden="true"><img src="talks/crypto-101/og-image.png" alt="" width="1200" height="630" loading="lazy"></a>
         <div class="talk-body">
-          <p class="talk-tags"><span class="tag tag-c">Beginner</span><span class="tag">About 2 hours</span><span class="tag">54 slides</span><span class="tag tag-y">Live demos</span></p>
+          <p class="talk-tags"><span class="tag tag-c">Beginner</span><span class="tag tag-ok">Every track</span><span class="tag">About 2 hours</span><span class="tag">54 slides</span><span class="tag tag-y">Live demos</span></p>
           <h3><a href="talks/crypto-101/">Crypto 101: Intro to Cryptography</a></h3>
           <p>How we keep digital information private and trustworthy: classic ciphers, hashing and passwords, AES, RSA and elliptic curves, passkeys, end-to-end encryption, and what quantum computers change. No background needed.</p>
           <p class="talk-actions">
@@ -74,6 +50,71 @@
         </div>
       </article>
     </div>
+  </section>
+
+  <nav class="track-nav" aria-label="Tracks">
+    <span>Then pick a track:</span>
+    <a href="#general" data-track="general" role="button" aria-pressed="false">General</a>
+    <a href="#developer" data-track="developer" role="button" aria-pressed="false">Developer</a>
+    <a href="#security" data-track="security" role="button" aria-pressed="false">Security</a>
+  </nav>
+
+  <!-- One <section class="track"> per track. Inside each, one <li class="talk"> per finished talk, in the order to take them; number them with .talk-step. -->
+  <section class="track" id="general" aria-labelledby="general-h">
+    <h2 id="general-h" class="hub-h2">Track: General</h2>
+    <p class="track-lede">For everyone. Protecting yourself, your accounts and your data, with no technical background needed.</p>
+    <ol class="talk-list">
+      <li class="talk">
+        <span class="talk-step" aria-hidden="true">01</span>
+        <a class="talk-shot" href="talks/passwords-and-accounts/" tabindex="-1" aria-hidden="true"><img src="talks/passwords-and-accounts/og-image.png" alt="" width="1200" height="630" loading="lazy"></a>
+        <div class="talk-body">
+          <p class="talk-prereq">Watch first: <a href="talks/crypto-101/">Crypto 101</a></p>
+          <p class="talk-tags"><span class="tag tag-c">Beginner</span><span class="tag">About 70 minutes</span><span class="tag">21 slides</span><span class="tag tag-y">Live demos</span></p>
+          <h3><a href="talks/passwords-and-accounts/">Passwords and Accounts, done properly</a></h3>
+          <p>How accounts actually get broken into, and the few habits that stop almost all of it: unique passwords, password managers, two-factor codes (scan a live one with your phone), passkeys and recovery. Ends with a checklist you can do tonight.</p>
+          <p class="talk-actions">
+            <a class="btn" href="talks/passwords-and-accounts/">Open the slides</a>
+            <a class="btn btn-ghost btn-sm" href="talks/passwords-and-accounts/?view=scroll">Read as one page</a>
+          </p>
+        </div>
+      </li>
+      <li class="talk">
+        <span class="talk-step" aria-hidden="true">02</span>
+        <a class="talk-shot" href="talks/how-https-works/" tabindex="-1" aria-hidden="true"><img src="talks/how-https-works/og-image.png" alt="" width="1200" height="630" loading="lazy"></a>
+        <div class="talk-body">
+          <p class="talk-prereq">Watch first: <a href="talks/crypto-101/">Crypto 101</a></p>
+          <p class="talk-tags"><span class="tag tag-c">Beginner</span><span class="tag">About 90 minutes</span><span class="tag">21 slides</span><span class="tag tag-y">Live demos</span></p>
+          <h3><a href="talks/how-https-works/">How HTTPS Really Works</a></h3>
+          <p>Follow one web request from the address bar to the padlock: DNS, what café Wi-Fi can see, a real TLS 1.3 handshake you can step through, certificates and their warnings, and what still leaks. The natural sequel to Crypto 101.</p>
+          <p class="talk-actions">
+            <a class="btn" href="talks/how-https-works/">Open the slides</a>
+            <a class="btn btn-ghost btn-sm" href="talks/how-https-works/?view=scroll">Read as one page</a>
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="track" id="developer" aria-labelledby="developer-h">
+    <h2 id="developer-h" class="hub-h2">Track: Developer</h2>
+    <p class="track-lede">For people who write and ship code. Building software that keeps its users safe.</p>
+    <div class="no-signal" aria-hidden="true">
+      <div class="ns-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="ns-static"></div>
+      <div class="ns-text"><p class="glitch" data-text="No signal">No signal</p><small>// developer track · transmission pending</small></div>
+    </div>
+    <p class="track-empty">The first developer talk is on its way. Until then, start with <a href="talks/crypto-101/">Crypto 101</a> and <a href="talks/how-https-works/">How HTTPS Really Works</a>.</p>
+  </section>
+
+  <section class="track" id="security" aria-labelledby="security-h">
+    <h2 id="security-h" class="hub-h2">Track: Security</h2>
+    <p class="track-lede">For IT and security professionals. Defending organisations, from identity to incident response.</p>
+    <div class="no-signal" aria-hidden="true">
+      <div class="ns-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="ns-static"></div>
+      <div class="ns-text"><p class="glitch" data-text="No signal">No signal</p><small>// security track · transmission pending</small></div>
+    </div>
+    <p class="track-empty">The first security talk is on its way. Until then, start with <a href="talks/crypto-101/">Crypto 101</a> and <a href="talks/how-https-works/">How HTTPS Really Works</a>.</p>
   </section>
 
   <section class="hub-info" aria-labelledby="using-h">
@@ -102,6 +143,8 @@
     <p>Fonts: Chakra Petch and JetBrains Mono (SIL Open Font License). Password-hash timings use <a href="https://github.com/Daninet/hash-wasm">hash-wasm</a> (MIT).</p>
   </div>
 </footer>
+
+<script src="hub.js"></script>
 
 </body>
 </html>
