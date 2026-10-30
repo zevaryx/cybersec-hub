@@ -11,7 +11,15 @@
     $("demo-out").textContent = L.hex(L.sha256(L.utf8(el.value)));
   }
 
+  // --------------------------------------------------------------------------- easter eggs
+  // Every talk hides a few. Ideas: jokes for special inputs, a console message, a reward for finishing a demo.
+  function consoleHint() {
+    console.log("%c" + document.title, "font: 700 24px monospace; color: #ff2e88; text-shadow: 0 0 8px #ff2e88");
+    console.log("%cA hint for the curious goes here.", "font: 14px monospace; color: #00f0ff");
+  }
+
   function start() {
+    consoleHint();
     $("demo-in").addEventListener("input", hash);
     hash();
   }

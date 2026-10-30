@@ -179,12 +179,65 @@
     return out;
   }
 
-  function hmacSha256(key, msg) {
-    if (key.length > 64) key = sha256(key);
+  function hmac(hash, key, msg) {                      // HMAC for any hash with 64-byte blocks
+    if (key.length > 64) key = hash(key);
     const k = new Uint8Array(64); k.set(key);
     const ipad = k.map((x) => x ^ 0x36), opad = k.map((x) => x ^ 0x5c);
-    return sha256(concat(opad, sha256(concat(ipad, msg))));
+    return hash(concat(opad, hash(concat(ipad, msg))));
   }
+  const hmacSha256 = (key, msg) => hmac(sha256, key, msg);
+
+  // --------------------------------------------------------------------------- SHA-1 (broken for collisions, still what authenticator apps use inside HMAC)
+  function sha1(msg) {
+    const p = sha256Pad(msg), dv = new DataView(p.buffer), H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0], W = new Uint32Array(80);
+    const rotl = (x, n) => (x << n) | (x >>> (32 - n));
+    for (let off = 0; off < p.length; off += 64) {
+      for (let t = 0; t < 16; t++) W[t] = dv.getUint32(off + 4 * t);
+      for (let t = 16; t < 80; t++) W[t] = rotl(W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16], 1);
+      let [a, b, c, d, e] = H;
+      for (let t = 0; t < 80; t++) {
+        const [f, k] = t < 20 ? [(b & c) | (~b & d), 0x5a827999] : t < 40 ? [b ^ c ^ d, 0x6ed9eba1]
+          : t < 60 ? [(b & c) | (b & d) | (c & d), 0x8f1bbcdc] : [b ^ c ^ d, 0xca62c1d6];
+        const tmp = (rotl(a, 5) + f + e + k + W[t]) >>> 0;
+        e = d; d = c; c = rotl(b, 30) >>> 0; b = a; a = tmp;
+      }
+      H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0; H[4] = (H[4] + e) >>> 0;
+    }
+    const out = new Uint8Array(20), odv = new DataView(out.buffer);
+    H.forEach((v, i) => odv.setUint32(4 * i, v));
+    return out;
+  }
+  const hmacSha1 = (key, msg) => hmac(sha1, key, msg);
+
+  // --------------------------------------------------------------------------- one-time codes (HOTP, RFC 4226; TOTP, RFC 6238)
+  const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  function base32Encode(b) {
+    let bits = 0, val = 0, out = "";
+    for (const x of b) { val = (val << 8) | x; bits += 8; while (bits >= 5) { out += B32[(val >>> (bits - 5)) & 31]; bits -= 5; } }
+    if (bits) out += B32[(val << (5 - bits)) & 31];
+    return out;
+  }
+  function base32Decode(s) {
+    const clean = s.toUpperCase().replace(/[\s=-]/g, ""), out = [];
+    let bits = 0, val = 0;
+    for (const ch of clean) {
+      const i = B32.indexOf(ch);
+      if (i < 0) throw new Error("not Base32");
+      val = (val << 5) | i; bits += 5;
+      if (bits >= 8) { out.push((val >>> (bits - 8)) & 255); bits -= 8; }
+    }
+    return Uint8Array.from(out);
+  }
+  /** One code from a shared secret and a counter. Returns the steps too, so they can be shown. */
+  function hotp(key, counter, digits = 6) {
+    const msg = new Uint8Array(8), dv = new DataView(msg.buffer);
+    dv.setUint32(0, Math.floor(counter / 0x100000000)); dv.setUint32(4, counter >>> 0);
+    const mac = hmacSha1(key, msg), offset = mac[19] & 15;
+    const bin = ((mac[offset] & 0x7f) << 24) | (mac[offset + 1] << 16) | (mac[offset + 2] << 8) | mac[offset + 3];
+    return { counter, msg, mac, offset, bin, code: String(bin % 10 ** digits).padStart(digits, "0") };
+  }
+  /** The code an authenticator app shows at a given time (seconds since 1970). */
+  const totp = (key, seconds, step = 30, digits = 6) => hotp(key, Math.floor(seconds / step), digits);
 
   // --------------------------------------------------------------------------- PART 3: AES-128 from scratch
   function makeSbox() {
@@ -438,7 +491,7 @@
   root.Lab = {
     utf8, text, hex, fromHex, bits, randBytes, concat, xor, chunks, bitDiff, equalBytes, randInt,
     ALPHA, FREQ, SAMPLE, letters, mod, caesar, counts, chi2, vigenere, ic, breakVigenere, Enigma,
-    sha256, sha256Pad, hmacSha256,
+    sha256, sha256Pad, hmac, hmacSha256, sha1, hmacSha1, base32Encode, base32Decode, hotp, totp,
     SBOX, expandKey, subBytes, shiftRows, mixColumns, addKey, aesBlock, pad, aesEcb, aesCbc, ctrCrypt, gcmEncrypt, gcmDecrypt, toBig, fromBig,
     modPow, gcd, modInv, randBits, randBelow, isPrime, genPrime, rsaKeygen, iroot, Curve, TOY, P256, ecdsaSign, ecdsaVerify, hashInt,
     derSig, spkiP256, verifyPasskey,

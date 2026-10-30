@@ -8,7 +8,19 @@ Talks on cryptography and cybersecurity by [zevaryx](https://github.com/zevaryx)
 
 | Talk | Level | Length | Link |
 | --- | --- | --- | --- |
+| **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
 | **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
+
+### Passwords and Accounts
+
+Four parts, with checkpoints after parts 1 and 3:
+
+1. **How accounts get broken into** (18 min): the attacker's shopping list, a password-reuse demo, what websites should store, checking for leaks without sending your password
+2. **Strong passwords without suffering** (16 min): length beats complexity, a random-password generator, password managers, how a vault is locked (live)
+3. **Two-factor and passkeys** (22 min): a live authenticator code the audience can scan with their own phone, how the 6 digits are made, which method stops which attack, the look-alike site test
+4. **Don't lock yourself out** (11 min): recovery codes, and a checklist for tonight that remembers your ticks
+
+The authenticator demo uses a public demo secret (`Cybersec Hub: Demo`); delete it from your app afterwards.
 
 ### Crypto 101
 
@@ -55,6 +67,14 @@ python3 -m http.server --directory docs 8000
 
 Then open <http://localhost:8000>. The real-passkey demo only works on the live site or `localhost`.
 
+Or use the included script, which opens your browser and needs nothing but Python 3:
+
+```sh
+python3 serve.py              # http://localhost:8000
+python3 serve.py --port 9000  # another port
+python3 serve.py --lan        # let phones on your network connect too
+```
+
 ## Publishing on GitHub Pages
 
 In the repository's **Settings → Pages**, choose **Deploy from a branch**, then the `main` branch and the `/docs` folder. Turn on **Discussions** (Settings → General → Features) so the questions links on the slides work.
@@ -71,6 +91,7 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 2. Set the parts and their minutes in the page's `deck-config` block; the presenter window builds its timing plan from them.
 3. Add a card for it to `docs/index.html` and a row to the table above.
 4. Optionally add a 1200×630 `og-image.png` for link previews.
+5. Hide a few easter eggs in the demos (jokes for special inputs, a console hint, a reward for finishing something) and list them in the title slide's speaker notes. Every talk has some.
 
 ## Project layout
 
@@ -81,18 +102,19 @@ docs/
   shared/
     deck.css          the cyberpunk theme, slide layout, scroll view, print layout, timers
     deck.js           slide navigation, notes, overview, presenter window, checkpoint timers
-    crypto.js         the maths: classical ciphers, SHA-256, AES (ECB/CBC/CTR/GCM), RSA, elliptic curves,
-                      passkey signature checks, toy lattice encryption
+    crypto.js         the maths: classical ciphers, SHA-256, SHA-1, HMAC, authenticator codes (HOTP/TOTP), Base32,
+                      AES (ECB/CBC/CTR/GCM), RSA, elliptic curves, passkey signature checks, toy lattice encryption
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/
+    crypto-101/, passwords-and-accounts/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos
       qr*.svg, og-image.png
 template/             starting point for a new talk (used by new-talk.sh)
 new-talk.sh
+serve.py              run the hub locally
 ```
 
 `shared/crypto.js` also works in Node (`require("./docs/shared/crypto.js")`), so the maths can be tested outside the browser. The AES and GCM code matches the official FIPS-197 and NIST test vectors.

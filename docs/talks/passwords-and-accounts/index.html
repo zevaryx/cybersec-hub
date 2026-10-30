@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Passwords and Accounts</title>
+<meta name="description" content="Passwords and Accounts, done properly: how accounts get broken into, password managers, two-factor codes, passkeys and recovery. A talk by zevaryx with live demos.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Passwords and Accounts, done properly">
+<meta property="og:description" content="How accounts get broken into, and the few habits that stop almost all of it. Live demos in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Passwords and Accounts in neon, beside a terminal estimating how long a password takes to crack.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Ccircle cx='11' cy='16' r='6' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M17 16h11v5M24 16v4' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "passwords-and-accounts", "title": "Passwords and Accounts", "footer": "PASSWORDS & ACCOUNTS", "subtitle": "DONE PROPERLY",
+  "parts": [{ "name": "How accounts get broken into", "minutes": 18 }, { "name": "Strong passwords without suffering", "minutes": 16 },
+            { "name": "Two-factor and passkeys", "minutes": 22 }, { "name": "Don't lock yourself out", "minutes": 11 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">PASS<span>WORDS</span></a>
+  <div class="scroll-parts">
+    <a href="#how-accounts-fall" data-part="1"><b>01</b>Break-ins</a>
+    <a href="#length" data-part="2"><b>02</b>Passwords</a>
+    <a href="#factors" data-part="3"><b>03</b>Two-factor</a>
+    <a href="#recovery" data-part="4"><b>04</b>Recovery</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= TITLE -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DONE PROPERLY</p>
+      <h1><span class="pre">Passwords and</span> <span class="glitch" data-text="Accounts">Accounts</span></h1>
+      <p class="lede">How accounts actually get broken into, and the few habits that stop almost all of it: password managers, two-factor, passkeys and recovery.</p>
+      <p class="muted">No background needed · questions welcome any time</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-pw">$ time-to-crack(<input id="hero-pw" value="Summer2026!" spellcheck="false" autocomplete="off">)</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 70 minutes, four parts, two discussion checkpoints. Questions any time.</span></li><li><b class="show">Show</b><span>The terminal: "Summer2026!" looks complex, but it's a word, a year and a symbol: one of the first patterns attackers try. Invite someone to suggest a password (not a real one!).</span></li><li><b class="tip">Tip</b><span>The estimate is rough on purpose. Part 2 explains why human-picked passwords are weaker than the maths suggests.</span></li><li><b class="tip">Eggs</b><span>Hidden jokes: try hunter2, swordfish, 12345 or "correct horse battery staple" in the terminal. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= ROADMAP -->
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#how-accounts-fall"><small>PART 1 · 18 MIN</small><b>How accounts get broken into</b></a><span>The attacker's shopping list</span><span>Password reuse</span><span>What websites store</span><span>Checking for leaks</span></li>
+      <li><a href="#length"><small>PART 2 · 16 MIN</small><b>Strong passwords without suffering</b></a><span>Length beats complexity</span><span>Let a computer pick</span><span>Password managers</span><span>How the vault is locked</span></li>
+      <li><a href="#factors"><small>PART 3 · 22 MIN</small><b>Two-factor and passkeys</b></a><span>Authenticator codes, live</span><span>How the 6 digits are made</span><span>Which method stops what</span><span>The look-alike site test</span></li>
+      <li><a href="#recovery"><small>PART 4 · 11 MIN</small><b>Don't lock yourself out</b></a><span>Recovery codes</span><span>Tonight's checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Four parts. By the end everyone should have a concrete list to do tonight.</span></li><li><b class="next">Next</b><span>"First, how do accounts actually get broken into?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="how-accounts-fall" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// BREAK-INS 01</p><h2>The attacker's shopping list</h2></header>
+  <div class="slide-body stack">
+    <p class="big-lede">Almost nobody "hacks" a password by cleverness. They reuse, trick, guess or reset.</p>
+    <div class="goal-grid">
+      <div class="goal"><b>Reused passwords</b><span>A site you used once leaks. Attackers try the same email and password everywhere else.</span><small>ALSO CALLED</small><em>Credential stuffing</em></div>
+      <div class="goal"><b>Phishing</b><span>A convincing fake login page, email or text gets you to type it in yourself.</span><small>ALSO CALLED</small><em>Fake login pages</em></div>
+      <div class="goal"><b>Guessing</b><span>The same few thousand common passwords, tried against millions of accounts.</span><small>ALSO CALLED</small><em>Password spraying</em></div>
+      <div class="goal"><b>Resetting</b><span>Taking over your email or phone number, then using "forgot password".</span><small>ALSO CALLED</small><em>SIM swaps, recovery abuse</em></div>
+    </div>
+    <p class="callout"><b>THE GOOD NEWS</b> One habit each stops all four: unique passwords, a password manager, two-factor or passkeys, and protected recovery.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Four ways in. None needs a genius: they're cheap and automated.</span></li><li><b class="ask">Ask</b><span>Which of these do you think is most common? <em>Answer: reused and stolen passwords are behind a huge share of account takeovers.</em></span></li><li><b class="say">Say</b><span>The rest of the talk is one fix per card.</span></li><li><b class="next">Next</b><span>"Let's watch reuse go wrong."</span></li></ul></div>
+</section>
+
+<section class="slide" id="reuse" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// BREAK-INS 02</p><h2>One leak, every account</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <label class="check"><input type="radio" name="reuse-mode" id="reuse-same" value="same" checked> Same password everywhere</label>
+      <label class="check"><input type="radio" name="reuse-mode" id="reuse-unique" value="unique"> A different password per site</label>
+      <label class="check"><input type="checkbox" id="reuse-2fa"> Two-factor on email and bank</label>
+      <button type="button" class="btn btn-ghost btn-sm" id="reuse-reset">Reset</button>
+    </div>
+    <p class="note">Click a site to make it leak its passwords.</p>
+    <div class="sites" id="reuse-sites"></div>
+    <pre class="term" id="reuse-out"></pre>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Same password everywhere: click "Game forum" to leak it. The attacker's bot tries that email and password on every other site, and they all fall.</span></li><li><b class="show">Show</b><span>Switch to a different password per site and leak again: only the forum falls.</span></li><li><b class="show">Show</b><span>Tick two-factor: even with reuse, email and bank survive, because a password alone isn't enough.</span></li><li><b class="say">Say</b><span>You can't stop other sites from leaking. You can stop a leak from spreading.</span></li></ul></div>
+</section>
+
+<section class="slide" id="storage" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// BREAK-INS 03</p><h2>What a website should store</h2></header>
+  <div class="slide-body stack">
+    <div class="controls"><label>Your password <input id="store-pw" value="correct horse" class="mid" spellcheck="false" autocomplete="off"></label></div>
+    <div class="store-rows" id="store-rows"></div>
+    <p class="callout"><b>RED FLAG</b> If a site can email you your current password, it's storing it in a way that can be reversed. Use a unique password there, and expect it to leak.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three ways a site can store your password, from awful to good.</span></li><li><b class="show">Show</b><span>Plain text: a leak is a list of passwords. A fast hash: common passwords are cracked instantly from a pre-computed table. A salted, slow hash (Argon2id): every guess costs real time, for each user separately.</span></li><li><b class="say">Say</b><span>You can't see which one a site uses, so assume the worst and never reuse. Crypto 101 has the full story.</span></li><li><b class="next">Next</b><span>"How do you find out whether your password already leaked?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="breach-check" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// BREAK-INS 04</p><h2>Checking for leaks without giving your password away</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label>Password to check <input id="leak-pw" value="password123" class="mid" spellcheck="false" autocomplete="off"></label></div>
+      <pre class="term" id="leak-out"></pre>
+      <p class="note">Simulated: nothing is sent anywhere, and the sample response is made up. The real service is the "Pwned Passwords" check at haveibeenpwned.com.</p>
+    </div>
+    <div class="stack">
+      <h3>How it works</h3>
+      <ol class="steps steps-plain">
+        <li>Your device hashes the password (SHA-1).</li>
+        <li>It sends only the <b>first 5 characters</b> of the hash.</li>
+        <li>The service replies with every leaked hash that starts the same way: hundreds of them.</li>
+        <li>Your device looks for the rest of its hash in that list, privately.</li>
+      </ol>
+      <div class="card"><b>Why this is safe</b><span>Five characters match hundreds of different leaked passwords, so the service never learns which one is yours. Password managers and browsers run this check for you.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Type "password123": the first 5 characters of its hash are all that's sent, and the rest is found in the sample reply. Try something random: not found.</span></li><li><b class="say">Say</b><span>This trick is called k-anonymity: you hide in a crowd of hundreds of matches.</span></li><li><b class="tip">Tip</b><span>Recommend checking your email address at haveibeenpwned.com tonight; it's on the final checklist.</span></li><li><b class="next">Next</b><span>"Time to discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers. Guesses are welcome.</p>
+    <ol class="checkpoint">
+      <li><p>Your password is strong but reused on 10 sites. One site leaks. What happens next?</p><details><summary>Hint</summary><p>Think about what an attacker's bot does with a fresh list of emails and passwords.</p></details><details class="answer"><summary>Answer</summary><p>Bots try that email and password on many other sites within hours. Strength doesn't matter once the password itself is known; only uniqueness and two-factor help.</p></details></li>
+      <li><p>A site emails you your password when you click "forgot password". What does that tell you?</p><details><summary>Hint</summary><p>Could it do that if it only stored a hash?</p></details><details class="answer"><summary>Answer</summary><p>It stores your password in a reversible way, so a leak would expose it directly. Make sure that password is used nowhere else.</p></details></li>
+      <li><p>The leak checker only receives 5 characters of your password's hash. Why can't it work out your password?</p><details><summary>Hint</summary><p>How many leaked passwords share those 5 characters?</p></details><details class="answer"><summary>Answer</summary><p>Hundreds of different leaked hashes start with the same 5 characters, and the matching happens on your device, so the service can't tell which one you checked.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then take two or three answers. The timer starts by itself.</span></li><li><b class="say">Say</b><span>Q1 is the key one: strength doesn't save a reused password.</span></li><li><b class="tip">Tip</b><span>Timing: Part 1 should finish around minute 20.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="length" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS 01</p><h2>Length beats complexity</h2></header>
+  <div class="slide-body stack">
+    <div class="cols-2">
+      <div class="stack">
+        <h3>A random password</h3>
+        <div class="controls">
+          <label>Length <span class="range"><input type="range" id="est-len" min="4" max="24" value="8"><output id="est-len-out">8</output></span></label>
+        </div>
+        <div class="controls">
+          <label class="check"><input type="checkbox" id="est-lower" checked> a–z</label>
+          <label class="check"><input type="checkbox" id="est-upper"> A–Z</label>
+          <label class="check"><input type="checkbox" id="est-digits" checked> 0–9</label>
+          <label class="check"><input type="checkbox" id="est-symbols"> symbols</label>
+        </div>
+      </div>
+      <div class="stack">
+        <h3>A random passphrase</h3>
+        <div class="controls">
+          <label>Words <span class="range"><input type="range" id="est-words" min="2" max="8" value="5"><output id="est-words-out">5</output></span></label>
+        </div>
+        <p class="note">Words picked at random from a 7,776-word list (dice-based "Diceware"), for example <span class="mono-y">cactus orbit ladle frozen tiptoe</span>.</p>
+      </div>
+    </div>
+    <div class="stats stats-2" id="est-out"></div>
+    <p class="callout"><b>CURRENT GUIDANCE</b> US guidance (NIST SP 800-63B) favours long passwords, drops forced symbol rules and regular forced changes, and checks new passwords against leak lists.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>8 characters of lowercase and digits: a fast hash falls in minutes. Add symbols: better, but drag the length up instead and watch it climb much faster.</span></li><li><b class="show">Show</b><span>Five random words beat a typical "complex" password, and they're easier to type.</span></li><li><b class="say">Say</b><span>The big caveat: these numbers assume truly random choices. "Summer2026!" isn't random; attackers try those patterns first.</span></li><li><b class="next">Next</b><span>"So let the computer do the picking."</span></li></ul></div>
+</section>
+
+<section class="slide" id="generator" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS 02</p><h2>Let a computer pick</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Length <span class="range"><input type="range" id="gen-len" min="8" max="40" value="20"><output id="gen-len-out">20</output></span></label>
+        <label class="check"><input type="checkbox" id="gen-symbols" checked> symbols</label>
+        <button type="button" class="btn" id="gen-new">Generate</button>
+      </div>
+      <pre class="term term-huge" id="gen-out"></pre>
+      <pre class="term" id="gen-info"></pre>
+    </div>
+    <div class="stack">
+      <h3>Why random wins</h3>
+      <ul class="rules">
+        <li>People pick patterns: names, years, a capital at the start, "!" at the end. Attackers' guess lists are built from those patterns.</li>
+        <li>A secure random generator has no pattern to guess (Crypto 101's randomness slide).</li>
+        <li>You don't need to remember it: that's the password manager's job.</li>
+        <li>The only passwords worth memorising: your password manager's, your device's, and your email's.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Press Generate a few times. 20 random characters: far beyond anything an attacker can try.</span></li><li><b class="say">Say</b><span>Nobody remembers these, and nobody should have to. That's what a password manager is for.</span></li><li><b class="next">Next</b><span>"So what is a password manager, really?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="managers" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS 03</p><h2>Password managers</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="props props-2">
+        <div><b>Remembers</b><span>A different random password for every site.</span></div>
+        <div><b>Fills in</b><span>Only on the exact website it was saved for.</span></div>
+        <div><b>Syncs</b><span>Across your phone and computers, encrypted.</span></div>
+        <div><b>Warns</b><span>About reused, weak or leaked passwords.</span></div>
+      </div>
+      <p class="note">Built into your browser or phone, or a separate app. Any reputable one beats reusing passwords.</p>
+    </div>
+    <div class="stack">
+      <h3>Autofill as a phishing alarm</h3>
+      <div class="controls"><label>You're on <select id="af-site"><option value="bank.example">bank.example</option><option value="bank-examp1e.com">bank-examp1e.com</option><option value="bank.example.secure-login.net">bank.example.secure-login.net</option></select></label></div>
+      <div class="browser" id="af-browser"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>What it does: remembers, fills in, syncs, warns.</span></li><li><b class="show">Show</b><span>Switch the site. On the real bank.example it fills in. On the look-alikes it refuses, because it matches the real address, not how the page looks.</span></li><li><b class="say">Say</b><span>If your manager doesn't fill in where it normally would, stop and check the address before typing anything.</span></li><li><b class="ask">Ask</b><span>"Isn't it risky to put all your passwords in one place?" <em>Answer: next slide. It's far less risky than reusing one password everywhere.</em></span></li></ul></div>
+</section>
+
+<section class="slide" id="vault" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS 04</p><h2>How the vault is locked</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Master password <input id="vault-master" value="cactus orbit ladle frozen tiptoe" spellcheck="false" autocomplete="off"></label>
+        <button type="button" class="btn" id="vault-lock">Lock the vault</button>
+      </div>
+      <pre class="term" id="vault-out">Press "Lock the vault".</pre>
+      <div class="controls">
+        <label>Try to unlock with <input id="vault-try" value="cactus orbit ladle frozen tiptoe" spellcheck="false" autocomplete="off"></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="vault-unlock">Unlock</button>
+      </div>
+      <pre class="term" id="vault-try-out"></pre>
+    </div>
+    <div class="stack">
+      <div class="chain chain-sm"><span>master password</span><i></i><span class="hot">slow hash (Argon2id)</span><i></i><span class="hot c">key</span><i></i><span>AES encrypts the vault</span></div>
+      <ul class="rules">
+        <li>The key is made on <b>your device</b> from your master password. The company never sees it.</li>
+        <li>The company stores only the encrypted vault. If it's breached, attackers get a locked box.</li>
+        <li>The slow hash makes every guess at your master password expensive.</li>
+        <li>So the master password must be long and used nowhere else.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Lock the vault: the master password goes through a slow hash to make a key, and the vault becomes ciphertext. That ciphertext is all the company stores.</span></li><li><b class="show">Show</b><span>Unlock with a wrong master password: the tag check fails. Note the time each guess costs.</span></li><li><b class="say">Say</b><span>That's why password manager breaches are bad but survivable: if your master password is strong, the stolen vault stays locked.</span></li><li><b class="tip">Tip</b><span>Details vary by product; this is the common design.</span></li></ul></div>
+</section>
+
+<section class="slide" id="master-password" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS 05</p><h2>Your master password, and the three you remember</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-3">
+      <div class="card"><b>Make it a passphrase</b><span>Five or six random words. Long, and easy to type on a phone.</span></div>
+      <div class="card"><b>Use it nowhere else</b><span>Not for email, not anywhere. It protects everything else.</span></div>
+      <div class="card"><b>Protect the manager too</b><span>Turn on two-factor or a passkey for the password manager account itself.</span></div>
+    </div>
+    <div class="cards-3">
+      <div class="card card-ok"><b>Write it down? It's OK</b><span>A paper copy kept safe at home beats forgetting it. Burglars rarely target sticky notes; online attackers can't reach paper.</span></div>
+      <div class="card"><b>Plan for emergencies</b><span>Most managers offer emergency access or a printable recovery kit for family.</span></div>
+      <div class="card card-bad"><b>The other two to memorise</b><span>Your device unlock code and your main email password. Everything else lives in the manager.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Three passwords to remember: the manager's master password, your device's unlock code, and your email. Email matters because it resets everything else.</span></li><li><b class="say">Say</b><span>Writing the master password on paper at home is fine for most people; the threat is online, not burglars.</span></li><li><b class="next">Next</b><span>"Even a perfect password can be stolen by phishing. That's where two-factor comes in."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="factors" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// TWO-FACTOR 01</p><h2>Something you know, have, or are</h2></header>
+  <div class="slide-body stack">
+    <div class="goal-grid goal-grid-3">
+      <div class="goal"><b>Know</b><span>A password or PIN.</span><small>WEAKNESS</small><em>Can be leaked, guessed or phished</em></div>
+      <div class="goal"><b>Have</b><span>Your phone, an authenticator app, a security key.</span><small>WEAKNESS</small><em>Can be lost; some kinds can be phished</em></div>
+      <div class="goal"><b>Are</b><span>Fingerprint or face, usually to unlock the "have".</span><small>WEAKNESS</small><em>Can't be changed, so it stays on your device</em></div>
+    </div>
+    <p class="big-lede">Two-factor means needing two <b>different kinds</b>, so one stolen thing isn't enough.</p>
+    <p class="note">Two passwords is still one factor. A password plus a code from your phone is two.</p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Know, have, are. Two-factor combines two different kinds.</span></li><li><b class="say">Say</b><span>Your fingerprint usually doesn't go to the website at all: it unlocks something on your phone, which does the real work.</span></li><li><b class="next">Next</b><span>"Let's make a real two-factor code, right now."</span></li></ul></div>
+</section>
+
+<section class="slide" id="totp" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// TWO-FACTOR 02</p><h2>Authenticator codes, live</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack center">
+      <img src="totp-qr.svg" alt="QR code that adds the demo code to an authenticator app" width="230" height="230" class="totp-qr">
+      <p class="note">Scan with any authenticator app (Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, your password manager…). It shows up as "Cybersec Hub: Demo"; delete it afterwards.</p>
+    </div>
+    <div class="stack">
+      <p class="mini-label">Shared secret (both sides have it)</p>
+      <pre class="term" id="totp-secret"></pre>
+      <div class="totp-now">
+        <div><p class="mini-label">Code right now</p><output id="totp-code" class="totp-code">------</output></div>
+        <div class="totp-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" id="totp-bar" cx="60" cy="60" r="54"/></svg><output id="totp-left">30</output><small>seconds</small></div>
+      </div>
+      <pre class="term" id="totp-next"></pre>
+      <p class="callout"><b>NO NETWORK NEEDED</b> Your phone and the website each work out the code from the same secret and the current time. Nothing is sent between them.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Ask everyone to scan the QR code with an authenticator app. Their phones show the same 6 digits as the slide, changing every 30 seconds.</span></li><li><b class="say">Say</b><span>The phone and the site agreed on a secret once (that's the QR code). Since then, both compute the code from the secret and the clock. No signal, no SMS, no internet needed.</span></li><li><b class="tip">Tip</b><span>If a phone's code is off by one step, its clock is slightly wrong. Real sites accept the code before and after too.</span></li><li><b class="tip">Tip</b><span>Remind them to delete the "Cybersec Hub: Demo" entry afterwards; it's a public demo secret.</span></li></ul></div>
+</section>
+
+<section class="slide" id="totp-inside" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// TWO-FACTOR 03</p><h2>How the 6 digits are made</h2></header>
+  <div class="slide-body stack">
+    <div class="chain"><span>secret</span><i></i><span>+ time step</span><i></i><span class="hot">HMAC-SHA1</span><i></i><span class="hot c">pick 4 bytes</span><i></i><span>last 6 digits</span></div>
+    <pre class="term term-big" id="totp-steps"></pre>
+    <p class="note">This is TOTP (RFC 6238), used by almost every authenticator app. The code changes every 30 seconds and can't be worked backwards to the secret.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Step 1: the time step is the number of 30-second periods since 1970. Step 2: mix it with the secret using HMAC, a keyed hash (Crypto 101 Part 2). Step 3: the last byte says where to cut out 4 bytes. Step 4: keep the last 6 digits.</span></li><li><b class="show">Show</b><span>Wait for the step to tick over: everything changes at once.</span></li><li><b class="say">Say</b><span>Weakness: if a fake site asks for the code, you can type it in, and an attacker can use it within those 30 seconds. Codes beat passwords alone, but they can still be phished.</span></li><li><b class="next">Next</b><span>"So which kind of two-factor stops which attack?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="mfa-ladder" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// TWO-FACTOR 04</p><h2>Which method stops which attack?</h2></header>
+  <div class="slide-body stack">
+    <p class="note">Click an attack to highlight it.</p>
+    <div class="table-wrap"><table class="grid-table mfa" id="mfa-table">
+      <thead><tr><th>Method</th><th><button type="button" data-col="1">Password leaked</button></th><th><button type="button" data-col="2">Look-alike site</button></th><th><button type="button" data-col="3">SIM swap</button></th><th><button type="button" data-col="4">Approval spam</button></th></tr></thead>
+      <tbody>
+        <tr><th>Password only</th><td class="no">✗</td><td class="no">✗</td><td class="na">–</td><td class="na">–</td></tr>
+        <tr><th>+ SMS code</th><td class="yes">✓</td><td class="no">✗ code can be relayed</td><td class="no">✗</td><td class="na">–</td></tr>
+        <tr><th>+ Authenticator app code</th><td class="yes">✓</td><td class="no">✗ code can be relayed</td><td class="yes">✓</td><td class="na">–</td></tr>
+        <tr><th>+ Push with number matching</th><td class="yes">✓</td><td class="part">~ can still be tricked</td><td class="yes">✓</td><td class="part">~ much harder</td></tr>
+        <tr><th>Passkey or security key</th><td class="yes">✓ nothing to leak</td><td class="yes">✓ tied to the real site</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      </tbody>
+    </table></div>
+    <p class="callout"><b>RULE</b> Any two-factor is far better than none. SMS is the weakest, but still worth it if it's the only option. Prefer an app, and passkeys where offered.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click "Password leaked": every two-factor method stops it. That alone blocks most account takeovers.</span></li><li><b class="show">Show</b><span>Click "Look-alike site": codes can be typed into the fake site and relayed live. Only passkeys and security keys are tied to the real address.</span></li><li><b class="say">Say</b><span>SIM swap: someone convinces your carrier to move your number to their SIM, then receives your SMS codes. "Approval spam": flooding your phone with login prompts until you tap yes; number matching makes that much harder.</span></li><li><b class="next">Next</b><span>"Let's run the look-alike test."</span></li></ul></div>
+</section>
+
+<section class="slide" id="phishing-test" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// TWO-FACTOR 05</p><h2>The look-alike site test</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <button type="button" class="btn" id="phish-go">Click the link in the "urgent" email</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="phish-reset">Reset</button>
+      <span class="note">It opens <span class="mono-y">bank-examp1e.com</span> (that's a digit 1, not an L).</span>
+    </div>
+    <div class="phish" id="phish"></div>
+    <p class="note">Want to try a real passkey? <a href="../crypto-101/#passkeys">Crypto 101's passkey slide</a> creates one with your fingerprint, face or PIN.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click the email link. Three versions of you arrive at the fake site.</span></li><li><b class="say">Say</b><span>Typing it yourself: the attacker gets your password, and your app code too if you type that. The password manager: refuses to fill in, which is your warning. The passkey: your device has no passkey for that address, so there's nothing to give away.</span></li><li><b class="say">Say</b><span>Passkeys are phishing-proof by design: the website's real address is part of what gets signed (Crypto 101 Part 4).</span></li><li><b class="tip">Tip</b><span>If someone asks for a live passkey, open the Crypto 101 link at the bottom.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers. Guesses are welcome.</p>
+    <ol class="checkpoint">
+      <li><p>Why is a code from an authenticator app safer than one sent by SMS?</p><details><summary>Hint</summary><p>Where does each code come from, and who else could receive it?</p></details><details class="answer"><summary>Answer</summary><p>The app makes the code on your phone from a stored secret. An SMS travels through your phone number, which an attacker can take over with a SIM swap.</p></details></li>
+      <li><p>A friend says: "I don't need a password manager, I have a system." What would you ask them?</p><details><summary>Hint</summary><p>What happens to a "system" once one of its passwords leaks?</p></details><details class="answer"><summary>Answer</summary><p>Whether one leaked password reveals the pattern for the rest, and whether every password is unique and random. A pattern like "Site name + 2026!" falls the moment one leaks.</p></details></li>
+      <li><p>You lose your phone with your authenticator app on it. What should you have set up beforehand?</p><details><summary>Hint</summary><p>How else could you prove it's you?</p></details><details class="answer"><summary>Answer</summary><p>Recovery codes stored somewhere safe, a second factor (a backup key or a second device), or an authenticator that backs up securely. Part 4 covers this.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share.</span></li><li><b class="say">Say</b><span>Q3 leads into the last part: recovery.</span></li><li><b class="tip">Tip</b><span>Timing: Part 3 should finish around minute 58.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="recovery" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY 01</p><h2>Don't lock yourself out</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Recovery codes</h3>
+      <p class="note">When you turn on two-factor, most sites offer one-time backup codes like these. Each works once.</p>
+      <div class="codes" id="rc-codes"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="rc-new">New codes</button>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Save recovery codes</b> in your password manager and on paper at home.</li>
+        <li><b>Add a second factor</b>: a backup security key, or a passkey on a second device.</li>
+        <li><b>Keep recovery details current</b>: backup email and phone number.</li>
+        <li><b>Protect your phone number</b>: ask your carrier for a PIN or port-out protection.</li>
+        <li><b>Set up a trusted contact</b> or legacy contact where offered.</li>
+      </ul>
+      <p class="callout"><b>RECOVERY IS A WAY IN</b> Attackers use it too. Weak security questions or an unprotected phone number can undo strong passwords.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Two-factor's biggest risk is locking yourself out. Recovery codes are the fix: one-time codes for when your phone is gone.</span></li><li><b class="say">Say</b><span>But every way back in is also a way in for attackers. Treat recovery options like passwords: few, and protected.</span></li><li><b class="tip">Tip</b><span>Security questions: if a site forces them, give random answers and store them in the password manager.</span></li></ul></div>
+</section>
+
+<section class="slide" id="tonight" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY 02</p><h2>Tonight's checklist</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <ol class="todo" id="todo"></ol>
+    <div class="stack">
+      <div class="stats stats-1"><div class="stat slow"><b id="todo-count">0 / 8</b><span>done</span></div></div>
+      <div class="fortress" id="todo-fortress" hidden><small>ACHIEVEMENT UNLOCKED</small><b>Account Fortress</b><span>All 8 done. Attackers will go bother someone else.</span></div>
+      <p class="note">Ticks are saved in this browser only, so you can come back to the list later. Start with your email: it can reset everything else.</p>
+      <button type="button" class="btn btn-ghost btn-sm" id="todo-clear">Clear my ticks</button>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Walk the list top to bottom. The order matters: email first, because it resets everything else.</span></li><li><b class="say">Say</b><span>Nobody does all of this tonight. Do the first three, and replace reused passwords a few at a time as you log in to things.</span></li><li><b class="tip">Tip</b><span>The list remembers ticks in each person's browser, so they can open the deck tomorrow and continue.</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or about your own accounts. (Please don't read out real passwords.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The checklist and demos stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://haveibeenpwned.com/" target="_blank" rel="noopener">Have I Been Pwned</a><span>Check whether your email address appeared in a breach.</span></li>
+        <li><a href="https://passkeys.directory/" target="_blank" rel="noopener">Passkeys directory</a><span>Sites and apps that support passkeys.</span></li>
+        <li><a href="https://2fa.directory/" target="_blank" rel="noopener">2FA Directory</a><span>Which sites support which kinds of two-factor.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>The maths behind hashing, salts, signatures and passkeys.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser; nothing you type is sent anywhere. The authenticator demo uses a public secret: never use it for a real account.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min or more</p><ul><li><b class="say">Say</b><span>Open the floor. Remind people not to share real passwords.</span></li><li><b class="tip">Tip</b><span>Press O to jump back to any slide or demo.</span></li><li><b class="say">Say</b><span>Point at the QR codes: the deck, with its checklist, stays online; Discussions for questions later.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/vendor/hash-wasm-4.12.0.umd.min.js"></script>
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

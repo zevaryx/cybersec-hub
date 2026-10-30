@@ -172,7 +172,7 @@ input[type="color"] { width: 72px; height: 40px; padding: 2px; background: var(-
   .mode-scroll .alpha { font-size: .62em; }
   .mode-scroll .enigma { padding: 12px 6px; }
   .mode-scroll .lamps > div, .mode-scroll .keys > div { gap: 3px; }
-  .mode-scroll .lamps span, .mode-scroll .keys button { width: min(32px, 8.6vw); height: min(32px, 8.6vw); }
+  .mode-scroll .lamps span, .mode-scroll .keys button { width: min(32px, 8.1vw); height: min(32px, 8.1vw); }
 }
 
 /* thin scrollbars on the scrolling demo lists */
