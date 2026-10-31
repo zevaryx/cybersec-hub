@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Identity and Access Management</title>
+<meta name="description" content="Identity and Access Management: single sign-on, ID tokens, phishing-resistant MFA, least privilege and clean offboarding, in an order you can roll out. With live demos. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Identity and Access Management">
+<meta property="og:description" content="Attackers don't break in, they log in. SSO, phishing-resistant MFA, least privilege and clean offboarding, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Identity and Access Management in neon, beside a terminal asking who you really are.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Ccircle cx='16' cy='11' r='5' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M6 27c1-6 5-9 10-9s9 3 10 9' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "identity-and-access", "title": "Identity and Access Management", "footer": "IDENTITY", "subtitle": "SECURITY TRACK · 01",
+  "parts": [{ "name": "One identity, many apps", "minutes": 25 }, { "name": "Strong authentication", "minutes": 22 },
+            { "name": "Least privilege over time", "minutes": 25 }, { "name": "Wrap-up", "minutes": 8 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">IDEN<span>TITY</span></a>
+  <div class="scroll-parts">
+    <a href="#sso" data-part="1"><b>01</b>SSO</a>
+    <a href="#mfa-strength" data-part="2"><b>02</b>MFA</a>
+    <a href="#roles" data-part="3"><b>03</b>Privilege</a>
+    <a href="#plan" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 01 · FOR IT, ADMINS AND TEAM LEADS</p>
+      <h1><span class="pre">Identity and</span> <span class="glitch" data-text="Access">Access</span></h1>
+      <p class="lede">Attackers don't break in, they log in. Single sign-on, phishing-resistant MFA, least privilege and clean offboarding, in an order you can actually roll out.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ login --user&nbsp;<input id="hero-in" value="alice" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 80 minutes, four parts, two checkpoints. For anyone who runs accounts for other people: IT, admins, team leads, and developers building login.</span></li><li><b class="show">Show</b><span>The terminal: a username is a claim, not proof. The rest of the talk is about proving it, and then limiting what it can do.</span></li><li><b class="tip">Eggs</b><span>Log in as root, admin or guest on the title slide; set the ID token's alg to none; approve the 10th push prompt; let the drift demo run for three years; tick the whole 90-day plan; at the help desk, reset the MFA because the caller said please. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#sso"><small>PART 1 · 25 MIN</small><b>One identity, many apps</b></a><span>Single sign-on</span><span>Inside an ID token</span><span>OAuth vs OpenID Connect</span><span>Sessions</span></li>
+      <li><a href="#mfa-strength"><small>PART 2 · 22 MIN</small><b>Strong authentication</b></a><span>Phishing-resistant MFA</span><span>Push fatigue</span><span>Rolling out passkeys</span><span>Conditional access</span></li>
+      <li><a href="#roles"><small>PART 3 · 25 MIN</small><b>Least privilege over time</b></a><span>Roles and groups</span><span>Admin access and break-glass</span><span>Joiners, movers, leavers</span><span>Non-human accounts</span></li>
+      <li><a href="#plan"><small>PART 4 · 8 MIN</small><b>Wrap-up</b></a><span>A 90-day plan</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, one identity for every app. Then making that identity hard to steal. Then keeping what it can do small, as people come, move and go.</span></li><li><b class="next">Next</b><span>"Why identity?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY IDENTITY</p><h2>Attackers don't break in, they log in</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Firewalls don't stop someone with a valid password, token or session. To your systems, they <i>are</i> the user.</p>
+      <ul class="rules">
+        <li>Stolen passwords, phished codes, leaked tokens and forgotten accounts are the usual ways in.</li>
+        <li>Valid logins don't trip most alarms. They look like work.</li>
+        <li>So identity is where to put your effort: prove who it is, and limit what they can do.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>A never-expiring admin token</b><span>Zeabur, October 2026: long-lived admin tokens in a config repository let an attacker read millions of customer secrets, unnoticed for over 16 hours.</span></div>
+      <div class="card"><b>A key nobody revoked</b><span>LiteLLM, October 2026: an admin key committed in May was used five months later to steal developers' GitHub tokens.</span></div>
+      <p class="note">Both from <a href="../../news/2026-10-black-october/">Cyber in the News: Black October</a>, with sources.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Neither of these needed a clever exploit. They needed a credential that still worked. That's the theme of the whole talk.</span></li><li><b class="next">Next</b><span>"Start with the biggest lever: one identity for everything."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="sso" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// ONE IDENTITY 01</p><h2>Single sign-on: one door to lock</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="sso-on"> Every app signs in through the identity provider</label>
+        <button type="button" class="btn btn-sm" id="sso-leave">Sam leaves the company</button>
+      </div>
+      <div class="apps" id="sso-apps"></div>
+      <p class="comment" id="sso-out"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>An <b>identity provider</b> (IdP) proves who you are once. Apps trust its answer.</li>
+        <li><b>One place</b> to enforce MFA, see sign-ins, and switch someone off.</li>
+        <li>Fewer passwords for people to reuse, and nothing for each app to store.</li>
+        <li>The flip side: the IdP is now the crown jewels. Protect its admins hardest.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Without SSO, press "Sam leaves": IT disables the accounts it remembers. Some stay open for months. Tick SSO and try again: one switch, every app closed.</span></li><li><b class="say">Say</b><span>The forgotten app is always the one with an export button. Apps that can't use SSO need a written offboarding step.</span></li><li><b class="next">Next</b><span>"How does an app trust the IdP's answer? A signed token."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tokens" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// ONE IDENTITY 02</p><h2>Inside an ID token</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="jwt" id="jwt-raw"></div>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="jwt-admin">Change "role" to admin</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="jwt-none">Set "alg" to none</button>
+        <button type="button" class="btn btn-sm" id="jwt-new">Issue a fresh token</button>
+      </div>
+      <pre class="term" id="jwt-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Three parts: <b class="c-h">header</b>, <b class="c-p">payload</b> (the claims), <b class="c-s">signature</b>, each Base64url-encoded.</li>
+        <li>Anyone can <b>read</b> it: it's encoded, not encrypted. Never put secrets in a token.</li>
+        <li>Only the IdP can <b>sign</b> it. Apps check the signature with the IdP's public key.</li>
+        <li>Then check the claims: issuer, audience, expiry, and the nonce you sent.</li>
+      </ul>
+      <p class="callout"><b>CRYPTO 101</b> <a href="../crypto-101/#encoding">Encoding</a> on the outside, <a href="../crypto-101/#signatures">signatures</a> underneath. Real ES256 (P-256 ECDSA), made in your browser.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Read the payload aloud: it's just Base64. Press "role → admin": the payload changes, the signature no longer matches, the app rejects it. "alg → none" is a classic: old libraries accepted unsigned tokens. Modern ones refuse; make sure yours does.</span></li><li><b class="say">Say</b><span>This is the format OpenID Connect uses for ID tokens (a JWT). SAML does the same job with signed XML.</span></li><li><b class="tip">Egg</b><span>Set alg to none.</span></li><li><b class="next">Next</b><span>"Two names people mix up: OAuth and OpenID Connect."</span></li></ul></div>
+</section>
+
+<section class="slide" id="oauth-oidc" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// ONE IDENTITY 03</p><h2>OAuth vs OpenID Connect</h2></header>
+  <div class="slide-body stack">
+    <div class="cols-2">
+      <div class="vs"><b>OAuth 2.0: permission</b><span>"This app may read my calendar."</span><span>Gives an app an <strong>access token</strong> to call an API on your behalf.</span><span>Like a valet key: it opens the car, not the boot.</span></div>
+      <div class="vs vs-c"><b>OpenID Connect: login</b><span>"This is Alice, she signed in at 09:14 with a passkey."</span><span>Adds an <strong>ID token</strong> on top of OAuth, for the app to read.</span><span>Like an ID card: says who, not what they may do.</span></div>
+    </div>
+    <div class="props props-4">
+      <div><b>Use the authorisation code flow</b><span>with PKCE, for web, mobile and single-page apps alike</span></div>
+      <div><b>Ask for the least scope</b><span>read-only, one calendar, not "full account access"</span></div>
+      <div><b>Never treat an access token as login</b><span>it proves a permission, not who's at the keyboard</span></div>
+      <div><b>Use a library</b><span>your framework's OIDC client checks the details for you</span></div>
+    </div>
+    <p class="callout"><b>CONSENT PHISHING</b> A malicious app can ask for real permissions on a real login page. Review which apps your users have granted access, and restrict who can approve new ones.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>OAuth answers "may this app do this?" OpenID Connect answers "who is this?" Mixing them up is how apps end up logging people in with a token that was only meant to read a calendar.</span></li><li><b class="say">Say</b><span>Consent phishing needs no password at all: the user really signs in, then grants a bad app access. That's why app consent belongs in your IdP's settings.</span></li><li><b class="next">Next</b><span>"Once you're in, you have a session. That's what gets stolen now."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sessions" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// ONE IDENTITY 04</p><h2>Sessions: the thing attackers steal now</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">MFA protects the moment you sign in. A stolen session cookie skips that moment entirely.</p>
+      <ul class="rules">
+        <li>Malware on a laptop can copy browser cookies. The attacker arrives already signed in.</li>
+        <li><b>Short sessions</b> limit the damage. NIST's guidance for most business systems (AAL2): sign in again at least every <b>24 hours</b>, and after an hour of inactivity.</li>
+        <li><b>Sign-out must end the session on the server</b>, not just delete the cookie.</li>
+        <li>Revoke sessions when a password changes, a device is lost, or someone leaves.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="habit"><b>For developers</b><span>Cookies with <code>Secure</code>, <code>HttpOnly</code> and <code>SameSite</code>. Short-lived access tokens, refresh tokens that can be revoked, and a new session ID after login.</span></div>
+      <div class="habit"><b>For admins</b><span>Session lifetimes set in the IdP, "sign out everywhere" one click away, and alerts for a session used from two countries at once.</span></div>
+      <p class="src">SOURCE <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a>, reauthentication at AAL2 ("SHOULD" limits)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Session theft is why "we have MFA" isn't the end of the story. Pair it with device protection and short sessions.</span></li><li><b class="tip">Check</b><span>NIST's numbers are recommendations ("SHOULD") for AAL2: no more than 24 hours overall and 1 hour of inactivity. Your industry may require shorter.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why does SSO make offboarding safer?</p><details><summary>Hint</summary><p>How many switches does IT have to find?</p></details><details class="answer"><summary>Answer</summary><p>One account to disable instead of one per app, so nothing is forgotten. Apps outside SSO still need their own step.</p></details></li>
+      <li><p>Someone base64-decodes an ID token and changes their role to admin. Why doesn't it work?</p><details><summary>Hint</summary><p>What covers the payload?</p></details><details class="answer"><summary>Answer</summary><p>The signature covers the header and payload. Change either and it no longer verifies with the IdP's public key, so the app rejects it (as long as it checks).</p></details></li>
+      <li><p>You have MFA everywhere. How can an attacker still get in as you?</p><details><summary>Hint</summary><p>What does your browser keep after you sign in?</p></details><details class="answer"><summary>Answer</summary><p>By stealing a session cookie or token from a compromised device, or by getting a help desk to reset your MFA. Short sessions, device security and help-desk checks close those gaps.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="mfa-strength" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// STRONG AUTHENTICATION 01</p><h2>Not all MFA is equal</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="ladder-mfa">
+        <div class="r0"><b>SMS or voice codes</b><span>NIST calls the phone network a <i>restricted</i> channel: SIM swaps and relayed codes</span></div>
+        <div class="r1"><b>Authenticator app codes</b><span>Better, but you type them, so a fake site can relay them</span></div>
+        <div class="r2"><b>Push with number matching</b><span>Stops blind approvals; a convincing fake site can still relay the session</span></div>
+        <div class="r3"><b>Passkeys and security keys</b><span>Phishing-resistant: the key only signs for the real site's address</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>NIST: anything you <b>type in</b> (passwords, codes) is <b>not phishing-resistant</b>.</li>
+        <li>Phishing-resistant means <b>cryptographic</b> and <b>bound to the site's name</b>, like WebAuthn passkeys and security keys.</li>
+        <li>Systems at NIST's middle level (AAL2) must <b>offer</b> a phishing-resistant option.</li>
+      </ul>
+      <p class="callout"><b>STILL TRUE</b> Any MFA beats none. Move people up the ladder; don't wait for perfect.</p>
+      <p class="note">The full attack-by-attack table: <a href="../passwords-and-accounts/#mfa-ladder">Passwords and Accounts</a>.</p>
+      <p class="src">SOURCE <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a>, sections 2.2, 3.1.3.3 and 3.2.5</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>The bottom rung still stops password reuse, which is most account takeovers. The top rung also stops the convincing fake login page, which is how targeted attacks work.</span></li><li><b class="say">Say</b><span>Why passkeys resist phishing: the browser tells the authenticator which site is asking, and it's part of what gets signed. A look-alike domain gets nothing.</span></li><li><b class="tip">Check</b><span>NIST SP 800-63B revision 4; check your national agency's guidance too.</span></li><li><b class="next">Next</b><span>"Push notifications have their own problem."</span></li></ul></div>
+</section>
+
+<section class="slide" id="push-fatigue" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// STRONG AUTHENTICATION 02</p><h2>Push fatigue: approve, approve, approve</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="push-match"> Number matching</label>
+        <button type="button" class="btn btn-sm" id="push-go">An attacker has the password: send prompts</button>
+      </div>
+      <div class="phone" id="push-phone"><p class="m">Your phone is quiet. For now.</p></div>
+      <p class="comment" id="push-out"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>With a stolen password, an attacker can trigger sign-in prompts over and over, at 2am, until someone taps <b>Approve</b> to make it stop.</li>
+        <li><b>Number matching</b> shows a number on the sign-in screen that you must type into the app. The attacker can't make you see it.</li>
+        <li>Also: limit how many prompts can be sent, show where the sign-in is from, and give people a "this wasn't me" button that alerts security.</li>
+      </ul>
+      <p class="callout"><b>TELL PEOPLE</b> A prompt you didn't ask for means your password is known. Deny it, and report it.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Send prompts without number matching: they keep coming; each has Approve and Deny. Then tick number matching: the prompt asks for a number only the real sign-in screen shows.</span></li><li><b class="tip">Egg</b><span>Approve the 10th prompt.</span></li><li><b class="next">Next</b><span>"The real fix is passkeys. How do you roll them out?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="passkey-rollout" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// STRONG AUTHENTICATION 03</p><h2>Rolling out passkeys without a revolt</h2></header>
+  <div class="slide-body stack">
+    <div class="steps-4">
+      <div><small>01</small><b>Admins first</b><span>IdP admins, cloud admins and finance get security keys or passkeys first. They're the biggest prize.</span></div>
+      <div><small>02</small><b>Enrol in person or on video</b><span>Check identity properly when someone adds their first key. That moment is an attacker's best chance.</span></div>
+      <div><small>03</small><b>Two of everything</b><span>Every person registers two authenticators, or keeps recovery set up, so a lost phone isn't a crisis.</span></div>
+      <div><small>04</small><b>Then switch off the weak ones</b><span>Once most people use passkeys, stop allowing SMS for those accounts.</span></div>
+    </div>
+    <div class="cols-2">
+      <div class="card"><b>Synced or device-bound?</b><span>Synced passkeys live in a password manager or phone account and survive a lost device: great for most staff. NIST says synced keys suit AAL2 but not its top level, AAL3, which needs keys that can't be copied, like hardware security keys.</span></div>
+      <div class="card"><b>Shared and kiosk devices</b><span>Shared tills and warehouse scanners can't hold everyone's passkey. Use security keys people carry, or the IdP's device-based sign-in, and short sessions.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Rollouts fail on recovery, not on technology. If losing a phone means a two-day lockout, people will demand SMS back.</span></li><li><b class="say">Say</b><span>Want to try one? Crypto 101's passkey slide creates a real passkey with your fingerprint, face or PIN.</span></li><li><b class="next">Next</b><span>"Some decisions can be automatic: conditional access."</span></li></ul></div>
+</section>
+
+<section class="slide" id="conditional" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// STRONG AUTHENTICATION 04</p><h2>Conditional access: context decides</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="mini-label">A sign-in arrives</p>
+      <div class="ca" id="ca">
+        <label>Who <select data-k="who"><option value="staff">staff member</option><option value="admin">admin</option><option value="contractor">contractor</option></select></label>
+        <label>Device <select data-k="dev"><option value="managed">company laptop, up to date</option><option value="personal">personal phone</option><option value="old">laptop, 3 months behind on updates</option></select></label>
+        <label>From <select data-k="loc"><option value="usual">usual country</option><option value="new">new country</option><option value="travel">two countries, 20 minutes apart</option></select></label>
+        <label>App <select data-k="app"><option value="email">email</option><option value="payroll">payroll</option><option value="console">cloud admin console</option></select></label>
+      </div>
+      <pre class="term" id="ca-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The IdP looks at <b>who</b>, <b>which device</b>, <b>where from</b> and <b>which app</b>, then allows, asks for stronger proof, or blocks.</li>
+        <li>Start in <b>report-only</b> mode: see what a rule would do for a week before enforcing it.</li>
+        <li>Keep rules few and named in plain words. "Admins need a security key" beats forty overlapping exceptions.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>A staff member on a company laptop reading email: allowed. Change to an admin on a personal phone opening the cloud console: blocked. Two countries in 20 minutes: impossible travel, blocked and flagged.</span></li><li><b class="say">Say</b><span>These are example rules, not a standard. Every IdP names this differently: conditional access, access policies, context-aware access.</span></li><li><b class="next">Next</b><span>"Part 3: once someone's in, what can they do?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="roles" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// LEAST PRIVILEGE 01</p><h2>Roles and groups, not one-off permissions</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="vs"><b>Permission by person</b><span>"Give Priya access to the finance share, like Tom has."</span><span>Copies whatever Tom collected over six years</span><span>Nobody can say why anyone has anything</span></div>
+      <div class="vs vs-c"><b>Permission by role</b><span>Priya joins the group <code>finance-analysts</code>.</span><span>The group has exactly what that job needs</span><span>Leaving the job means leaving the group</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Name groups after jobs</b>, not people or projects: <code>support-agents</code>, not <code>daves-team</code>.</li>
+        <li>Every group has an <b>owner</b> who approves who joins and checks it later.</li>
+        <li>Never "copy access from a colleague". It copies their history, not their job.</li>
+        <li>Write down what each role is for, in one sentence. You'll thank yourself during the review.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is mostly organisation, not technology: clear job-shaped groups with owners make every later step (reviews, offboarding, audits) easy.</span></li><li><b class="next">Next</b><span>"The most powerful roles deserve special treatment."</span></li></ul></div>
+</section>
+
+<section class="slide" id="admin-access" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// LEAST PRIVILEGE 02</p><h2>Admin access: just in time, and a glass to break</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="habit"><b>Separate admin accounts</b><span>Read email and browse as yourself; do admin work as <code>alice-admin</code>, with a security key. Phishing your everyday account gets nothing.</span></div>
+      <div class="habit"><b>Just-in-time admin</b><span>Nobody is admin all the time. Request it for an hour, with a reason; it switches off by itself, and it's logged.</span></div>
+      <div class="habit"><b>Few owners</b><span>Count the people who can change the IdP or the cloud account. If you need more than two hands, it's too many.</span></div>
+    </div>
+    <div class="stack">
+      <div class="card card-bad"><b>Break-glass accounts</b><span>Two emergency admin accounts for when the IdP itself is broken or locked out. Long random passwords and security keys, stored offline, excluded from rules that could lock them out, never used day to day, and an alert every time one signs in.</span></div>
+      <p class="callout"><b>TEST IT</b> Use the break-glass process once a year, on purpose. An emergency is the worst time to find out the key is in a drawer nobody can open.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Standing admin rights are an attacker's favourite find. Just-in-time access means a stolen account is usually just a normal account.</span></li><li><b class="say">Say</b><span>Break-glass is the exception that makes the rules safe: you can enforce strict policies because there's a tested way back in.</span></li><li><b class="next">Next</b><span>"Now the slow problem: people change jobs."</span></li></ul></div>
+</section>
+
+<section class="slide" id="jml" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// LEAST PRIVILEGE 03</p><h2>Joiners, movers, leavers</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="drift-review"> Quarterly access reviews, and moves remove old access</label>
+        <button type="button" class="btn btn-sm" id="drift-go">Run the next 6 months</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="drift-reset">Start over</button>
+      </div>
+      <pre class="term term-big" id="drift-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Joiners</b>: access comes from the role in HR's system, ready on day one.</li>
+        <li><b>Movers</b>: the old role's access goes when the new one arrives. This is the step everyone forgets.</li>
+        <li><b>Leavers</b>: disabled the moment HR marks them gone, then sessions revoked and devices wiped.</li>
+        <li>Automate from one source of truth, usually the HR system. Manual tickets drift.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Without reviews, run a few half-years: Dana moves from support to sales to finance and keeps everything. Start over, tick reviews, and run again: access follows the job.</span></li><li><b class="say">Say</b><span>Movers are the quiet risk: nobody leaves, so nothing is switched off, and one account slowly becomes a skeleton key.</span></li><li><b class="tip">Egg</b><span>Run it for three years without reviews.</span></li><li><b class="next">Next</b><span>"Reviews only work if people actually do them."</span></li></ul></div>
+</section>
+
+<section class="slide" id="reviews" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// LEAST PRIVILEGE 04</p><h2>Access reviews people actually finish</h2></header>
+  <div class="slide-body stack">
+    <div class="cols-2">
+    <div class="stack">
+      <div class="vs"><b>The review nobody finishes</b><span>A spreadsheet of 4,000 rows, sent to one manager</span><span>Permission names like <code>GRP_FIN_RW_07</code></span><span>"Approve all" by Friday, or else</span></div>
+    </div>
+    <div class="stack">
+      <div class="vs vs-c"><b>The review that works</b><span>Small: each group's owner reviews their own group</span><span>Readable: role names and what they're for</span><span>Focused: highlight what changed and what's unused for 90 days</span><span>Default to removing: unanswered means revoke</span></div>
+    </div>
+    </div>
+    <p class="callout"><b>PLAIN WORDS</b> If a reviewer can't tell what a permission does, they'll approve it. Clear names are a security control.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Most access reviews are rubber stamps because they're designed to be impossible. Small, readable and focused reviews actually remove things.</span></li><li><b class="next">Next</b><span>"Not every identity is a person."</span></li></ul></div>
+</section>
+
+<section class="slide" id="non-human" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// LEAST PRIVILEGE 05</p><h2>Non-human identities: the forgotten majority</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Service accounts, API keys, CI tokens and bots often outnumber people, and nobody offboards them.</p>
+      <ul class="rules">
+        <li><b>Inventory</b>: every key has a name, an owner, a purpose and an expiry date.</li>
+        <li><b>Short-lived over long-lived</b>: CI pipelines can swap a signed identity token for a temporary cloud credential (workload identity federation), so there's no stored key at all.</li>
+        <li><b>Least privilege</b>: one key, one job, read-only where possible.</li>
+        <li>When the owner leaves, their keys get a new owner or get revoked.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Never expiring, never noticed</b><span>Zeabur's admin tokens were created in January 2024 and never expired. LiteLLM's key sat in a public repository for five months. Both still worked.</span></div>
+      <p class="note">More in <a href="../git-github-security/#tokens">Git and GitHub Security</a> (tokens) and <a href="../security-habits/#habit-privilege">Security Habits</a> (least privilege).</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Non-human identities can't do MFA, don't leave, and don't complain when they have too much access. That's why they need a process even more than people do.</span></li><li><b class="next">Next</b><span>"One more way in that has nothing to do with technology."</span></li></ul></div>
+</section>
+
+<section class="slide" id="help-desk" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// LEAST PRIVILEGE 06</p><h2>The help desk is part of your login page</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="call" id="call"></div>
+      <div class="controls" id="call-choices"></div>
+      <p class="comment" id="call-out"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Whoever can reset a password or MFA can hand over an account. Attackers call the help desk, sounding stressed and senior.</li>
+        <li><b>Verify, then act</b>: call back on the number in the directory, or check with the person's manager. Never use details the caller offers.</li>
+        <li>Make the secure way the easy way: <b>self-service recovery</b> with a second passkey means fewer calls, and fewer chances to be fooled.</li>
+        <li>Give the help desk a written script, and the authority to say "I'll call you back".</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Play the call: pick what the help desk does at each step. The safe path is always slower for one minute, and saves a breach.</span></li><li><b class="say">Say</b><span>This is the general lesson of the talk: identity security is mostly process and kindness, done consistently.</span></li><li><b class="tip">Egg</b><span>Choose "Reset it: they said please".</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Which MFA methods survive a convincing phishing site, and why?</p><details><summary>Hint</summary><p>Which ones do you type in?</p></details><details class="answer"><summary>Answer</summary><p>Passkeys and security keys. They sign for the real site's address, so a look-alike gets nothing. Anything you type, including app codes, can be relayed.</p></details></li>
+      <li><p>Dana has moved teams three times. What's the risk, and what fixes it?</p><details><summary>Hint</summary><p>What happens to the old access?</p></details><details class="answer"><summary>Answer</summary><p>Access piles up until one account can reach everything. Moves should remove the old role, and regular reviews catch what slips through.</p></details></li>
+      <li><p>Name one non-human identity in your organisation without a clear owner.</p><details><summary>Hint</summary><p>CI tokens, old API keys, shared service accounts.</p></details><details class="answer"><summary>Answer</summary><p>Most organisations find several. Give each an owner and an expiry date, or revoke it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="plan" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>A 90-day plan</h2></header>
+  <div class="slide-body stack">
+    <div class="plan" id="plan-grid">
+      <div><b>Days 1–30 · See</b>
+        <label><input type="checkbox"> <span>List every app, and which use SSO</span></label>
+        <label><input type="checkbox"> <span>List admins, owners and break-glass accounts</span></label>
+        <label><input type="checkbox"> <span>MFA on for everyone, any kind</span></label>
+        <label><input type="checkbox"> <span>Write the help-desk verification script</span></label></div>
+      <div><b>Days 31–60 · Strengthen</b>
+        <label><input type="checkbox"> <span>Security keys or passkeys for all admins</span></label>
+        <label><input type="checkbox"> <span>Number matching on push MFA</span></label>
+        <label><input type="checkbox"> <span>Separate admin accounts, just-in-time where possible</span></label>
+        <label><input type="checkbox"> <span>Conditional access rules in report-only mode</span></label></div>
+      <div><b>Days 61–90 · Sustain</b>
+        <label><input type="checkbox"> <span>Joiner/mover/leaver driven by HR data</span></label>
+        <label><input type="checkbox"> <span>First access review, by group owners</span></label>
+        <label><input type="checkbox"> <span>Every API key and service account has an owner and expiry</span></label>
+        <label><input type="checkbox"> <span>Test the break-glass process</span></label></div>
+    </div>
+    <p class="note" id="plan-note">Tick what you've done. This page remembers, on this device only.</p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>See first, then strengthen, then sustain. Each month is achievable for a small team, and each one makes the next easier.</span></li><li><b class="tip">Egg</b><span>Tick all twelve.</span></li><li><b class="next">Next</b><span>"Questions?"</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or about your own organisation's setup. (Please keep real account names out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The 90-day plan and the demos stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B</a><span>US guidance on authentication strength, MFA and sessions.</span></li>
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authentication Cheat Sheet</a><span>Practical advice for building login well.</span></li>
+        <li><a href="../passwords-and-accounts/">Passwords and Accounts</a><span>The user's side: passkeys, two-factor and recovery.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>The signatures behind tokens and passkeys.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The ID token uses real ES256 signatures made in your browser; the identity provider, phone and help desk are simulations, and nothing you type is sent anywhere.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

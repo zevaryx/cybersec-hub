@@ -1,0 +1,85 @@
+/* talk.css: styles for "Identity and Access Management". The shared theme is in ../../shared/deck.css. */
+
+.roadmap-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+code { font: .9em var(--mono); color: var(--yellow); }
+.span-2 { grid-column: 1 / -1; }
+.prompt #hero-in { max-width: 100%; }
+.src { font: .62em/1.5 var(--mono); letter-spacing: .06em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+.src a { color: var(--cyan); }
+.habit { display: grid; gap: 6px; padding: 12px 16px; border: 1px solid var(--line); border-left: 3px solid var(--pink); background: rgba(21, 18, 51, .7); }
+.habit b { color: var(--pink); }
+.habit span { color: var(--fg); font-size: .88em; }
+.ok { color: var(--ok); } .bad { color: var(--bad); }
+#plan-note.ok { color: var(--ok); }
+
+/* SSO */
+.apps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.apps .idp { grid-column: 1 / -1; padding: 10px 14px; border: 1px solid var(--cyan); color: var(--cyan); font: 600 .85em var(--mono); text-align: center; box-shadow: 0 0 14px var(--cyan-glow); }
+.apps .idp.off { border-color: var(--line); color: var(--muted); box-shadow: none; text-decoration: line-through; }
+.apps .app { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); transition: border-color .3s, opacity .3s; }
+.apps .app b { font-size: .88em; }
+.apps .app span { font: .68em var(--mono); color: var(--muted); }
+.apps .app.on { border-color: var(--ok); } .apps .app.on span { color: var(--ok); }
+.apps .app.off { opacity: .35; }
+.apps .app.open { border-color: var(--bad); box-shadow: 0 0 14px rgba(255, 91, 58, .25); } .apps .app.open span { color: var(--bad); }
+
+/* ID token */
+.jwt { font: .8em/1.5 var(--mono); padding: 10px 14px; border: 1px solid var(--line); background: var(--void); overflow-wrap: anywhere; }
+.c-h { color: var(--pink); } .c-p { color: var(--cyan); } .c-s { color: var(--yellow); }
+b.c-h, b.c-p, b.c-s { font-weight: 700; }
+
+/* MFA ladder */
+.ladder-mfa { display: grid; gap: 8px; }
+.ladder-mfa > div { display: grid; gap: 4px; padding: 12px 16px; border: 1px solid var(--line); border-left-width: 6px; background: rgba(21, 18, 51, .7); }
+.ladder-mfa b { font-size: 1.05em; }
+.ladder-mfa span { color: var(--muted); font-size: .86em; }
+.ladder-mfa .r0 { border-left-color: var(--bad); } .ladder-mfa .r1 { border-left-color: var(--yellow); }
+.ladder-mfa .r2 { border-left-color: var(--cyan); } .ladder-mfa .r3 { border-left-color: var(--ok); } .ladder-mfa .r3 b { color: var(--ok); }
+
+/* push fatigue phone */
+.phone { min-height: 190px; padding: 14px; border: 2px solid var(--line); border-radius: 18px; background: var(--void); display: grid; align-content: center; }
+.phone p { text-align: center; font-weight: 600; }
+.phone .m { color: var(--muted); font-weight: 400; }
+.notif { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--cyan); border-radius: 12px; background: var(--panel-2); animation: notif-in .3s; }
+.notif small { font: .7em var(--mono); color: var(--muted); }
+.notif span { font-size: .82em; color: var(--yellow); }
+.notif label { display: grid; gap: 4px; font-size: .78em; }
+.notif input { max-width: 6ch; font: 1.1em var(--mono); }
+.notif .btns { display: flex; gap: 8px; }
+@keyframes notif-in { from { transform: translateY(-8px); opacity: 0; } }
+
+/* conditional access */
+.ca { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.ca label { display: grid; gap: 4px; font: .66em var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-width: 0; }
+.ca select { font: .9rem var(--mono); text-transform: none; letter-spacing: 0; color: var(--fg); background: var(--void); border: 1px solid var(--line); padding: 6px 8px; width: 100%; min-width: 0; }
+
+/* rollout steps */
+.steps-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.steps-4 > div { display: grid; gap: 6px; align-content: start; padding: 14px 16px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); }
+.steps-4 small { font: 700 1.3em var(--mono); color: var(--pink); }
+.steps-4 b { color: var(--cyan); }
+.steps-4 span { color: var(--muted); font-size: .86em; }
+
+/* help desk call */
+.call { min-height: 110px; padding: 14px 18px; border: 1px solid var(--line); border-left: 3px solid var(--yellow); background: rgba(21, 18, 51, .7); display: grid; align-content: center; }
+.call p { font-size: 1.02em; }
+#call-choices { display: grid; gap: 8px; justify-items: start; }
+
+/* 90-day plan */
+.plan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.plan > div { display: grid; gap: 8px; align-content: start; padding: 14px 16px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); }
+.plan > div > b { color: var(--pink); font-size: 1.05em; margin-bottom: 2px; }
+.plan > div:nth-child(2) > b { color: var(--cyan); } .plan > div:nth-child(3) > b { color: var(--ok); }
+.plan label { display: flex; gap: 10px; align-items: center; cursor: pointer; font-size: .88em; }
+.plan input { accent-color: var(--ok); width: 18px; height: 18px; flex: none; }
+.plan input:checked + span { color: var(--ok); }
+
+/* narrow screens (scroll view) */
+@media (max-width: 900px) {
+  .mode-scroll .roadmap-4, .mode-scroll .steps-4, .mode-scroll .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mode-scroll .plan { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .mode-scroll .roadmap-4, .mode-scroll .steps-4, .mode-scroll .ca { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .notif { animation: none; } }
