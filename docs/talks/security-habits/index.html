@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Security Habits for New Developers</title>
+<meta name="description" content="Security Habits for New Developers: trust boundaries and ten habits that prevent most of the bugs that end up in the news, with live demos. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/security-habits/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Security Habits for New Developers">
+<meta property="og:description" content="You don't need to be a security expert to write secure code. Ten habits that prevent most of the bugs in the news, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/security-habits/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/security-habits/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Security Habits for New Developers in neon, beside a terminal that refuses to trust your input.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M11 9l-6 7 6 7M21 9l6 7-6 7' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M18 7l-4 18' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "security-habits", "title": "Security Habits for New Developers", "footer": "DEV HABITS", "subtitle": "DEVELOPER TRACK · 01",
+  "parts": [{ "name": "Thinking like a defender", "minutes": 20 }, { "name": "Ten habits", "minutes": 30 }, { "name": "Wrap-up", "minutes": 10 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">DEV <span>HABITS</span></a>
+  <div class="scroll-parts">
+    <a href="#inputs" data-part="1"><b>01</b>Defender</a>
+    <a href="#habit-validate" data-part="2"><b>02</b>Habits</a>
+    <a href="#checklist" data-part="3"><b>03</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 01 · NO BACKGROUND NEEDED</p>
+      <h1><span class="pre">Security habits for</span> <span class="glitch" data-text="New Developers">New Developers</span></h1>
+      <p class="lede">You don't need to be a security expert to write secure code. Ten habits that prevent most of the bugs that end up in the news.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/security-habits/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ trust(<input id="hero-in" value="hello" spellcheck="false" autocomplete="off">)</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. An hour, three parts, two checkpoints. No security background needed: if you can write a web app, you can write a safer one.</span></li><li><b class="show">Show</b><span>The terminal: type anything into trust(). It never trusts you. That's the whole talk in one function.</span></li><li><b class="tip">Eggs</b><span>Type Bobby Tables ('; DROP TABLE students;--) into any demo field; try "me" or "admin" in the title terminal; set a negative price in the shop; look at the dev error page's database password; tick every permission on the least-privilege slide; tick all ten habits on the checklist for the Habit Machine. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Why habits, and not a list of rules?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#inputs"><small>PART 1 · 20 MIN</small><b>Thinking like a defender</b></a><span>Everything is input</span><span>Trust boundaries</span><span>Data as code, and trusting the client</span></li>
+      <li><a href="#habit-validate"><small>PART 2 · 30 MIN</small><b>Ten habits</b></a><span>Validate, encode, use safe defaults</span><span>Permissions, secrets, libraries, updates</span><span>Errors, least privilege, review, learning</span></li>
+      <li><a href="#checklist"><small>PART 3 · 10 MIN</small><b>Wrap-up</b></a><span>A checklist for your desk</span><span>Where to learn next</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First we learn to see code the way an attacker does. Then ten habits, each with a demo. Then a checklist you can pin above your desk.</span></li><li><b class="next">Next</b><span>"These aren't hypothetical. Here's last month."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY HABITS</p><h2>Last month's news, as habits</h2></header>
+  <div class="slide-body stack">
+    <p class="big-lede">October 2026 had some of the biggest security stories in years. Most of them come down to a habit someone skipped.</p>
+    <div class="cards-3">
+      <a class="card card-link" href="../../news/2026-10-black-october/#gitlab-ruby"><b>GitLab and Ruby</b><span>User-written regex patterns were compiled as code. A critical bug followed.</span><em>Habit 1: data is never code</em></a>
+      <a class="card card-link" href="../../news/2026-10-black-october/#litellm"><b>LiteLLM</b><span>An admin key committed to a public repo in May was never revoked. In October it opened the door.</span><em>Habit 4: secrets stay out of code</em></a>
+      <a class="card card-link" href="../../news/2026-10-black-october/#claude-extension"><b>A poisoned editor extension</b><span>A malicious version reached developers' laptops for about 11 hours, through updates.</span><em>Habit 6: know your dependencies</em></a>
+    </div>
+    <p class="note">From <a href="../../news/2026-10-black-october/">Cyber in the News: Black October</a>, where every story has its sources.</p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>None of these needed a genius attacker. They needed one missed habit. We'll come back to each one when we reach its habit.</span></li><li><b class="tip">Tip</b><span>Keep it kind: the people involved weren't careless; habits are hard to keep under deadline pressure. That's why we practise them.</span></li><li><b class="next">Next</b><span>"Part 1: where does danger come from? Short answer: everywhere data comes from."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="inputs" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// DEFENDER 01</p><h2>Everything that reaches your code is input</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="big-lede">If it came from outside your code, someone else might control it.</p>
+      <p class="callout"><b>RULE</b> "Never trust input" really means: check it at the point it enters, every time, on a computer you control.</p>
+    </div>
+    <div class="input-grid">
+      <div><b>Forms</b><span>every field, including hidden ones</span></div>
+      <div><b>URLs</b><span>paths, query strings, IDs</span></div>
+      <div><b>Headers and cookies</b><span>the browser sends what it's told to</span></div>
+      <div><b>Files</b><span>uploads, names, sizes, contents</span></div>
+      <div><b>Other services</b><span>APIs, webhooks, message queues</span></div>
+      <div><b>Databases</b><span>data someone else wrote earlier</span></div>
+      <div><b>AI model output</b><span>it may repeat text an attacker planted</span></div>
+      <div><b>Your own dependencies</b><span>code you didn't write, run as you</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Most people think "input" means form fields. It's anything your code didn't produce itself. Two that surprise people: data already in your database (someone typed it once), and the output of an AI model (it can repeat instructions hidden in a web page it read).</span></li><li><b class="ask">Ask</b><span>Which of these does your current project read? <em>Usually most of them.</em></span></li><li><b class="next">Next</b><span>"So where exactly should we check? At the boundaries."</span></li></ul></div>
+</section>
+
+<section class="slide" id="boundaries" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// DEFENDER 02</p><h2>Trust boundaries: where data changes hands</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="zones" id="zones">
+        <div class="zone zone-out"><small>The internet: untrusted</small><span data-c="browser">Browser</span><span data-c="pay">Payment provider</span><span data-c="ai">AI model API</span></div>
+        <div class="zone zone-mid"><small>Your server</small><span data-c="api">Your API</span></div>
+        <div class="zone zone-in"><small>Private network</small><span data-c="db">Database</span></div>
+      </div>
+      <p class="mini-label">Pick a flow of data</p>
+      <div class="flows" id="flows"></div>
+    </div>
+    <pre class="term term-big" id="flow-out"></pre>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Draw your app as boxes and arrows. Wherever an arrow crosses from a less trusted place to a more trusted one, that's a trust boundary, and that's where your checks go.</span></li><li><b class="show">Show</b><span>Click each flow. Browser to API: validate, authenticate, check permission. Payment webhook: verify the signature and look the amount up yourself. AI model: its reply is input too. API to browser: encode output, never leak secrets.</span></li><li><b class="ask">Ask</b><span>Which arrow do people forget most? <em>Webhooks and AI output: they feel like "our" systems.</em></span></li><li><b class="next">Next</b><span>"Two mistakes cause most boundary failures."</span></li></ul></div>
+</section>
+
+<section class="slide" id="data-as-code" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// DEFENDER 03 · CLASSIC MISTAKE 1</p><h2>Treating data as code</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">Look up a student by name <input id="sql-in" value="Ada" spellcheck="false" autocomplete="off"></label></div>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" data-sql="' OR '1'='1">Try ' OR '1'='1</button><button type="button" class="btn btn-ghost btn-sm" data-sql="O'Brien">Try O'Brien</button></div>
+      <pre class="term" id="sql-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Gluing input into a query, command or template lets the input <b>change the code</b>. That's injection.</li>
+        <li>Parameters keep them apart: the code is fixed, the input is only ever a value.</li>
+        <li>Same idea everywhere: SQL, shell commands, HTML, regex patterns, AI prompts.</li>
+      </ul>
+      <p class="callout"><b>OCTOBER</b> GitLab compiled patterns users typed. Ruby's regex engine had bugs. A pattern is code.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Type Ada: both versions find one row. Press ' OR '1'='1: the glued-together query now says "or true" and returns every student. The parameterised one finds nobody, correctly. Try O'Brien: the glued version breaks on a real name, which is how a lot of these bugs get found.</span></li><li><b class="say">Say</b><span>This is a simulation of how the database reads the text, not a real database.</span></li><li><b class="tip">Egg</b><span>Robert'); DROP TABLE students;-- (xkcd 327).</span></li><li><b class="next">Next</b><span>"Mistake two: believing what the browser tells you."</span></li></ul></div>
+</section>
+
+<section class="slide" id="client-lies" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// DEFENDER 04 · CLASSIC MISTAKE 2</p><h2>Trusting the client</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="shop">
+        <div class="shop-item"><b>Neon keyboard</b><span>$49.99</span></div>
+        <div class="controls">
+          <label>Quantity <input id="shop-qty" type="number" value="1" min="1" max="99"></label>
+          <label class="grow devtools">Hidden field (edit me, like DevTools) <input id="shop-price" value="49.99" spellcheck="false" autocomplete="off"></label>
+        </div>
+        <div class="controls">
+          <label class="check"><input type="checkbox" id="shop-check"> The server looks up the price itself</label>
+          <button type="button" class="btn btn-sm" id="shop-buy">Place order</button>
+        </div>
+      </div>
+      <pre class="term" id="shop-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Anything in the page can be changed: hidden fields, disabled buttons, prices, JavaScript checks.</li>
+        <li>Browser checks are for <b>convenience</b>. Server checks are for <b>security</b>.</li>
+        <li>Send IDs from the client, not facts: "item 42", not "item 42 costs $0.01".</li>
+      </ul>
+      <p class="callout"><b>TEST IT</b> Open DevTools on your own app and change things. If the server believes you, fix it.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Edit the hidden price to 0.01 and place the order: the "server" charges a cent. Tick "the server looks up the price" and try again: the client's price is ignored.</span></li><li><b class="say">Say</b><span>Everything here runs in your browser. The "server" is a few lines of JavaScript pretending, which is exactly why you can't trust it.</span></li><li><b class="tip">Egg</b><span>Try a negative price.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A form disables the "admin" checkbox for normal users. Is the admin feature protected?</p><details><summary>Hint</summary><p>Who controls the browser?</p></details><details class="answer"><summary>Answer</summary><p>No. Anyone can re-enable it or send the request directly. The server must check the user's role on every request.</p></details></li>
+      <li><p>Your app summarises web pages with an AI model, then runs the actions it suggests. Where's the trust boundary?</p><details><summary>Hint</summary><p>Who wrote the web page?</p></details><details class="answer"><summary>Answer</summary><p>Between the model's output and your code. A page can hide instructions the model repeats, so treat its output as untrusted input and limit what it can trigger.</p></details></li>
+      <li><p>Name one trust boundary in something you've built.</p><details><summary>Hint</summary><p>Where does data arrive from somewhere you don't control?</p></details><details class="answer"><summary>Answer</summary><p>Common ones: form handlers, API endpoints, file uploads, webhooks, and anything reading another service's response.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="habit-validate" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// HABITS 1 AND 2</p><h2>Validate on the way in, encode on the way out</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">Someone posts a comment <input id="enc-in" value="Great talk! &lt;img src=x onerror=alert('hi')&gt;" spellcheck="false" autocomplete="off"></label></div>
+      <div class="enc-pair">
+        <div><p class="mini-label bad">Inserted as HTML</p><pre class="term" id="enc-raw"></pre></div>
+        <div><p class="mini-label ok">Encoded by the template</p><div class="enc-view" id="enc-safe"></div></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="habit"><b>1 · Validate input on the server</b><span>Check type, length and format against what you <i>allow</i> (an allowlist), and reject the rest.</span></div>
+      <div class="habit"><b>2 · Use the framework's safe defaults</b><span>Query parameters, auto-escaping templates, the ORM. Don't switch them off; be suspicious of "raw" and "unsafe" in function names.</span></div>
+      <p class="callout"><b>ENCODE FOR THE DESTINATION</b> The same text needs different escaping in HTML, a URL, JavaScript or SQL. Templates do this for you.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>The comment contains an image tag with an onerror handler. Left: what the browser would do if you pasted it into the page as HTML (we describe it rather than run it). Right: the template encodes it, so it shows up as harmless text.</span></li><li><b class="say">Say</b><span>That's cross-site scripting: data treated as code, in the browser this time. React, Vue, Django, Rails and most modern templates encode by default. The bugs live in the escape hatches: innerHTML, dangerouslySetInnerHTML, |safe, raw().</span></li><li><b class="next">Next</b><span>"Habit 3: the server decides who may do what."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit-permissions" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// HABIT 3</p><h2>Check permissions on every request</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="note">You're signed in as <b>customer 7</b>. Your invoice is 1042.</p>
+      <div class="urlbar"><span>https://shop.example/invoices/</span><input id="idor-in" value="1042" inputmode="numeric" spellcheck="false" autocomplete="off" aria-label="Invoice number"></div>
+      <div class="controls"><label class="check"><input type="checkbox" id="idor-check"> The server checks the invoice belongs to you</label></div>
+      <pre class="term" id="idor-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Hiding a button isn't access control. Every endpoint asks: <b>is this user allowed to do this, to this thing?</b></li>
+        <li>Changing an ID in a URL to see someone else's data is one of the most common bugs there is.</li>
+        <li>Put the check in one place every request passes through, so a new endpoint can't forget it.</li>
+      </ul>
+      <p class="callout"><b>OWASP</b> Broken access control is number 1 on the OWASP Top 10.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Change 1042 to 1041 or 1043: you see other customers' invoices. Tick the ownership check and try again: 404, which also doesn't reveal that the invoice exists.</span></li><li><b class="say">Say</b><span>Signed in isn't the same as allowed. Authentication says who you are; authorisation says what you may touch.</span></li><li><b class="tip">Check</b><span>Confirm the current OWASP Top 10 edition before presenting (2025 at the time of writing, with broken access control first).</span></li><li><b class="next">Next</b><span>"Habit 4: secrets."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit-secrets" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// HABIT 4</p><h2>Keep secrets out of code, and out of Git</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="git-log">git log</button><button type="button" class="btn btn-ghost btn-sm" id="git-patch">git log -p</button><button type="button" class="btn btn-sm" id="git-rotate">Rotate the key</button></div>
+      <pre class="term term-big" id="git-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Keys go in environment variables or a secret manager. Add <code>.env</code> to <code>.gitignore</code> before your first commit.</li>
+        <li><b>Deleting a key in the next commit doesn't remove it.</b> Git keeps every version, and bots scan public repos within minutes.</li>
+        <li>Leaked a key? <b>Revoke it first</b>, then clean up. Turn on your host's secret scanning and push protection.</li>
+      </ul>
+      <p class="callout"><b>OCTOBER</b> LiteLLM: an admin key committed in May, never revoked, used in October.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>git log: three innocent commits, one says "remove key". git log -p: the key is right there in the history. Rotate the key: now the leaked one is useless, which is the only real fix.</span></li><li><b class="say">Say</b><span>Rewriting history to remove it is good hygiene, but forks, clones and caches may already have it. Assume it's out; make it worthless.</span></li><li><b class="next">Next</b><span>"Habit 5: don't build your own locks."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit-libraries" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// HABITS 5 AND 6</p><h2>Use well-known libraries, and keep them few and current</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="habit"><b>5 · Don't write your own crypto, auth or parsers</b><span>Use the well-reviewed library: a password-hashing library, your framework's sessions, a real parser. Small mistakes in these become big holes.</span></div>
+      <p class="note">The crypto on this hub is written from scratch, on purpose, to show how it works. Production code uses a vetted library. <a href="../crypto-101/">Crypto 101</a> shows why.</p>
+      <div class="habit"><b>6 · Keep dependencies few and current</b><span>Every package is code that runs as you. Fewer is better; updated is essential.</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Lock files</b> with hashes, so a build installs exactly what you tested.</li>
+        <li><b>Update bots</b> (Dependabot, Renovate) open the pull requests for you.</li>
+        <li>Don't jump to a release published an hour ago. Let it settle.</li>
+        <li>Updating isn't done until the running program is restarted or the image rebuilt.</li>
+      </ul>
+      <p class="callout"><b>OCTOBER</b> LiteLLM 1.107.0 and a Claude Code extension version were both malicious for hours. A Brotli bug sat in a trusted library for eight years.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>These two pull in opposite directions on purpose: use libraries instead of writing risky code yourself, but every library is someone else's code you now depend on. So pick well-known ones, keep the list short, and keep it updated.</span></li><li><b class="say">Say</b><span>Pinned, hash-checked installs were safe from LiteLLM's bad release. A brand-new release installed automatically was not.</span></li><li><b class="next">Next</b><span>"Habit 7: what happens when things go wrong."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit-errors" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// HABIT 7</p><h2>Fail safely: helpful to you, useless to an attacker</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="check"><input type="checkbox" id="err-prod"> Production mode</label><button type="button" class="btn btn-sm" id="err-go">Trigger the bug</button></div>
+      <div class="err-pair">
+        <div><p class="mini-label">What the user sees</p><pre class="term" id="err-user"></pre></div>
+        <div><p class="mini-label">What your logs record</p><pre class="term" id="err-log"></pre></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Users get a <b>generic message</b> and a reference number.</li>
+        <li>Your logs get the <b>details</b>: stack trace, request ID, what failed.</li>
+        <li><b>Never</b> secrets, passwords, tokens or full card numbers in either.</li>
+        <li>Fail <b>closed</b>: if a permission check errors, the answer is no.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Trigger the bug in development mode: the stack trace shows the database host, the query and the connection string, password included. Tick production mode: the user gets a reference number; the log keeps the detail with the secret redacted.</span></li><li><b class="say">Say</b><span>Detailed errors are wonderful while you build and a map for attackers once you ship. Make sure production mode is really on in production.</span></li><li><b class="tip">Egg</b><span>Look closely at the dev-mode password.</span></li><li><b class="next">Next</b><span>"Habit 8: give everything as little power as possible."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit-privilege" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// HABIT 8</p><h2>Least privilege: every key can only do its job</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="note">A token for the <b>nightly sales report</b>. It needs to read orders. What does it get?</p>
+      <div class="perms" id="perms">
+        <label class="check"><input type="checkbox" data-p="read:orders" checked> read:orders</label>
+        <label class="check"><input type="checkbox" data-p="write:orders"> write:orders</label>
+        <label class="check"><input type="checkbox" data-p="read:customers"> read:customers</label>
+        <label class="check"><input type="checkbox" data-p="refunds"> issue refunds</label>
+        <label class="check"><input type="checkbox" data-p="admin"> admin</label>
+        <label class="check"><input type="checkbox" data-p="never-expires"> never expires</label>
+      </div>
+      <pre class="term" id="perm-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Database users that can't drop tables. API tokens with one scope. Cloud roles for one job.</li>
+        <li>Give keys an <b>expiry date</b>, and one owner who'd notice if it leaked.</li>
+        <li>When (not if) something leaks, least privilege decides how bad the day is.</li>
+      </ul>
+      <p class="callout"><b>OCTOBER</b> Zeabur: never-expiring admin tokens in a config repo, reachable from the internet.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>With only read:orders, a leak exposes order data. Tick more boxes and watch the "if this leaks" list grow. Least privilege doesn't stop the leak; it shrinks the damage.</span></li><li><b class="tip">Egg</b><span>Tick everything.</span></li><li><b class="next">Next</b><span>"The last two habits are about people."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit-people" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// HABITS 9 AND 10</p><h2>Review each other, and learn without blame</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="habit"><b>9 · Review code with security on the checklist</b><span>Four questions for every pull request:</span></div>
+      <ol class="review-q">
+        <li>Where does new <b>input</b> enter, and is it validated?</li>
+        <li>Is any input used as <b>code</b>: SQL, HTML, shell, regex, a prompt?</li>
+        <li>Does every new endpoint check <b>who may do this</b>?</li>
+        <li>Any <b>secrets</b>, new dependencies or detailed errors?</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <div class="habit"><b>10 · Learn from incidents, blamelessly</b><span>When something breaks, ask what made the mistake easy, not who made it.</span></div>
+      <ul class="rules">
+        <li>Write it up: what happened, how it was found, what changes so it can't happen the same way again.</li>
+        <li>Read other people's write-ups too. October's incident reports are free lessons.</li>
+        <li>People who are blamed hide mistakes. People who aren't, report them early.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Code review catches what one tired person misses. Four questions cover most of today's talk.</span></li><li><b class="say">Say</b><span>LiteLLM, Railway and Zeabur all published detailed incident reports. That's the industry doing habit 10 in public, and it's why this talk could use real examples.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>You pushed an API key by accident and deleted it in the next commit. Are you safe?</p><details><summary>Hint</summary><p>What does git log -p show?</p></details><details class="answer"><summary>Answer</summary><p>No. It's still in the history, and may already be copied. Revoke or rotate the key first, then clean up.</p></details></li>
+      <li><p>Why is a detailed error page useful to you, and dangerous in production?</p><details><summary>Hint</summary><p>Who else can read it?</p></details><details class="answer"><summary>Answer</summary><p>It shows exactly what failed, which helps you debug. In production it shows attackers your stack, queries, file paths and sometimes secrets. Log the detail; show users a reference number.</p></details></li>
+      <li><p>Which of the ten habits would have helped most in your last project?</p><details><summary>Hint</summary><p>Validate, defaults, permissions, secrets, libraries, updates, errors, privilege, review, learning.</p></details><details class="answer"><summary>Answer</summary><p>There's no wrong answer. Pick one and make it automatic this week.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="checklist" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>The checklist for your desk</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <ol class="habits" id="habits">
+      <li><label><input type="checkbox"> <span><b>Validate</b> input on the server, against an allowlist</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Safe defaults</b>: parameters, escaping templates, no "raw"</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Permissions</b> checked on every request</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Secrets</b> out of code and Git; revoke first if leaked</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Libraries</b> for crypto, auth and parsing</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Dependencies</b> few, locked and current</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Errors</b>: generic for users, detailed logs, no secrets</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Least privilege</b> for every key, user and role</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Review</b> with security questions</span></label></li>
+      <li><label><input type="checkbox"> <span><b>Learn</b> from incidents, without blame</span></label></li>
+    </ol>
+    <div class="stack">
+      <div class="machine" id="machine"><p class="glitch" data-text="Habit Machine">Habit Machine</p><span>All ten habits, ticked. Now do it again tomorrow.</span></div>
+      <p class="note" id="habit-count">Tick the ones you already do. This page remembers, on this device only.</p>
+      <p class="callout"><b>START SMALL</b> Pick the one you skip most and make it automatic: a template, a lint rule, a pre-commit hook.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Ten habits on one page. Print it, or open this slide on your phone and tick what you already do.</span></li><li><b class="tip">Egg</b><span>Tick all ten for the Habit Machine.</span></li><li><b class="next">Next</b><span>"Where to go from here."</span></li></ul></div>
+</section>
+
+<section class="slide" id="learn-next" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>Where to learn next</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="mini-label">On this hub</p>
+      <div class="links">
+        <a href="../crypto-101/"><b>Crypto 101</b><span>Hashing, encryption, keys and signatures</span></a>
+        <a href="../passwords-and-accounts/"><b>Passwords and Accounts</b><span>What good login looks like from the user's side</span></a>
+        <a href="../how-https-works/"><b>How HTTPS Really Works</b><span>What protects data on the way</span></a>
+        <a href="../../news/"><b>Cyber in the News</b><span>A monthly roundup with real incidents</span></a>
+      </div>
+      <p class="note">Coming next in the Developer track: Git and GitHub security, then using crypto correctly in code.</p>
+    </div>
+    <div class="stack">
+      <p class="mini-label">Elsewhere</p>
+      <ul class="rules">
+        <li><b>OWASP Top 10</b>: the most common web application risks, with examples and fixes.</li>
+        <li><b>OWASP Cheat Sheet Series</b>: short, practical answers to "how do I do X safely?"</li>
+        <li>Your framework's <b>security guide</b>: Django, Rails, Express, Spring and others all have one.</li>
+        <li>Incident write-ups from companies you use: free lessons from someone else's bad day.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>OWASP is a non-profit; its Top 10 and Cheat Sheets are free and well maintained. Your framework's security page is the most underrated document you'll ever read.</span></li><li><b class="tip">Check</b><span>Update the "coming next" line as Developer-track talks are built.</span></li><li><b class="next">Next</b><span>"Questions?"</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body stack">
+    <p class="glitch big-q" data-text="Questions?">Questions?</p>
+    <p class="contact">Ask later at <a href="https://github.com/zevaryx/cybersec-hub/discussions">github.com/zevaryx/cybersec-hub/discussions</a> or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Ask which habit people will start with.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

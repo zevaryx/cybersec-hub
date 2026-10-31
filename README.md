@@ -17,8 +17,9 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | Start here | **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
 | General 1 | **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
 | General 2 | **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
+| Developer 1 | **Security Habits for New Developers** | Beginner | about 60 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
 
-The Developer and Security tracks have no finished talks yet.
+The Security track has no finished talks yet.
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
 
@@ -36,6 +37,16 @@ Four parts, with a checkpoint after part 2:
 4. **Wrap-up** (12 min): the myth of the month, what to do for each track, the 12 days of cybermas, and every source
 
 The facts were checked against official sources on 30 October 2026. The Binance story was a day old then, so its numbers may have moved.
+
+### Security Habits for New Developers
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **Thinking like a defender** (20 min): everything is input, trust boundaries (pick a flow and see what to check), treating data as code (a SQL query glued together vs parameterised), trusting the client (a shop that believes the price in a hidden field)
+2. **Ten habits** (30 min): validate and encode (an HTML comment shown raw vs encoded), permissions on every request (change the invoice number), secrets in Git history (delete vs rotate), well-known libraries, few and current dependencies, failing safely (dev vs production errors), least privilege (watch the blast radius grow), review and blameless learning
+3. **Wrap-up** (10 min): a ten-habit checklist that remembers your ticks, where to learn next
+
+Real examples come from October 2026 (see Cyber in the News). Every "server" in the demos is JavaScript in your browser; nothing is sent anywhere.
 
 ### How HTTPS Really Works
 
@@ -145,7 +156,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos
