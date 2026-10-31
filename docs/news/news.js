@@ -23,3 +23,34 @@ for (const b of buttons) {
 
 nav.hidden = false;
 sort(new URLSearchParams(location.search).get('sort') === 'oldest' ? 'oldest' : 'latest');
+
+// ---------------------------------------------------------------- easter eggs (listed in plans/EASTER_EGGS.md)
+function egg(msg) {
+  let t = document.querySelector('.hub-toast');
+  if (!t) {
+    t = document.createElement('p');
+    t.className = 'hub-toast';
+    t.setAttribute('role', 'status');
+    document.body.append(t);
+  }
+  t.textContent = msg;
+  t.classList.remove('show');
+  void t.offsetWidth;                                   // restart the animation
+  t.classList.add('show');
+  clearTimeout(t.hide);
+  t.hide = setTimeout(() => t.classList.remove('show'), 6000);   // reduced motion has no animation to end it
+}
+
+// sorting the list over and over
+let sorts = 0;
+for (const b of buttons) {
+  b.addEventListener('click', () => {
+    sorts++;
+    if (sorts !== 6) return;
+    if (list.children.length === 1) egg('Sorting one episode: done instantly, every time. Come back next month for a harder problem.');
+    else egg('Sorted again. Same news either way, sadly.');
+  });
+}
+
+console.log('%c// BREAKING NEWS', 'color:#ff2e88;font:700 16px monospace');
+console.log('Local person opens browser console. Experts say this is a good habit. Every story slide lists its sources at the bottom: check our work too.');

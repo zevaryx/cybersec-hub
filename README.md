@@ -18,9 +18,9 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | General 1 | **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
 | General 2 | **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
 | Developer 1 | **Security Habits for New Developers** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
+| Security 1 | **Identity and Access Management** | Intermediate | about 80 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/) |
 | Developer 2 | **Git and GitHub Security** | Beginner to intermediate | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/git-github-security/) |
 
-The Security track has no finished talks yet.
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
 
@@ -38,6 +38,17 @@ Four parts, with a checkpoint after part 2:
 4. **Wrap-up** (12 min): the myth of the month, what to do for each track, the 12 days of cybermas, and every source
 
 The facts were checked against official sources on 30 October 2026. The Binance story was a day old then, so its numbers may have moved.
+
+### Identity and Access Management
+
+Four parts, with checkpoints after parts 1 and 3:
+
+1. **One identity, many apps** (25 min): single sign-on (offboard someone with and without it), a real ES256 ID token to decode and tamper with, OAuth vs OpenID Connect, sessions and token theft
+2. **Strong authentication** (22 min): the MFA ladder and what NIST calls phishing-resistant, push fatigue (with and without number matching), rolling out passkeys, conditional access (pick a sign-in, see the decision)
+3. **Least privilege over time** (25 min): roles and groups, separate and just-in-time admin, break-glass accounts, joiners/movers/leavers (watch access drift), access reviews people finish, non-human identities, help-desk resets as a way in
+4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
+
+Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
 
 ### Git and GitHub Security
 
@@ -146,8 +157,8 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 
 1. Write the slides in its `index.html` (each has its speaker notes in a `.notes` block) and its demos in `app.js`.
 2. Set the parts and their minutes in the page's `deck-config` block; the presenter window builds its timing plan from them.
-3. Add a card for it to its track in `docs/index.html`, in the order to take the talks, and a row to the table above.
-   For a **Cyber in the News** episode, create it the same way, then move the folder to `docs/news/YYYY-MM-slug/` (same depth, so its links to `shared/` still work; point links into other talks at `../../talks/`). Add a card to `docs/news/index.html` with `data-date="YYYY-MM"` (the page sorts itself), and replace the latest-episode card on `docs/index.html`.
+3. Add a card for it to its track in `docs/index.html`, in the order to take the talks (before the "More coming soon" tile), and a row to the table above. Also swap it into the "Newest talk" featured card at the top. The track's tab count and progress bar update themselves.
+   For a **Cyber in the News** episode, create it the same way, then move the folder to `docs/news/YYYY-MM-slug/` (same depth, so its links to `shared/` still work; point links into other talks at `../../talks/`). Add a card to `docs/news/index.html` with `data-date="YYYY-MM"` (the page sorts itself), and replace the Cyber in the News featured card on `docs/index.html`.
 4. Add a `qr.svg` QR code of the talk's address (the title and Questions slides show it; `qr-discussions.svg` is copied in for you), and optionally a 1200×630 `og-image.png` for link previews.
 5. Hide a few easter eggs in the demos (jokes for special inputs, a console hint, a reward for finishing something) and list them in the title slide's speaker notes. Every talk has some.
 
@@ -155,19 +166,21 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 
 ```
 docs/
-  index.html          the hub's front page (Crypto 101, one section per track, then Cyber in the News)
-  hub.css             front-page styles (also used by news/)
+  index.html          the hub's front page: featured cards (Crypto 101, latest news, newest talk), then one tab per track
+  hub.js              the track tabs, reading progress (saved in the visitor's browser only), and a few easter eggs
+  hub.css             front-page styles (also used by news/). The pages link it, hub.js and news.js with ?v=DATE:
+                      change that date when you edit them, so returning visitors don't get a stale copy
   news/               the Cyber in the News page: every episode, sortable (news.js)
     YYYY-MM-slug/     one folder per episode, laid out like a talk folder
   shared/
     deck.css          the cyberpunk theme, slide layout, scroll view, print layout, timers
-    deck.js           slide navigation, notes, overview, presenter window, checkpoint timers
+    deck.js           slide navigation, notes, overview, presenter window, checkpoint timers, and marking a talk read for the hub
     crypto.js         the maths: classical ciphers, SHA-256, SHA-1, HMAC, HKDF (incl. TLS 1.3 labels), HOTP/TOTP, Base32,
                       AES (ECB/CBC/CTR/GCM), RSA, elliptic curves, passkey signature checks, toy lattice encryption
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos

@@ -21,6 +21,9 @@
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked: fine */ } },
   };
+  // reaching the last slide marks this talk read for the hub's progress bars, in this browser only (keyed by folder name; see hub.js)
+  const READ_KEY = "hub-read:" + location.pathname.replace(/index\.html$/, "").split("/").filter(Boolean).pop();
+  const markRead = () => { if (!store.get(READ_KEY)) store.set(READ_KEY, new Date().toISOString().slice(0, 10)); };
   const chan = "BroadcastChannel" in window ? new BroadcastChannel(`deck-${TALK_ID}`) : null;
   let cur = 0;
 
@@ -136,6 +139,7 @@
     document.querySelectorAll(".scroll-parts a").forEach((a) => a.classList.toggle("active", +a.dataset.part === +s.dataset.part));
     if (mode() === "presenter") presenterDraw();
     cpFollow(s);
+    if (cur === slides.length - 1) markRead();
     document.dispatchEvent(new CustomEvent("deck:slide", { detail: s }));   // lets demos redraw at the right size
     if (broadcast && chan) chan.postMessage({ type: "go", id: s.id });
   }
@@ -234,6 +238,7 @@
       if (mode() !== "scroll") return;
       for (const en of entries) if (en.isIntersecting) {
         cur = slides.indexOf(en.target);
+        if (cur === slides.length - 1) markRead();
         document.querySelectorAll(".scroll-parts a").forEach((a) => a.classList.toggle("active", +a.dataset.part === +en.target.dataset.part));
       }
     }, { rootMargin: "-45% 0px -50% 0px" });
