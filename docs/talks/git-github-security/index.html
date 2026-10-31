@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Git and GitHub Security</title>
+<meta name="description" content="Git and GitHub Security: signed commits, protected branches, leaked tokens, safer GitHub Actions and the settings worth turning on today, with live demos. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/git-github-security/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Git and GitHub Security">
+<meta property="og:description" content="Your repository is a front door to your users. Signed commits, protected branches, leaked tokens and safer Actions.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/git-github-security/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/git-github-security/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Git and GitHub Security in neon, beside a terminal committing as someone else.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Ccircle cx='10' cy='8' r='3' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='10' cy='24' r='3' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='22' cy='12' r='3' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3Cpath d='M10 11v10M22 15c0 5-12 3-12 6' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "git-github-security", "title": "Git and GitHub Security", "footer": "GIT SECURITY", "subtitle": "DEVELOPER TRACK · 02",
+  "parts": [{ "name": "Who wrote this commit?", "minutes": 28 }, { "name": "Protecting the repository", "minutes": 29 }, { "name": "When a secret leaks", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">GIT <span>SEC</span></a>
+  <div class="scroll-parts">
+    <a href="#author-is-text" data-part="1"><b>01</b>Commits</a>
+    <a href="#branch-rules" data-part="2"><b>02</b>Repository</a>
+    <a href="#leak-order" data-part="3"><b>03</b>Leaks</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 02 · FOR ANYONE WHO PUSHES CODE</p>
+      <h1><span class="pre">Git and GitHub</span> <span class="glitch" data-text="Security">Security</span></h1>
+      <p class="lede">Your repository is a front door to your users. Signed commits, protected branches, leaked tokens, and the GitHub settings worth turning on today.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/git-github-security/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ git commit --author="<input id="hero-in" value="Ada Lovelace" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 70 minutes, three parts, two checkpoints. If you push code anywhere, this is for you.</span></li><li><b class="show">Show</b><span>The terminal: type any name. Git happily commits as them. That's where we start.</span></li><li><b class="tip">Eggs</b><span>Commit as Linus Torvalds (title or fake-author slide); type git push --force into any field; forge, then tamper, on the signing slide; make the workflow fully safe; get the leak drill right first time; tick every setting. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#author-is-text"><small>PART 1 · 28 MIN</small><b>Who wrote this commit?</b></a><span>Author names are just text</span><span>Signed commits and "Verified"</span><span>Commits worth reading; undo without fear</span><span>Securing your account</span></li>
+      <li><a href="#branch-rules"><small>PART 2 · 29 MIN</small><b>Protecting the repository</b></a><span>Branch rules and good pull requests</span><span>Secret scanning and tokens</span><span>Safer GitHub Actions</span></li>
+      <li><a href="#leak-order"><small>PART 3 · 15 MIN</small><b>When a secret leaks</b></a><span>The right order</span><span>Why rewriting history isn't enough</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Who wrote the code, who can change it, and what to do when a secret gets out.</span></li><li><b class="next">Next</b><span>"Two real incidents first."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY IT MATTERS</p><h2>The repository is a front door</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-2">
+      <div class="card"><b>March 2025 · tj-actions/changed-files</b><span>A popular GitHub Action's version tags, v1 to v45.0.7, were quietly pointed at a malicious commit. Workflows using it printed their secrets into build logs. CISA listed it as known exploited.</span><em>Tags can move. Commits can't.</em></div>
+      <div class="card"><b>October 2026 · LiteLLM</b><span>With three developers' stolen GitHub tokens, an attacker pushed a workflow change past branch protection, approved the release with a second account, then hid the change with a revert and force-push.</span><em>Protections are only as strong as who can switch them off.</em></div>
+    </div>
+    <p class="src">SOURCES <a href="https://www.cve.org/CVERecord?id=CVE-2025-30066" target="_blank" rel="noopener">CVE-2025-30066</a> · <a href="https://www.cisa.gov/news-events/alerts/2025/03/18/supply-chain-compromise-third-party-github-action-cve-2025-30066" target="_blank" rel="noopener">CISA</a> (18 Mar 2025) · <a href="https://docs.litellm.ai/blog/security-incident-oct-21-2026-attack-chain" target="_blank" rel="noopener">LiteLLM attack chain</a> · <a href="../../news/2026-10-black-october/#litellm">Black October</a></p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Two incidents, two years apart, same lesson: the repository and its automation are part of your product. Anyone who can change them can change what your users run.</span></li><li><b class="say">Say</b><span>We'll come back to both: tags vs commits in GitHub Actions, and who can bypass branch rules.</span></li><li><b class="next">Next</b><span>"First question: who actually wrote a commit?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="author-is-text" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// COMMITS 01</p><h2>A commit's author is just text</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">user.name <input id="fa-name" value="Grace Hopper" spellcheck="false" autocomplete="off"></label>
+        <label class="grow">user.email <input id="fa-email" value="grace@example.com" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <pre class="term term-big" id="fa-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Git records whatever <code>user.name</code> and <code>user.email</code> say. It never checks.</li>
+        <li>GitHub links the commit to whichever account owns that email, avatar and all.</li>
+        <li>So a commit "by" a famous developer, or by you, proves nothing on its own.</li>
+      </ul>
+      <p class="callout"><b>TRY IT</b> Set your name to someone else's and look at the log. That's the whole attack.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Change the name and email: the log looks completely real. Nothing on your machine or on GitHub's side checked it.</span></li><li><b class="say">Say</b><span>This isn't a bug. Git was designed to record authorship, not prove it. Proving it needs a signature.</span></li><li><b class="tip">Egg</b><span>Commit as Linus Torvalds.</span></li><li><b class="next">Next</b><span>"So how do you prove a commit is yours?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="signing" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// COMMITS 02</p><h2>Signed commits: proof, not a promise</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="sig-mine">Sign a commit as you</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sig-forge">Forge one as you, unsigned</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sig-tamper">Change it after signing</button>
+      </div>
+      <pre class="term term-big" id="sig-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A signature covers the whole commit: the code snapshot, its parents, the author and the message.</li>
+        <li>Change one byte afterwards and it no longer verifies.</li>
+        <li>Only your private key can make it. GitHub checks it against the public key on your account.</li>
+      </ul>
+      <p class="callout"><b>CRYPTO 101</b> The same digital signatures, here real P-256 ECDSA in your browser. <a href="../crypto-101/#signatures">Revisit the slide</a>.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Sign a commit: it verifies. Forge one with your name but no key: no signature at all. Change the signed one's message: the signature fails.</span></li><li><b class="say">Say</b><span>Git signs with SSH, GPG or S/MIME keys. This demo uses P-256 ECDSA to show the idea; the commit text is simplified.</span></li><li><b class="next">Next</b><span>"What does GitHub's Verified badge actually promise?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="verified" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// COMMITS 03</p><h2>What "Verified" does and doesn't prove</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="badges">
+        <div><span class="gh-badge ok">Verified</span><p>Signed, and the signature checks out against a key on the committer's account.</p></div>
+        <div><span class="gh-badge bad">Unverified</span><p>Signed, but the signature didn't check out. Or, with vigilant mode on, not signed at all.</p></div>
+        <div><span class="gh-badge none">no badge</span><p>Not signed. This is the default for unsigned commits, so forgeries look normal.</p></div>
+      </div>
+      <p class="callout"><b>VIGILANT MODE</b> Turn it on in your GitHub settings and unsigned commits using your email are marked Unverified. It's off by default.</p>
+    </div>
+    <div class="stack">
+      <div class="cards-2">
+        <div class="card card-ok"><b>It proves</b><span>The commit was signed by a key registered to that account, and hasn't changed since.</span></div>
+        <div class="card card-bad"><b>It doesn't prove</b><span>The code is safe, a human meant it, or the account wasn't compromised.</span></div>
+      </div>
+      <p class="note">LiteLLM's malicious workflow change came from real accounts with real tokens. A signature tells you <b>which key</b>; reviews and branch rules decide <b>whether it gets in</b>.</p>
+    </div>
+    <p class="src span-2">SOURCES <a href="https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification" target="_blank" rel="noopener">GitHub Docs: about commit signature verification</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Verified is a strong statement about where a commit came from, and nothing else. Treat it like the padlock in HTTPS: it means the connection is genuine, not that the site is honest.</span></li><li><b class="say">Say</b><span>Vigilant mode is the setting that makes forgeries of you stand out. Turn it on once you sign everything.</span></li><li><b class="next">Next</b><span>"Setting it up takes three commands."</span></li></ul></div>
+</section>
+
+<section class="slide" id="setup" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// COMMITS 04</p><h2>Sign every commit with your SSH key</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <pre class="term term-big setup"><span class="m"># 1. sign with SSH, using your existing key</span>
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+<span class="m"># 2. sign every commit and tag by default</span>
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+<span class="m"># 3. check locally (Git 2.34 or later)</span>
+echo "$(git config user.email) $(cat ~/.ssh/id_ed25519.pub)" &gt;&gt; ~/.ssh/allowed_signers
+git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
+git log --show-signature -1</pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Then on GitHub: <b>Settings → SSH and GPG keys → New SSH key</b>, and choose key type <b>Signing key</b>.</li>
+        <li>The same key can be used for pushing and signing, but it must be added once for each.</li>
+        <li><code>allowed_signers</code> lets <i>your own</i> Git verify signatures, without GitHub.</li>
+      </ul>
+      <p class="callout"><b>FUN FACT</b> Every commit to this hub is signed this way. Check the repository's history for the badges.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>If you already push over SSH, you already have the key. Two settings make Git use it to sign; two more make it sign everything by default.</span></li><li><b class="tip">Tip</b><span>Use a key with a passphrase, or one held by a hardware key or password manager, so a stolen laptop can't sign as you.</span></li><li><b class="tip">Check</b><span>Commands from GitHub Docs ("Telling Git about your signing key"). SSH signature verification needs Git 2.34 or later.</span></li><li><b class="next">Next</b><span>"Before the account: two everyday Git habits."</span></li></ul></div>
+</section>
+
+<section class="slide" id="commit-messages" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// GOOD GIT 01</p><h2>Commits worth reading</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">Subject line <input id="cm-subject" value="fixed stuff" spellcheck="false" autocomplete="off"></label></div>
+      <div class="controls"><label class="grow">Body (optional) <textarea id="cm-body" rows="3" spellcheck="false"></textarea></label></div>
+      <pre class="term" id="cm-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>One change per commit.</b> Easy to review, easy to revert, easy to find with <code>git bisect</code>.</li>
+        <li>Subject: <b>what it does</b>, in the imperative ("Fix login redirect"), about 50 characters.</li>
+        <li>Body: <b>why</b>. The diff already shows what changed; only you know why.</li>
+        <li>Check before you commit: <code>git add -p</code> to choose hunks, <code>git diff --staged</code> to read them.</li>
+      </ul>
+      <p class="callout"><b>SECURITY BONUS</b> Reading your staged diff is also how you catch the <code>.env</code> file before it's history.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>"fixed stuff" gets three suggestions. Rewrite it live with the room: "Fix redirect loop after login", then add a body explaining why. Watch the checks turn green.</span></li><li><b class="say">Say</b><span>Six months from now you'll read your own history to find out why something is the way it is. Write for that person.</span></li><li><b class="tip">Egg</b><span>Try "asdf" or "wip" as the subject.</span></li><li><b class="next">Next</b><span>"And when a commit goes wrong anyway?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="undo" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// GOOD GIT 02</p><h2>Undo without fear</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="mini-label">What happened?</p>
+      <div class="undo-list" id="undo-list"></div>
+    </div>
+    <div class="stack">
+      <pre class="term term-big" id="undo-out"></pre>
+      <p class="callout"><b>THE RULE</b> Rewrite only what you haven't shared. Once it's pushed and others have it, <code>revert</code> instead.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Ask the room for their worst Git moment, then find it in the list. The reflog one gets the biggest sigh of relief: Git keeps a record of where your branch has been for weeks.</span></li><li><b class="say">Say</b><span>Prefer --force-with-lease to --force: it refuses to overwrite work someone else pushed since you last fetched.</span></li><li><b class="next">Next</b><span>"Back to security: your account."</span></li></ul></div>
+</section>
+
+<section class="slide" id="account" data-part="1" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// COMMITS 05</p><h2>Your GitHub account is the master key</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="habit"><b>Sign in with a passkey or security key</b><span>Phishing-resistant, like the Passwords talk showed. Keep an authenticator app as backup, not SMS.</span></div>
+      <div class="habit"><b>Save your recovery codes</b><span>In your password manager. Losing every factor locks you out of your own code.</span></div>
+      <div class="habit"><b>Review what can act as you</b><span>SSH keys, personal access tokens, authorised OAuth and GitHub Apps, active sessions. Remove what you don't recognise.</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Everything else in this talk can be undone by someone who controls your account.</li>
+        <li>Old laptops, old tokens and old app grants are doors you forgot you left open.</li>
+        <li>Do the review twice a year, and whenever you change jobs or machines.</li>
+      </ul>
+      <p class="note">More on passkeys and recovery: <a href="../passwords-and-accounts/">Passwords and Accounts</a>.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Your GitHub account can push, approve, change settings and create tokens. Protect it like a bank account, because for your users it's more important than one.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Someone's commits show your name and email. How would anyone tell they aren't yours?</p><details><summary>Hint</summary><p>What does your real work have that theirs can't?</p></details><details class="answer"><summary>Answer</summary><p>If you sign every commit and turn on vigilant mode, theirs show as Unverified while yours show Verified.</p></details></li>
+      <li><p>A commit shows "Verified". Is it safe to merge?</p><details><summary>Hint</summary><p>What does a signature say about the code inside?</p></details><details class="answer"><summary>Answer</summary><p>Not by itself. It proves which key signed it and that it hasn't changed, not that the code is good or the account wasn't stolen. It still needs review.</p></details></li>
+      <li><p>Which is worse to lose: your laptop's SSH key, or your GitHub password with no second factor?</p><details><summary>Hint</summary><p>Which one can create new keys and tokens?</p></details><details class="answer"><summary>Answer</summary><p>The account. It can add keys, mint tokens and change settings. Revoke the laptop's key from the account either way.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="branch-rules" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// REPOSITORY 01</p><h2>Branch rules: nobody pushes straight to main</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="mini-label">A ruleset for the default branch</p>
+      <ul class="ruleset">
+        <li><b>Require a pull request</b><span>with at least one approving review</span></li>
+        <li><b>Require status checks</b><span>tests and scans must pass first</span></li>
+        <li><b>Require signed commits</b><span>every commit must carry a verifiable signature</span></li>
+        <li><b>Block force pushes</b><span>history on main can't be rewritten</span></li>
+        <li><b>Restrict deletions</b><span>the branch can't be removed</span></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Rulesets</b> are GitHub's newer form of branch protection: several can apply at once, and they can cover tags too.</li>
+        <li>Keep the <b>bypass list</b> short. Anyone on it, including admins, can skip every rule.</li>
+        <li>Require approval of the <b>most recent push</b>, so nobody slips a change in after review.</li>
+      </ul>
+      <p class="callout"><b>OCTOBER</b> LiteLLM's attacker used an organisation owner's token to disable protections and force-push. Fewer owners, fewer bypasses.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Branch rules turn "please don't push to main" into "you can't push to main". The weak spot is whoever can turn the rules off.</span></li><li><b class="tip">Check</b><span>Confirm current ruleset option names in GitHub's settings before presenting; they change occasionally.</span></li><li><b class="next">Next</b><span>"Rules make reviews happen. Now make them good ones."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pull-requests" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// GOOD GIT 03</p><h2>Pull requests people want to review</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="habit"><b>Small and focused</b><span>Under a few hundred lines, one purpose. Big PRs get skimmed; small ones get read.</span></div>
+      <div class="habit"><b>A description that answers three questions</b><span>What does it change? Why? How did you test it? Screenshots for anything visible.</span></div>
+      <div class="habit"><b>Draft early</b><span>Open a draft PR to get feedback on the approach before you've built all of it.</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>CODEOWNERS</b> requests the right reviewers automatically, for the right folders.</li>
+        <li>Review kindly and specifically: suggest, explain why, and say what's good too.</li>
+        <li>As the author, review your own diff first. You'll catch half the comments before anyone else does.</li>
+        <li>Keep the four security questions from Developer 01 on your review checklist.</li>
+      </ul>
+      <p class="note"><a href="../security-habits/#habit-people">The four review questions</a> from Security Habits.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Branch rules make reviews mandatory; these habits make them worth having. A reviewer who understands a small change can spot the security problem in it.</span></li><li><b class="next">Next</b><span>"What about secrets that slip into a PR?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="secret-scanning" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// REPOSITORY 02</p><h2>Secret scanning and push protection</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">The file you're about to push <textarea id="push-in" rows="4" spellcheck="false"></textarea></label></div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="push-go">git push</button><button type="button" class="btn btn-ghost btn-sm" id="push-add">Add a token by mistake</button></div>
+      <pre class="term" id="push-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Secret scanning</b> finds known token formats in your repository and alerts you.</li>
+        <li><b>Push protection</b> blocks the push before the secret ever lands. You can bypass it, but you must give a reason.</li>
+        <li>For your <b>personal account</b> it's on by default when pushing to public repositories. For a <b>repository</b>, an admin has to enable it.</li>
+      </ul>
+      <p class="callout"><b>DEPENDABOT TOO</b> Turn on Dependabot alerts and security updates: pull requests for vulnerable dependencies, written for you.</p>
+    </div>
+    <p class="src span-2">SOURCES <a href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection" target="_blank" rel="noopener">GitHub Docs: about push protection</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Push the clean file: accepted. Press "Add a token by mistake" and push again: blocked, with the line number, before it reaches GitHub. This is a simulation that looks for token-shaped text; GitHub's real scanner knows hundreds of formats and checks many with the provider.</span></li><li><b class="say">Say</b><span>Bypassing asks why: "used in tests", "false positive", or "I'll fix it later". The last one opens an alert, so it isn't forgotten.</span></li><li><b class="next">Next</b><span>"Your own tokens deserve the same care."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tokens" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// REPOSITORY 03</p><h2>Tokens: fine-grained, few, and expiring</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="vs"><b>Classic token</b><span>Broad scopes like <code>repo</code>: every repository you can reach</span><span>Can be made to never expire</span><span>Easy to create, easy to forget</span></div>
+      <div class="vs vs-c"><b>Fine-grained token</b><span>Chosen repositories only</span><span>Specific permissions, read or write, one by one</span><span>An expiry date you choose; organisations can require approval and limit lifetimes</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>For automation, prefer a <b>GitHub App</b> or the workflow's own <code>GITHUB_TOKEN</code> over a person's token.</li>
+        <li>Never automate with your <b>GitHub CLI login</b>. It acts as you, everywhere you can act.</li>
+        <li>Name each token after its job, so the one to revoke is obvious on a bad day.</li>
+      </ul>
+      <p class="callout"><b>OCTOBER</b> LiteLLM's lesson in its own words: stop relying on GitHub CLI OAuth tokens for automation; use scoped tokens.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is least privilege from the Security Habits talk, applied to GitHub. If a token leaks, the blast radius is whatever you gave it.</span></li><li><b class="next">Next</b><span>"The biggest token of all lives in your workflows."</span></li></ul></div>
+</section>
+
+<section class="slide" id="actions" data-part="2" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// REPOSITORY 04</p><h2>GitHub Actions: the weakest link, if you let it be</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="wf-opts" id="wf-opts">
+        <label>permissions <select data-k="perm"><option value="write">write-all</option><option value="read">contents: read</option></select></label>
+        <label>action <select data-k="pin"><option value="tag">@v45 (a tag)</option><option value="sha">@0e58ed8… (a commit)</option><option value="lock">locked in actions.lock</option></select></label>
+        <label>trigger <select data-k="trig"><option value="prt">pull_request_target + checkout PR code</option><option value="pr">pull_request</option></select></label>
+        <label>PR title <select data-k="inj"><option value="inline">echo "${{ github.event.pull_request.title }}"</option><option value="env">via an env variable</option></select></label>
+      </div>
+      <pre class="term" id="wf-out"></pre>
+    </div>
+    <div class="stack">
+      <pre class="term" id="wf-find"></pre>
+      <ul class="rules rules-sm">
+        <li><b>Least privilege</b>: default <code>GITHUB_TOKEN</code> to read-only; raise it per job.</li>
+        <li><b>Lock or pin</b> third-party actions. GitHub now recommends a lockfile, <code>actions.lock</code> made by <code>gh actions-lock</code>; otherwise pin full commit SHAs.</li>
+        <li><b>Forks are strangers</b>: never check out a fork's code in <code>pull_request_target</code>.</li>
+        <li><b>Input is code again</b>: pass titles and branch names through environment variables.</li>
+      </ul>
+    </div>
+    <p class="src span-2">SOURCES <a href="https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions" target="_blank" rel="noopener">GitHub Docs: security hardening for Actions</a> · <a href="https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles" target="_blank" rel="noopener">workflow dependency lockfiles</a> · <a href="https://github.com/github/gh-actions-lock" target="_blank" rel="noopener">github/gh-actions-lock</a></p>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with the risky defaults: four findings. Fix them one by one: read-only token, lock or pin, plain pull_request, title through an env variable. The YAML updates as you go.</span></li><li><b class="say">Say</b><span>The tag option is the tj-actions story: a tag is a name someone can move. A commit SHA or a lockfile entry can't be moved. GitHub's docs say pull_request_target with untrusted checkout can be used to "take over a repository".</span></li><li><b class="tip">Tip</b><span>The Actions lockfile is generally available. Install with gh extension install github/gh-actions-lock, then run gh actions-lock to write .github/workflows/actions.lock. In CI, gh actions-lock --verify checks it; --relock moves tags like v4 to their current commits on purpose, so updates are reviewed.</span></li><li><b class="tip">Egg</b><span>Fix all four.</span></li></ul></div>
+</section>
+
+<section class="slide" id="settings" data-part="2" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// REPOSITORY 05</p><h2>Settings to turn on today</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="mini-label">Your account</p>
+      <ul class="ticks" id="ticks-account">
+        <li><label><input type="checkbox"> <span>Passkey or security key, plus an authenticator app</span></label></li>
+        <li><label><input type="checkbox"> <span>Recovery codes saved in a password manager</span></label></li>
+        <li><label><input type="checkbox"> <span>Commits signed, signing key on GitHub</span></label></li>
+        <li><label><input type="checkbox"> <span>Vigilant mode on</span></label></li>
+        <li><label><input type="checkbox"> <span>Old SSH keys, tokens and app grants removed</span></label></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <p class="mini-label">Each repository</p>
+      <ul class="ticks" id="ticks-repo">
+        <li><label><input type="checkbox"> <span>Ruleset on main: PRs, checks, no force pushes</span></label></li>
+        <li><label><input type="checkbox"> <span>Secret scanning and push protection</span></label></li>
+        <li><label><input type="checkbox"> <span>Dependabot alerts and security updates</span></label></li>
+        <li><label><input type="checkbox"> <span>Workflow token read-only by default</span></label></li>
+        <li><label><input type="checkbox"> <span>Actions locked or pinned to commits</span></label></li>
+      </ul>
+      <p class="note" id="ticks-note">This page remembers your ticks, on this device only.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Ten switches. Most take a minute each. Tick what you've done; the page remembers on your device.</span></li><li><b class="tip">Egg</b><span>Tick all ten.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Which three repository settings would you turn on first, and why?</p><details><summary>Hint</summary><p>Think: what gets in, what leaks, what runs.</p></details><details class="answer"><summary>Answer</summary><p>A common pick: a ruleset on main (what gets in), push protection (what leaks), and a read-only workflow token (what runs). Any well-argued three is a good answer.</p></details></li>
+      <li><p>Your workflow uses <code>some/action@v3</code>. What could change without you noticing?</p><details><summary>Hint</summary><p>Who controls where v3 points?</p></details><details class="answer"><summary>Answer</summary><p>Everything: the action's owner, or anyone who takes over their account, can move the tag to new code. Lock it or pin a full commit SHA.</p></details></li>
+      <li><p>Who in your organisation can bypass branch rules? Should they?</p><details><summary>Hint</summary><p>Check the bypass list and the owners.</p></details><details class="answer"><summary>Answer</summary><p>Often more people than anyone realises. Keep owners few, keep the bypass list short, and protect those accounts the hardest.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="leak-order" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// LEAKS 01</p><h2>A token leaked. What do you do first?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="mini-label">Click the steps in the order you'd do them</p>
+      <div class="drill" id="drill"></div>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="drill-reset">Shuffle again</button></div>
+    </div>
+    <div class="stack">
+      <ol class="drill-answer" id="drill-answer"></ol>
+      <p class="comment" id="drill-out"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Ask the room for the first step before clicking. Most people say "delete the commit". The answer: revoke it, because until then it works for whoever has it.</span></li><li><b class="say">Say</b><span>The order: revoke, replace it where it's used, check the provider's logs for use since the leak, clean the history, then make it harder next time (push protection, a secret manager).</span></li><li><b class="tip">Egg</b><span>Get it right first time.</span></li><li><b class="next">Next</b><span>"Why isn't deleting it from history enough?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="history" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// LEAKS 02</p><h2>Rewriting history doesn't un-leak a secret</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Clones</b>: everyone who pulled already has it.</li>
+        <li><b>Forks</b>: copies of your repository keep their own history.</li>
+        <li><b>Caches and pull requests</b>: GitHub can keep cached views; its docs say to contact support to remove them.</li>
+        <li><b>Scrapers</b>: bots scan public pushes for keys, often within minutes.</li>
+      </ul>
+      <p class="callout"><b>SO</b> Clean the history to stop the leak spreading, but assume the secret is already out. Revoking it is the real fix.</p>
+    </div>
+    <div class="stack">
+      <p class="note">The flip side: a force-push can also hide things from <b>you</b>.</p>
+      <div class="card card-bad"><b>October 2026 · LiteLLM</b><span>The attacker's workflow change was pushed, used to publish a malicious release, then removed from main's history with a revert and a force-push, and the workflow run records were deleted.</span></div>
+      <p class="note">Blocking force pushes on main, and watching the audit log, make that much harder.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>History rewriting tools (git filter-repo, BFG) are worth using, but they only change your copy and GitHub's. Everything already copied stays copied.</span></li><li><b class="tip">Check</b><span>GitHub Docs, "Removing sensitive data from a repository", for current steps and how to request removal of cached views.</span></li><li><b class="next">Next</b><span>"Let's wrap up."</span></li></ul></div>
+</section>
+
+<section class="slide" id="takeaways" data-part="3" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP</p><h2>Four things to do this week</h2></header>
+  <div class="slide-body stack">
+    <div class="take-grid take-4">
+      <div><b>Commit well</b><span>One change per commit, a subject that says what, a body that says why, and read your staged diff first.</span></div>
+      <div><b>Sign</b><span>Set up SSH signing, add the signing key to GitHub, turn on vigilant mode. Ten minutes.</span></div>
+      <div><b>Protect</b><span>Passkey on your account. A ruleset on main, push protection and Dependabot on your repositories.</span></div>
+      <div><b>Lock down Actions</b><span>Read-only workflow token, locked or pinned actions, and no fork code in pull_request_target.</span></div>
+    </div>
+    <div class="links">
+      <a href="../security-habits/"><b>Developer 01 · Security Habits</b><span>The ten habits this talk builds on</span></a>
+      <a href="../../news/"><b>Cyber in the News</b><span>Monthly real incidents, with sources</span></a>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>The first card makes you a better teammate; the other three make you a harder target. If you only do one security thing: a passkey on your GitHub account.</span></li><li><b class="next">Next</b><span>"Questions?"</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or your own repository's settings. (Please don't paste real tokens.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The checklist, drill and workflow fixer stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://docs.github.com/en/code-security" target="_blank" rel="noopener">GitHub Docs: code security</a><span>Secret scanning, push protection, Dependabot and more.</span></li>
+        <li><a href="https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions" target="_blank" rel="noopener">Security hardening for GitHub Actions</a><span>GitHub's own guide to safer workflows.</span></li>
+        <li><a href="https://github.com/github/gh-actions-lock" target="_blank" rel="noopener">gh-actions-lock</a><span>Lock every action your workflows use to an exact commit.</span></li>
+        <li><a href="../security-habits/">Security Habits for New Developers</a><span>Developer track, step 1: the habits this talk builds on.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The signing demo uses real P-256 ECDSA; commits, pushes and workflows are simulations in your browser, and nothing you type is sent anywhere.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="alarm" id="alarm" hidden role="alert"><b>git push --force</b><span>With great power comes great responsibility.</span></div>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

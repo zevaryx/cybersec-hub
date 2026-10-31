@@ -94,3 +94,22 @@ a.card-link em { font: normal .8em var(--mono); color: var(--yellow); margin-top
 
 /* title terminal: never wider than the frame */
 .prompt #hero-in { max-width: 100%; }
+
+/* beyond the ten: everyday habits */
+.every-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.every-grid > div { display: grid; gap: 6px; align-content: start; padding: 12px 14px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); }
+.every-grid b { color: var(--cyan); }
+.every-grid span { color: var(--muted); font-size: .84em; }
+.every-grid > div:nth-child(odd) b { color: var(--pink); }
+#edge-kind { font: .95rem var(--mono); color: var(--fg); background: var(--void); border: 1px solid var(--line); padding: 8px 10px; width: 100%; text-transform: none; letter-spacing: 0; }
+@media (max-width: 900px) { .mode-scroll .every-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .mode-scroll .every-grid { grid-template-columns: minmax(0, 1fr); } }
+.edge-table { display: grid; border: 1px solid var(--line); background: var(--void); }
+.edge-table > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 14px; padding: 7px 14px; border-bottom: 1px solid var(--line); font-size: .84em; }
+.edge-table > div:last-child { border-bottom: 0; }
+.edge-table .eh b { font: .7em var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--pink); }
+.edge-table code { color: var(--fg); overflow-wrap: anywhere; }
+.edge-table span { color: var(--cyan); }
+.edge-table .mine code, .edge-table .mine span { color: var(--yellow); }
+.edge-table .egg { padding: 8px 14px; font-size: .8em; }
+.edge-table .egg span { color: var(--yellow); }

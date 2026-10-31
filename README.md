@@ -17,7 +17,8 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | Start here | **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
 | General 1 | **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
 | General 2 | **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
-| Developer 1 | **Security Habits for New Developers** | Beginner | about 60 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
+| Developer 1 | **Security Habits for New Developers** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
+| Developer 2 | **Git and GitHub Security** | Beginner to intermediate | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/git-github-security/) |
 
 The Security track has no finished talks yet.
 
@@ -38,12 +39,22 @@ Four parts, with a checkpoint after part 2:
 
 The facts were checked against official sources on 30 October 2026. The Binance story was a day old then, so its numbers may have moved.
 
+### Git and GitHub Security
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **Who wrote this commit?** (28 min): author names are just text (commit as anyone), signed commits with real ECDSA (sign, forge, tamper), what "Verified" proves, SSH signing setup, commit messages worth reading (a live checker), undoing mistakes without fear (pick the situation, get the command), securing your account
+2. **Protecting the repository** (29 min): rulesets, pull requests people want to review, secret scanning and push protection (a simulated push), fine-grained tokens, GitHub Actions (fix a risky workflow: token permissions, locking or pinning actions, fork triggers, script injection), a settings checklist that remembers your ticks
+3. **When a secret leaks** (15 min): the response drill (put the steps in order), why rewriting history isn't enough, four things to do this week
+
+Real examples: the tj-actions/changed-files compromise (March 2025) and LiteLLM (October 2026). GitHub facts were checked against GitHub Docs on 30 October 2026; the Actions lockfile is the generally available `gh actions-lock` extension.
+
 ### Security Habits for New Developers
 
 Three parts, with checkpoints after parts 1 and 2:
 
 1. **Thinking like a defender** (20 min): everything is input, trust boundaries (pick a flow and see what to check), treating data as code (a SQL query glued together vs parameterised), trusting the client (a shop that believes the price in a hidden field)
-2. **Ten habits** (30 min): validate and encode (an HTML comment shown raw vs encoded), permissions on every request (change the invoice number), secrets in Git history (delete vs rotate), well-known libraries, few and current dependencies, failing safely (dev vs production errors), least privilege (watch the blast radius grow), review and blameless learning
+2. **Ten habits** (38 min): validate and encode (an HTML comment shown raw vs encoded), permissions on every request (change the invoice number), secrets in Git history (delete vs rotate), well-known libraries, few and current dependencies, failing safely (dev vs production errors), least privilege (watch the blast radius grow), review and blameless learning; plus everyday habits that make them easy (readable code, tools, environments, docs) and an edge-case generator for testing the unhappy path
 3. **Wrap-up** (10 min): a ten-habit checklist that remembers your ticks, where to learn next
 
 Real examples come from October 2026 (see Cyber in the News). Every "server" in the demos is JavaScript in your browser; nothing is sent anywhere.
@@ -137,7 +148,7 @@ This copies `template/` to `docs/talks/how-https-works/` with the title filled i
 2. Set the parts and their minutes in the page's `deck-config` block; the presenter window builds its timing plan from them.
 3. Add a card for it to its track in `docs/index.html`, in the order to take the talks, and a row to the table above.
    For a **Cyber in the News** episode, create it the same way, then move the folder to `docs/news/YYYY-MM-slug/` (same depth, so its links to `shared/` still work; point links into other talks at `../../talks/`). Add a card to `docs/news/index.html` with `data-date="YYYY-MM"` (the page sorts itself), and replace the latest-episode card on `docs/index.html`.
-4. Optionally add a 1200×630 `og-image.png` for link previews.
+4. Add a `qr.svg` QR code of the talk's address (the title and Questions slides show it; `qr-discussions.svg` is copied in for you), and optionally a 1200×630 `og-image.png` for link previews.
 5. Hide a few easter eggs in the demos (jokes for special inputs, a console hint, a reward for finishing something) and list them in the title slide's speaker notes. Every talk has some.
 
 ## Project layout
@@ -156,7 +167,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos

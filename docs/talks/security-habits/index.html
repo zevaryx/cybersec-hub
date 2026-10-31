@@ -25,7 +25,7 @@
 <!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
 <script type="application/json" id="deck-config">
 { "id": "security-habits", "title": "Security Habits for New Developers", "footer": "DEV HABITS", "subtitle": "DEVELOPER TRACK · 01",
-  "parts": [{ "name": "Thinking like a defender", "minutes": 20 }, { "name": "Ten habits", "minutes": 30 }, { "name": "Wrap-up", "minutes": 10 }] }
+  "parts": [{ "name": "Thinking like a defender", "minutes": 20 }, { "name": "Ten habits", "minutes": 38 }, { "name": "Wrap-up", "minutes": 10 }] }
 </script>
 <script>
   /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
@@ -73,7 +73,7 @@
       <p class="comment" id="hero-note"></p>
     </div>
   </div>
-  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. An hour, three parts, two checkpoints. No security background needed: if you can write a web app, you can write a safer one.</span></li><li><b class="show">Show</b><span>The terminal: type anything into trust(). It never trusts you. That's the whole talk in one function.</span></li><li><b class="tip">Eggs</b><span>Type Bobby Tables ('; DROP TABLE students;--) into any demo field; try "me" or "admin" in the title terminal; set a negative price in the shop; look at the dev error page's database password; tick every permission on the least-privilege slide; tick all ten habits on the checklist for the Habit Machine. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Why habits, and not a list of rules?"</span></li></ul></div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 70 minutes, three parts, two checkpoints. No security background needed: if you can write a web app, you can write a safer one.</span></li><li><b class="show">Show</b><span>The terminal: type anything into trust(). It never trusts you. That's the whole talk in one function.</span></li><li><b class="tip">Eggs</b><span>Type Bobby Tables ('; DROP TABLE students;--) into any demo field; try "me" or "admin" in the title terminal; set a negative price in the shop; look at the dev error page's database password; tick every permission on the least-privilege slide; tick all ten habits on the checklist for the Habit Machine. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Why habits, and not a list of rules?"</span></li></ul></div>
 </section>
 
 <section class="slide" id="roadmap" data-part="0" data-num="02">
@@ -81,18 +81,18 @@
   <div class="slide-body">
     <ol class="roadmap roadmap-3">
       <li><a href="#inputs"><small>PART 1 · 20 MIN</small><b>Thinking like a defender</b></a><span>Everything is input</span><span>Trust boundaries</span><span>Data as code, and trusting the client</span></li>
-      <li><a href="#habit-validate"><small>PART 2 · 30 MIN</small><b>Ten habits</b></a><span>Validate, encode, use safe defaults</span><span>Permissions, secrets, libraries, updates</span><span>Errors, least privilege, review, learning</span></li>
+      <li><a href="#habit-validate"><small>PART 2 · 38 MIN</small><b>Ten habits</b></a><span>Validate, encode, use safe defaults</span><span>Permissions, secrets, libraries, updates</span><span>Errors, least privilege, review, learning</span><span>Everyday habits and the unhappy path</span></li>
       <li><a href="#checklist"><small>PART 3 · 10 MIN</small><b>Wrap-up</b></a><span>A checklist for your desk</span><span>Where to learn next</span><span>Questions</span></li>
     </ol>
     <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour.</p>
   </div>
-  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First we learn to see code the way an attacker does. Then ten habits, each with a demo. Then a checklist you can pin above your desk.</span></li><li><b class="next">Next</b><span>"These aren't hypothetical. Here's last month."</span></li></ul></div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First we learn to see code the way an attacker does. Then ten habits, each with a demo. Then a checklist you can pin above your desk.</span></li><li><b class="next">Next</b><span>"These aren't hypothetical. Here's what Black October looked like."</span></li></ul></div>
 </section>
 
 <section class="slide" id="why" data-part="0" data-num="03">
-  <header class="slide-head"><p class="eyebrow">// WHY HABITS</p><h2>Last month's news, as habits</h2></header>
+  <header class="slide-head"><p class="eyebrow">// WHY HABITS</p><h2>The Black October fallout, as habits</h2></header>
   <div class="slide-body stack">
-    <p class="big-lede">October 2026 had some of the biggest security stories in years. Most of them come down to a habit someone skipped.</p>
+    <p class="big-lede">In October 2026, a month the internet nicknamed "Black October", some of the biggest security stories came down to a habit someone skipped.</p>
     <div class="cards-3">
       <a class="card card-link" href="../../news/2026-10-black-october/#gitlab-ruby"><b>GitLab and Ruby</b><span>User-written regex patterns were compiled as code. A critical bug followed.</span><em>Habit 1: data is never code</em></a>
       <a class="card card-link" href="../../news/2026-10-black-october/#litellm"><b>LiteLLM</b><span>An admin key committed to a public repo in May was never revoked. In October it opened the door.</span><em>Habit 4: secrets stay out of code</em></a>
@@ -355,10 +355,48 @@
       </ul>
     </div>
   </div>
-  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Code review catches what one tired person misses. Four questions cover most of today's talk.</span></li><li><b class="say">Say</b><span>LiteLLM, Railway and Zeabur all published detailed incident reports. That's the industry doing habit 10 in public, and it's why this talk could use real examples.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Code review catches what one tired person misses. Four questions cover most of today's talk.</span></li><li><b class="say">Say</b><span>LiteLLM, Railway and Zeabur all published detailed incident reports. That's the industry doing habit 10 in public, and it's why this talk could use real examples.</span></li><li><b class="next">Next</b><span>"Ten habits done. A few more that make them easy."</span></li></ul></div>
 </section>
 
-<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="16">
+<section class="slide" id="everyday" data-part="2" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// BEYOND THE TEN</p><h2>Everyday habits that make the ten easy</h2></header>
+  <div class="slide-body stack">
+    <p class="note">Most security bugs hide in code that's hard to read, hard to test or hard to change. These pay off every day, security or not.</p>
+    <div class="every-grid">
+      <div><b>Readable beats clever</b><span>Clear names, small functions, one job each. A reviewer can only catch the bug they can understand.</span></div>
+      <div><b>Test the unhappy path</b><span>Empty, huge, wrong type, wrong user. Most bugs live where the happy-path test never goes.</span></div>
+      <div><b>Let tools nag you</b><span>A formatter, a linter and pre-commit hooks locally; the same checks in CI on every pull request.</span></div>
+      <div><b>Keep environments apart</b><span>Separate settings and data for development, staging and production. Never test on real customers' data.</span></div>
+      <div><b>Write it down</b><span>A README that gets a newcomer running in minutes, short notes on why you chose things, and a runbook for bad days.</span></div>
+      <div><b>Log like you'll debug at 3am</b><span>Structured logs with request IDs and clear messages. You'll find bugs faster, and spot attacks too.</span></div>
+      <div><b>Small steps, often</b><span>Small commits and small pull requests are easier to review, test and undo than one giant change.</span></div>
+      <div><b>Ask early</b><span>Stuck for half an hour? Ask. Read the docs and the error message first, then ask with what you tried.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>None of these are "security" habits, and all of them make security easier. Code people can read gets reviewed properly; code with tests can be patched quickly; documented systems get fixed by whoever's on call.</span></li><li><b class="ask">Ask</b><span>Which one would help your current project most? <em>Usually tests or a README.</em></span></li><li><b class="next">Next</b><span>"Let's practise the second one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="unhappy-path" data-part="2" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// BEYOND THE TEN</p><h2>Test the unhappy path</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls"><label class="grow">You're writing a form field for <select id="edge-kind"><option value="name">a person's name</option><option value="age">an age</option><option value="email">an email address</option><option value="file">a file upload</option><option value="date">a date</option></select></label></div>
+      <div class="controls"><label class="grow">Try your own value <input id="edge-in" placeholder="type something odd" spellcheck="false" autocomplete="off"></label></div>
+      <div class="edge-table" id="edge-out"></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>For every input, write tests for: <b>empty</b>, <b>too long</b>, <b>wrong type</b>, <b>weird characters</b>, and <b>valid but unusual</b>.</li>
+        <li>Unusual but valid matters too: real names have apostrophes, real emails have plus signs.</li>
+        <li>For every action, test the <b>wrong user</b>: can customer 7 reach customer 3's data?</li>
+      </ul>
+      <p class="callout"><b>HABIT</b> When you fix a bug, first write a test that fails because of it. It can never quietly come back.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Pick each field type and read a few cases aloud. Ask the room which ones their own code would get wrong; dates and names usually win.</span></li><li><b class="say">Say</b><span>Validation should reject what's wrong without rejecting real people: O'Brien, Zoë and 李雷 are all valid names.</span></li><li><b class="tip">Egg</b><span>Bobby Tables works here too.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="18">
   <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
   <div class="slide-body stack">
     <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
@@ -372,7 +410,7 @@
 </section>
 
 <!-- ======================================================================= PART 3 -->
-<section class="slide" id="checklist" data-part="3" data-num="17">
+<section class="slide" id="checklist" data-part="3" data-num="19">
   <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>The checklist for your desk</h2></header>
   <div class="slide-body cols-2 cols-wide-left">
     <ol class="habits" id="habits">
@@ -396,7 +434,7 @@
   <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Ten habits on one page. Print it, or open this slide on your phone and tick what you already do.</span></li><li><b class="tip">Egg</b><span>Tick all ten for the Habit Machine.</span></li><li><b class="next">Next</b><span>"Where to go from here."</span></li></ul></div>
 </section>
 
-<section class="slide" id="learn-next" data-part="3" data-num="18">
+<section class="slide" id="learn-next" data-part="3" data-num="20">
   <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>Where to learn next</h2></header>
   <div class="slide-body cols-2">
     <div class="stack">
@@ -407,7 +445,7 @@
         <a href="../how-https-works/"><b>How HTTPS Really Works</b><span>What protects data on the way</span></a>
         <a href="../../news/"><b>Cyber in the News</b><span>A monthly roundup with real incidents</span></a>
       </div>
-      <p class="note">Coming next in the Developer track: Git and GitHub security, then using crypto correctly in code.</p>
+      <p class="note">Next in the Developer track: <a href="../git-github-security/">Git and GitHub Security</a>. After that: using crypto correctly in code.</p>
     </div>
     <div class="stack">
       <p class="mini-label">Elsewhere</p>
@@ -422,12 +460,29 @@
   <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>OWASP is a non-profit; its Top 10 and Cheat Sheets are free and well maintained. Your framework's security page is the most underrated document you'll ever read.</span></li><li><b class="tip">Check</b><span>Update the "coming next" line as Developer-track talks are built.</span></li><li><b class="next">Next</b><span>"Questions?"</span></li></ul></div>
 </section>
 
-<section class="slide slide-end" id="questions" data-part="3" data-num="19">
+<section class="slide slide-end" id="questions" data-part="3" data-num="21">
   <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
-  <div class="slide-body stack">
-    <p class="glitch big-q" data-text="Questions?">Questions?</p>
-    <p class="contact">Ask later at <a href="https://github.com/zevaryx/cybersec-hub/discussions">github.com/zevaryx/cybersec-hub/discussions</a> or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
-    <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a habit you're not sure how to start. Ask for a demo to be run again.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://owasp.org/www-project-top-ten/" target="_blank" rel="noopener">OWASP Top 10</a><span>The most common web application risks, with examples and fixes.</span></li>
+        <li><a href="https://cheatsheetseries.owasp.org/" target="_blank" rel="noopener">OWASP Cheat Sheet Series</a><span>Short, practical answers to "how do I do X safely?"</span></li>
+        <li><a href="../git-github-security/">Git and GitHub Security</a><span>Developer track, next: signed commits, branch rules, safer Actions.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>The maths behind hashing, keys and signatures.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every "server", database and Git history here is a simulation in your browser; nothing you type is sent anywhere.</p>
+    </div>
   </div>
   <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Ask which habit people will start with.</span></li></ul></div>
 </section>

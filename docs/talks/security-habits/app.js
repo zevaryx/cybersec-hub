@@ -152,6 +152,28 @@
     $("perm-out").innerHTML = out;
   }
 
+  // --------------------------------------------------------------------------- test the unhappy path
+  const EDGES = {
+    name: [["\"\" (empty)", "reject, with a helpful message"], ["\"   \" (only spaces)", "trim, then reject"], ["10,000 characters", "reject: set a sensible maximum"],
+      ["O'Brien", "accept: real names have apostrophes"], ["Zoë, 李雷", "accept: names aren't only A to Z"], ["<b>Ada</b>", "store as text; encode when shown"]],
+    age: [["0", "accept or reject? decide and test it"], ["-1", "reject"], ["150", "reject, or at least question it"], ["twelve", "reject: not a number"],
+      ["12.5", "round, or reject? decide and test it"], ["9007199254740993", "too big for some languages to store exactly"]],
+    email: [["a@b", "probably reject: no dot in the domain"], ["user+tag@example.com", "accept: plus signs are valid"], ["USER@Example.com", "treat as the same person as user@example.com"],
+      [" user@example.com ", "trim the spaces"], ["two@@signs.com", "reject"], ["300 characters", "reject: addresses max out at 254"]],
+    file: [["0 bytes", "reject, or handle gracefully"], ["a 2 GB video", "reject before reading it all into memory"], ["invoice.pdf.exe", "check the real type, not the name"],
+      ["../../etc/passwd as a name", "never use the uploaded name as a path"], ["an image that's really HTML", "check the contents; serve with the right type"], ["the same file twice", "duplicate, or error? decide and test it"]],
+    date: [["29 February 2027", "reject: 2027 isn't a leap year"], ["31 April", "reject: April has 30 days"], ["the hour the clocks change", "store times in UTC; show in local time"],
+      ["year 0001 or 9999", "reject, or at least question it"], ["\"tomorrow\"", "only if you meant to parse words"], ["03/04/2026", "3 April or 4 March? use a date picker"]],
+  };
+  function edges() {
+    const kind = $("edge-kind").value, own = $("edge-in").value;
+    let out = `<div class="eh"><b>test case</b><b>expect</b></div>` + EDGES[kind].map(([c, e]) => `<div><code>${esc(c)}</code><span>${esc(e)}</span></div>`).join("");
+    if (own.trim()) out += `<div class="mine"><code>${esc(JSON.stringify(own))}</code><span>your case: add it as a test, and decide what should happen</span></div>`;
+    const egg = bobby(own);
+    if (egg) out += `<p class="egg">${egg.trim()}</p>`;
+    $("edge-out").innerHTML = out;
+  }
+
   // --------------------------------------------------------------------------- the checklist and the Habit Machine
   const STORE = "security-habits-checklist";
   function checklist() {
@@ -199,6 +221,8 @@
     $("perms").addEventListener("change", perms);
     perms();
     checklist();
+    $("edge-kind").addEventListener("change", edges);
+    bind("edge-in", edges);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

@@ -18,7 +18,7 @@ dest="docs/talks/$slug"
 if [ -e "$dest" ]; then echo "$dest already exists" >&2; exit 1; fi
 
 mkdir -p "$dest"
-cp template/index.html template/app.js template/talk.css "$dest/"
+cp template/index.html template/app.js template/talk.css template/qr-discussions.svg "$dest/"
 # escape characters that are special in sed replacements
 esc() { printf '%s' "$1" | sed -e 's/[\/&|]/\\&/g'; }
 sed -i -e "s|{{SLUG}}|$(esc "$slug")|g" -e "s|{{TITLE}}|$(esc "$title")|g" -e "s|{{FOOTER}}|$(esc "$footer")|g" "$dest/index.html"

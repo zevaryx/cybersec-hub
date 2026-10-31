@@ -1,0 +1,104 @@
+/* talk.css: styles for "Git and GitHub Security". The shared theme is in ../../shared/deck.css. */
+
+.roadmap-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+code { font: .9em var(--mono); color: var(--yellow); }
+.span-2 { grid-column: 1 / -1; }
+.card em { font: normal .8em var(--mono); color: var(--yellow); margin-top: 4px; }
+.prompt #hero-in { max-width: 100%; }
+
+/* sources line under a slide */
+.src { font: .62em/1.5 var(--mono); letter-spacing: .06em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; margin-top: auto; }
+.src a { color: var(--cyan); }
+
+/* links as cards */
+.links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.links > a { display: grid; gap: 4px; align-content: start; padding: 12px 16px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); text-decoration: none; color: var(--fg); }
+.links > a:hover { border-color: var(--cyan); }
+.links > a b { color: var(--cyan); }
+.links > a span { color: var(--muted); font-size: .85em; }
+
+/* small boxed points */
+.habit { display: grid; gap: 6px; padding: 12px 16px; border: 1px solid var(--line); border-left: 3px solid var(--pink); background: rgba(21, 18, 51, .7); }
+.habit b { color: var(--pink); }
+.habit span { color: var(--fg); font-size: .88em; }
+
+/* Verified badges */
+.badges { display: grid; gap: 10px; }
+.badges > div { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 14px; align-items: center; padding: 10px 14px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); }
+.badges p { font-size: .88em; color: var(--muted); }
+.gh-badge { justify-self: start; padding: 2px 10px; border: 1px solid; border-radius: 999px; font: 600 .78em var(--mono); }
+.gh-badge.ok { color: var(--ok); border-color: var(--ok); } .gh-badge.bad { color: var(--yellow); border-color: var(--yellow); } .gh-badge.none { color: var(--muted); border-color: var(--line); border-style: dashed; }
+
+/* setup commands */
+.setup { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .78em; }
+
+/* branch ruleset */
+.ruleset { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ruleset li { display: grid; gap: 2px; padding: 10px 14px 10px 44px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); position: relative; }
+.ruleset li::before { content: "✓"; position: absolute; left: 14px; top: 9px; font: 700 1.1em var(--mono); color: var(--ok); }
+.ruleset b { color: var(--fg); }
+.ruleset span { color: var(--muted); font-size: .85em; }
+
+/* push protection */
+#push-in { width: 100%; resize: vertical; font: .85em/1.5 var(--mono); }
+
+/* workflow builder */
+.wf-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.wf-opts label { display: grid; gap: 4px; font: .66em var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-width: 0; }
+.wf-opts select { font: .9rem var(--mono); text-transform: none; letter-spacing: 0; color: var(--fg); background: var(--void); border: 1px solid var(--line); padding: 6px 8px; min-width: 0; width: 100%; }
+#wf-out, #wf-find { font-size: .76em; }
+.rules-sm { font-size: .84em; }
+
+/* settings checklist */
+.ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ticks label { display: flex; gap: 10px; align-items: center; cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); font-size: .9em; }
+.ticks input { accent-color: var(--ok); width: 18px; height: 18px; flex: none; }
+.ticks input:checked + span { color: var(--ok); }
+#ticks-note.ok { color: var(--ok); }
+
+/* leak drill */
+.drill { display: grid; gap: 8px; }
+.drill button { padding: 12px 16px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: 600 .95em var(--display); text-align: left; cursor: pointer; transition: border-color .2s, opacity .2s; }
+.drill button:hover { border-color: var(--cyan); }
+.drill button.done { opacity: .3; border-color: var(--ok); cursor: default; }
+.drill button.wrong { animation: drill-shake .35s; border-color: var(--bad); }
+@keyframes drill-shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.drill-answer { margin: 0; padding-left: 1.8em; display: grid; gap: 8px; min-height: 2em; }
+.drill-answer li::marker { font: 700 1em var(--mono); color: var(--ok); }
+.drill-answer li { display: grid; gap: 2px; }
+.drill-answer b { color: var(--ok); }
+.drill-answer span { color: var(--muted); font-size: .85em; }
+
+/* git push --force alarm */
+.alarm { position: fixed; inset: 0; z-index: 90; display: grid; place-content: center; justify-items: center; gap: 12px; pointer-events: none; background: rgba(255, 91, 58, .22); }
+.alarm[hidden] { display: none; }
+.alarm b { font: 700 clamp(2rem, 7vw, 5rem) var(--mono); color: var(--bad); text-shadow: 0 0 30px var(--bad); }
+.alarm span { font: 600 clamp(1rem, 2.4vw, 1.6rem) var(--display); color: var(--fg); background: var(--void); padding: 6px 14px; }
+.alarm.on { animation: alarm-flash .5s steps(2) 4; }
+@keyframes alarm-flash { 50% { background: rgba(255, 91, 58, .05); } }
+
+/* narrow screens (scroll view) */
+@media (max-width: 900px) {
+  .mode-scroll .roadmap-3, .mode-scroll .links { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .mode-scroll .wf-opts { grid-template-columns: minmax(0, 1fr); }
+  .mode-scroll .badges > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alarm.on, .drill button.wrong { animation: none; }
+}
+
+/* good Git: commit messages and undo */
+#cm-body { width: 100%; resize: vertical; font: .85em/1.5 var(--mono); }
+.undo-list { display: grid; gap: 6px; }
+.undo-list button { padding: 8px 12px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); font: 600 .8em var(--display); text-align: left; cursor: pointer; }
+.undo-list button:hover { border-color: var(--cyan); color: var(--fg); }
+.undo-list button[aria-pressed="true"] { border-color: var(--cyan); background: var(--cyan); color: var(--void); }
+
+/* text areas, in the theme */
+textarea { background: var(--void); color: var(--fg); border: 1px solid var(--line); padding: 8px 10px; }
+textarea:focus { outline: none; border-color: var(--cyan); }
+.take-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .mode-scroll .take-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .mode-scroll .take-4 { grid-template-columns: minmax(0, 1fr); } }
