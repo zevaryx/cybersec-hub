@@ -20,6 +20,7 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | Developer 1 | **Security Habits for New Developers** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
 | Security 1 | **Identity and Access Management** | Intermediate | about 80 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/) |
 | Developer 2 | **Git and GitHub Security** | Beginner to intermediate | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/git-github-security/) |
+| Security 2 | **Cloud Security Fundamentals** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/cloud-security/) |
 
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
@@ -49,6 +50,17 @@ Four parts, with checkpoints after parts 1 and 3:
 4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
 
 Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
+
+### Cloud Security Fundamentals
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Who secures what** (20 min): shared responsibility as a stack (click through on-premises, IaaS, PaaS and SaaS), accounts, subscriptions and projects as walls
+2. **Identity is the perimeter** (30 min): users, roles and policies, a policy simulator where explicit deny wins, roles instead of long-lived keys, a blast-radius comparison of a leaked key and a leaked role session, MFA for root and owner accounts
+3. **Common misconfigurations** (25 min): public storage (block it account-wide), open ports, encryption and who holds the key, the metadata service and SSRF (a link previewer with and without IMDSv2), a misconfiguration hunt in Terraform with a policy check
+4. **Guardrails** (15 min): audit logs and findings services across AWS, Azure and Google Cloud, a billing alert as an intrusion detector, everyday habits, a first-week checklist that remembers your ticks
+
+Real examples: Snowflake customers (2024), Capital One (2019), Code Spaces (2014) and the Storm-0558 review. Provider defaults (S3 public access and encryption, IMDSv2, root and Azure MFA, Google's secure-by-default organizations) were checked against the providers' documentation on 30 October 2026.
 
 ### Git and GitHub Security
 
@@ -180,7 +192,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos

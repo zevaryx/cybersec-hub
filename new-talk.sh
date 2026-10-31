@@ -26,5 +26,5 @@ sed -i -e "s|{{SLUG}}|$(esc "$slug")|g" -e "s|{{TITLE}}|$(esc "$title")|g" -e "s
 echo "Created $dest"
 echo "Next:"
 echo "  1. Write the slides in $dest/index.html and demos in $dest/app.js"
-echo "  2. Add a card for it to its track in docs/index.html (copy a <li class=\"talk\">), in the order to take them"
+echo "  2. Add a card for it to its track in docs/index.html (copy a <li class=\"talk-card\">, before the \"More coming soon\" tile), and make it the \"Newest talk\" featured card"
 echo "  3. Add the talk to the list in README.md"

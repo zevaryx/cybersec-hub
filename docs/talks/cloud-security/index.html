@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cloud Security Fundamentals</title>
+<meta name="description" content="Cloud Security Fundamentals: shared responsibility, least-privilege roles instead of long-lived keys, the common misconfigurations, and the guardrails every account needs. With live demos. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/cloud-security/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Cloud Security Fundamentals">
+<meta property="og:description" content="Cloud breaches are rarely clever: public buckets, over-powered keys and missing logs. The handful of settings that matter most, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/cloud-security/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/cloud-security/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Cloud Security Fundamentals in neon, beside a terminal listing a storage bucket.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M9 24a6 6 0 0 1 0-12 8 8 0 0 1 15 2 5 5 0 0 1-1 10z' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Crect x='13' y='17' width='7' height='6' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "cloud-security", "title": "Cloud Security Fundamentals", "footer": "CLOUD", "subtitle": "SECURITY TRACK · 02",
+  "parts": [{ "name": "Who secures what", "minutes": 20 }, { "name": "Identity is the perimeter", "minutes": 30 },
+            { "name": "Common misconfigurations", "minutes": 25 }, { "name": "Guardrails", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">CLO<span>UD</span></a>
+  <div class="scroll-parts">
+    <a href="#shared" data-part="1"><b>01</b>Who</a>
+    <a href="#policies" data-part="2"><b>02</b>Identity</a>
+    <a href="#public-storage" data-part="3"><b>03</b>Misconfig</a>
+    <a href="#logging" data-part="4"><b>04</b>Guardrails</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 02 · FOR DEVELOPERS AND OPS ON AWS, AZURE OR GOOGLE CLOUD</p>
+      <h1><span class="pre">Cloud Security</span> <span class="glitch" data-text="Fundamentals">Fundamentals</span></h1>
+      <p class="lede">Cloud breaches are rarely clever. They're public buckets, over-powered keys and missing logs. Who secures what, and the handful of settings that matter most.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/cloud-security/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ storage ls s3://<input id="hero-in" value="acme-invoices" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes, four parts, three checkpoints. For anyone who runs things in AWS, Azure or Google Cloud. Examples use AWS names, with the others alongside: the ideas are the same everywhere.</span></li><li><b class="show">Show</b><span>The terminal: a stranger asks to list our bucket and gets AccessDenied. That's the answer we want strangers to get, every time.</span></li><li><b class="tip">Eggs</b><span>On the title slide, list a bucket called public, one with "final" in its name, one with "backup" in it, or 169.254.169.254; in the policy simulator, have the intern try to create a user; let the leaked key run for four years; open port 1337 or 23 to the internet, or close every port including the website; preview a file:// URL; find all six misconfigurations before running the check; set the billing alert to $1; tick the whole first-week list. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#shared"><small>PART 1 · 20 MIN</small><b>Who secures what</b></a><span>Shared responsibility</span><span>Accounts as walls</span></li>
+      <li><a href="#policies"><small>PART 2 · 30 MIN</small><b>Identity is the perimeter</b></a><span>Policies and least privilege</span><span>Roles, not keys</span><span>MFA for humans</span></li>
+      <li><a href="#public-storage"><small>PART 3 · 25 MIN</small><b>Common misconfigurations</b></a><span>Public storage</span><span>Open ports</span><span>Encryption and keys</span><span>The metadata service</span><span>Checks before deploy</span></li>
+      <li><a href="#logging"><small>PART 4 · 15 MIN</small><b>Guardrails</b></a><span>Logs and findings</span><span>Billing alerts</span><span>Your first week</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, who's responsible for what. Then identity, because in the cloud a credential is the front door. Then the misconfigurations behind most breaches. Then the guardrails that catch what slips through.</span></li><li><b class="next">Next</b><span>"Why bother? Three stories."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Cloud breaches are rarely clever</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">None of these needed a cloud provider to be hacked. Each needed one setting, one credential, or one missing copy.</p>
+      <ul class="rules">
+        <li>The provider runs the building, the hardware and the services. <b>How you configure them is yours.</b></li>
+        <li>Clouds make it easy to change things fast. That includes making things public, and deleting them.</li>
+        <li>The good news: the fixes are mostly settings you can turn on this week.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Snowflake customers, 2024</b><span>Logins stolen by infostealer malware, some dating to 2020, still worked: the accounts had no MFA. Mandiant found no breach of Snowflake itself; about 165 organisations were notified.</span></div>
+      <div class="card"><b>Capital One, 2019</b><span>A misconfigured firewall let an attacker fetch the server's own cloud credentials, which could read storage. About 100 million people in the US and 6 million in Canada were affected.</span></div>
+      <div class="card"><b>Code Spaces, 2014</b><span>An attacker in the AWS console deleted servers, data and backups, which lived in the same account. The company shut down.</span></div>
+      <p class="src">Sources: <a href="https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion" target="_blank" rel="noopener">Mandiant</a> · <a href="https://www.capitalone.com/digital/facts2019/" target="_blank" rel="noopener">Capital One</a> · <a href="https://www.networkworld.com/article/2366862/a-wakeup-call-for-the-cloud.html" target="_blank" rel="noopener">Network World</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three different failures: a login without MFA, a server whose credentials could be fetched by an outsider, and backups an attacker could reach with the same access. We'll fix each of them today.</span></li><li><b class="tip">Tip</b><span>Capital One: the metadata service detail is part 3. Code Spaces: separate accounts are next.</span></li><li><b class="next">Next</b><span>"First question: whose job is what?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="shared" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// WHO SECURES WHAT 01</p><h2>Shared responsibility, as a stack</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Service model" id="sr-pick">
+        <button type="button" data-m="onprem">Your own servers</button>
+        <button type="button" data-m="iaas" aria-pressed="true">Virtual machines (IaaS)</button>
+        <button type="button" data-m="paas">Managed database (PaaS)</button>
+        <button type="button" data-m="saas">Software (SaaS)</button>
+      </div>
+      <div class="sr-stack" id="sr-stack"></div>
+      <p class="sr-key"><span class="you">You</span> <span class="both">Shared: the provider builds it, you configure it</span> <span class="prov">Provider</span></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The provider secures <b>the cloud itself</b>: buildings, hardware, the hypervisor, the services.</li>
+        <li>You secure <b>what you put in it</b>, and the settings. The more managed the service, the less you patch.</li>
+        <li>Two rows never move: <b>your data</b> and <b>who can get to it</b>. They're yours even in SaaS.</li>
+        <li>Providers fail too. Microsoft lost a signing key in 2023; a US review board called it a "cascade of security failures". That's why you still log and limit.</li>
+      </ul>
+      <p class="comment" id="sr-out"></p>
+      <p class="src">Source: <a href="https://www.cisa.gov/resources-tools/resources/CSRB-Review-Summer-2023-MEO-Intrusion" target="_blank" rel="noopener">CSRB review of the 2023 Exchange Online intrusion</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Click through the four models. On your own servers, everything is yours. Each step to the right hands more rows to the provider, but data and access never move.</span></li><li><b class="say">Say</b><span>Snowflake was SaaS. The provider ran everything below the login. The customers owned the login, and that's where it failed.</span></li><li><b class="ask">Ask</b><span>"Which of your services are which?" Most organisations have all four.</span></li><li><b class="next">Next</b><span>"The next boundary is one you draw yourself: accounts."</span></li></ul></div>
+</section>
+
+<section class="slide" id="boundaries" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// WHO SECURES WHAT 02</p><h2>Accounts are walls. Use more of them</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="org">
+        <div class="org-root"><b>Organisation</b><span>guardrails apply to everything below</span></div>
+        <div class="org-kids">
+          <div class="org-acct sec"><b>Security</b><span>audit logs, read-only for everyone else</span></div>
+          <div class="org-acct prod"><b>Production</b><span>customer data, few people, no experiments</span></div>
+          <div class="org-acct"><b>Staging</b><span>looks like prod, holds no real data</span></div>
+          <div class="org-acct"><b>Development</b><span>try things here</span></div>
+          <div class="org-acct bak"><b>Backups</b><span>copies production can write but not delete</span></div>
+        </div>
+      </div>
+      <p class="note"><b>AWS</b> accounts in an Organization · <b>Azure</b> subscriptions under management groups · <b>Google Cloud</b> projects in folders under an organization.</p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>An account (or subscription, or project) is the strongest wall a cloud gives you. A leaked key in Development can't touch Production.</li>
+        <li><b>Backups belong somewhere else.</b> Code Spaces' backups died with the same login that ran production.</li>
+        <li><b>Logs belong somewhere else</b> too, so an intruder can't erase their tracks.</li>
+        <li>Organisation-wide guardrails (AWS service control policies, Azure Policy, Google organization policies) say what <i>nobody</i> below may do, admins included.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>One account for everything means one mistake reaches everything. Separate accounts cost almost nothing and turn "we lost everything" into "we lost dev".</span></li><li><b class="tip">Tip</b><span>Guardrails come back in the policy simulator: the organisation's "deny" beats even an admin's "allow".</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>In a managed database service, who patches the database engine, and who controls who can connect?</p><details><summary>Hint</summary><p>Which rows of the stack moved to the provider?</p></details><details class="answer"><summary>Answer</summary><p>The provider patches the engine and the operating system under it. You decide who can connect: network rules, database users and their permissions.</p></details></li>
+      <li><p>Why keep backups in a separate account from production?</p><details><summary>Hint</summary><p>What can a stolen production admin login reach?</p></details><details class="answer"><summary>Answer</summary><p>So one stolen login, or one mistake, can't delete both. Production can write backups but not delete them; nobody's everyday account can.</p></details></li>
+      <li><p>Snowflake wasn't hacked, but its customers were. Whose job was the fix?</p><details><summary>Hint</summary><p>Which rows stay yours, even in SaaS?</p></details><details class="answer"><summary>Answer</summary><p>The customers': accounts and access are always yours. Requiring MFA and rotating old logins would have stopped it. (Providers can help with safer defaults: Snowflake made MFA the default for new accounts from October 2024.)</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="policies" data-part="2" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// IDENTITY IS THE PERIMETER 01</p><h2>Users, roles and policies</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+<pre class="code policy-anatomy"><span class="m">// a policy: who may do what, to which thing, when</span>
+{
+  <span class="k">"Effect"</span>:    <span class="c">"Allow"</span>,
+  <span class="k">"Action"</span>:    [<span class="c">"s3:GetObject"</span>],
+  <span class="k">"Resource"</span>:  <span class="c">"arn:aws:s3:::acme-reports/*"</span>,
+  <span class="k">"Condition"</span>: { <span class="m">"aws:SecureTransport"</span>: <span class="c">"true"</span> }
+}</pre>
+      <div class="cards-2">
+        <div class="card"><b>A user</b><span>A person or program with its own long-term login. For people, prefer SSO into roles.</span></div>
+        <div class="card"><b>A role</b><span>A set of permissions anyone allowed can step into, for a short time. No password, no permanent key.</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Least privilege</b>: the actions this job needs, on the resources it needs, nothing else.</li>
+        <li><code>"Action": "*"</code> and <code>"Resource": "*"</code> are smells. Every one should have a reason written next to it.</li>
+        <li>Don't write policies from scratch: start from what the job actually used. AWS IAM Access Analyzer can generate a policy from the activity log; Google's IAM recommender flags unused permissions.</li>
+        <li>Give permissions to <b>groups and roles</b>, not to individuals, so changes happen in one place.</li>
+      </ul>
+      <p class="note">Same idea everywhere: AWS IAM policies, Azure role assignments (RBAC), Google Cloud IAM bindings.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Read the policy aloud: allow, get objects, from this bucket, only over HTTPS. Every cloud permission is some version of this sentence.</span></li><li><b class="tip">Tip</b><span>The recommenders are the easiest win in the talk: they show which granted permissions haven't been used in 90 days.</span></li><li><b class="next">Next</b><span>"When several policies apply, which one wins? Let's try it."</span></li></ul></div>
+</section>
+
+<section class="slide" id="policy-sim" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// IDENTITY IS THE PERIMETER 02</p><h2>Policy simulator: explicit deny wins</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls sim-controls">
+        <label>Who<select id="ps-who"><option value="dev">dev-role</option><option value="ci">ci-deploy role</option><option value="intern">intern (user)</option><option value="old">old-admin key</option></select></label>
+        <label>Wants to<select id="ps-act"><option>s3:GetObject</option><option>s3:PutObject</option><option>s3:DeleteBucket</option><option>ec2:TerminateInstances</option><option>iam:CreateUser</option></select></label>
+        <label>On<select id="ps-res"><option value="dev-bucket">dev-bucket</option><option value="prod-bucket" selected>prod-bucket</option><option value="web-server">web-server</option><option value="account">the account</option></select></label>
+        <label class="check"><input type="checkbox" id="ps-tls" checked> Over HTTPS</label>
+      </div>
+      <div class="policies" id="ps-policies"></div>
+    </div>
+    <div class="stack">
+      <ol class="trace" id="ps-trace"></ol>
+      <p class="verdict" id="ps-verdict"></p>
+      <p class="comment" id="ps-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>dev-role reading prod-bucket: allowed by ProdRead. Untick HTTPS: the bucket's own policy denies it, and deny beats allow. Switch to old-admin key and DeleteBucket on prod-bucket: "*" allows it, the organisation's guardrail denies it. Then the intern on iam:CreateUser.</span></li><li><b class="say">Say</b><span>Three rules: anything not allowed is denied; an allow in the identity's or the resource's policy can grant it; an explicit deny anywhere ends the discussion. This is AWS's order; Azure and Google work the same way for deny assignments and deny policies.</span></li><li><b class="tip">Tip</b><span>ci-deploy has ec2:* on everything. Ask: does a deploy job need to terminate servers?</span></li><li><b class="next">Next</b><span>"What happens when one of these credentials leaks? Depends on what kind it is."</span></li></ul></div>
+</section>
+
+<section class="slide" id="keys-roles" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// IDENTITY IS THE PERIMETER 03</p><h2>Roles, not keys</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="vs"><b>Long-lived access key</b><span>Works until someone deletes it, from anywhere in the world</span><span>Lives in config files, laptops, CI settings and chat logs</span><span>Often older than the person who made it remembers</span><span>Usually attached to more than it needs</span></div>
+      <div class="vs vs-c"><b>Short-lived role credentials</b><span>Expire on their own, usually within an hour</span><span>Issued on demand to something that proved who it is</span><span>Nothing to store, so nothing to leak from storage</span><span>Each session is logged with who assumed the role</span></div>
+    </div>
+    <div class="stack">
+      <h3>Who gets them, and how</h3>
+      <ul class="rules">
+        <li><b>People:</b> sign in through SSO and step into a role (AWS IAM Identity Center, Microsoft Entra ID, Google Workspace or Cloud Identity).</li>
+        <li><b>Servers and functions:</b> instance roles, managed identities, attached service accounts. The platform hands out credentials; your code never sees a key file.</li>
+        <li><b>CI/CD:</b> OpenID Connect federation. GitHub Actions, GitLab and others prove which repository and branch is running, and get credentials for that job only.</li>
+        <li><b>Other clouds and on-premises:</b> workload identity federation instead of exported keys.</li>
+      </ul>
+      <p class="note">Google now blocks new service account keys by default in organizations created since 3 May 2024, and automatically disables keys it finds exposed in public places. <a href="https://cloud.google.com/resource-manager/docs/secure-by-default-organizations" target="_blank" rel="noopener">Source</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A key is a password that never expires and often has admin rights. A role is a visitor's badge that stops working at the end of the day.</span></li><li><b class="ask">Ask</b><span>"How many access keys does your account have, and how old is the oldest?" Most consoles can answer that in one screen.</span></li><li><b class="next">Next</b><span>"Let's leak one of each and compare."</span></li></ul></div>
+</section>
+
+<section class="slide" id="blast-radius" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// IDENTITY IS THE PERIMETER 04</p><h2>Blast radius: leak a key, leak a role</h2></header>
+  <div class="slide-body stack">
+    <div class="controls">
+      <label class="grow">Time since the leak<input type="range" id="br-time" min="0" max="7" step="1" value="0"></label>
+      <output class="br-when" id="br-when"></output>
+    </div>
+    <div class="cols-2">
+      <div class="br-card" id="br-key"></div>
+      <div class="br-card" id="br-role"></div>
+    </div>
+    <p class="comment" id="br-note"></p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Fifteen minutes in, both are dangerous: but look at what each can reach. Then drag the slider past an hour: the role's credentials expire on their own; the key just keeps going. Drag to the end.</span></li><li><b class="say">Say</b><span>Two things shrink the damage: scope (what it can touch) and lifetime (how long it works). Roles win on both.</span></li><li><b class="next">Next</b><span>"Humans still log in, though. Protect those logins hardest."</span></li></ul></div>
+</section>
+
+<section class="slide" id="human-mfa" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// IDENTITY IS THE PERIMETER 05</p><h2>MFA for humans, root first</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>The <b>root or owner account</b> can do anything, including closing the account. Give it a phishing-resistant MFA (a security key or passkey), no access keys, and use it almost never.</li>
+        <li>Everyone else: SSO with MFA, then roles. No shared admin logins.</li>
+        <li><b>Break-glass</b>: one or two emergency accounts, kept offline, alarmed when used, tested twice a year.</li>
+        <li>Automation shouldn't use human accounts at all. Use workload identities: they're built for it.</li>
+      </ul>
+      <p class="callout"><b>SEE ALSO</b> <a href="../identity-and-access/">Identity and Access Management</a> for MFA strength, push fatigue and break-glass in detail.</p>
+    </div>
+    <div class="stack">
+      <h3>The providers now insist</h3>
+      <div class="card"><b>AWS</b><span>MFA required for root users: management accounts from May 2024, standalone accounts from June 2024, and all account types by June 2025. Member accounts can have no root password at all, with centralized root access.</span></div>
+      <div class="card"><b>Microsoft Azure</b><span>MFA required to sign in to the Azure portal from October 2024, and for create, update and delete through the CLI, PowerShell, SDKs and IaC tools from 1 October 2025 (tenants could postpone to 1 July 2026). Managed identities and service principals aren't affected.</span></div>
+      <p class="src">Sources: <a href="https://aws.amazon.com/about-aws/whats-new/2025/06/aws-iam-mfa-root-users-across-all-account-types" target="_blank" rel="noopener">AWS</a> · <a href="https://learn.microsoft.com/en-us/entra/identity/authentication/concept-mandatory-multifactor-authentication" target="_blank" rel="noopener">Microsoft Learn</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>When the providers start forcing a setting on everyone, that's a sign of how often its absence went wrong. Turn it on before they make you.</span></li><li><b class="tip">Tip</b><span>A script that breaks because of Azure's MFA requirement was running as a person. Move it to a managed identity or service principal: that's the real fix, not an exemption.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why are short-lived role credentials safer than an access key stored in a config file?</p><details><summary>Hint</summary><p>Think scope and lifetime.</p></details><details class="answer"><summary>Answer</summary><p>They expire on their own, so a leak has a deadline; there's nothing stored to leak in the first place; and each session is tied to who assumed the role in the logs.</p></details></li>
+      <li><p>One policy allows an action and another explicitly denies it. What happens, and why is that useful?</p><details><summary>Hint</summary><p>Who usually writes the deny?</p></details><details class="answer"><summary>Answer</summary><p>It's denied. That lets a central team set guardrails (like "nobody deletes production buckets") that no team's allow can override, however broad.</p></details></li>
+      <li><p>Your nightly script stopped working when MFA became mandatory. What's the right fix?</p><details><summary>Hint</summary><p>Who was the script pretending to be?</p></details><details class="answer"><summary>Answer</summary><p>Stop running it as a person. Give it a workload identity (managed identity, service principal or role) with only the permissions it needs.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="public-storage" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// MISCONFIGURATIONS 01</p><h2>Public storage: block it for the whole account</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls controls-col">
+        <label class="check"><input type="checkbox" id="pub-block" checked> Block public access, account-wide</label>
+        <label>Bucket policy<select id="pub-policy"><option value="private">Only our roles can read</option><option value="public">Anyone can read (Principal: "*")</option></select></label>
+        <label class="check"><input type="checkbox" id="pub-acl"> Old-style ACL on one file: public-read</label>
+      </div>
+      <div class="pub-view" id="pub-view"></div>
+      <p class="comment" id="pub-out"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>"Public" should be a decision someone made on purpose, for a website or a download, not a side effect.</li>
+        <li>Turn on <b>block public access at the account level</b>, so one bucket's policy can't undo it. Put real public files behind a CDN instead.</li>
+        <li>Since April 2023, new S3 buckets block public access and disable ACLs by default. <b>Older buckets didn't change.</b> Check them.</li>
+        <li>Google enforces uniform bucket-level access in organizations created since May 2024; Azure has a per-account "allow blob anonymous access" switch. Turn it off.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://aws.amazon.com/about-aws/whats-new/2022/12/amazon-s3-automatically-enable-block-public-access-disable-access-control-lists-buckets-april-2023/" target="_blank" rel="noopener">AWS</a> · <a href="https://cloud.google.com/resource-manager/docs/secure-by-default-organizations" target="_blank" rel="noopener">Google Cloud</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Set the bucket policy to "Anyone can read" with the block on: still private. Untick the block: the whole bucket is open. Tick the ACL instead: one file leaks. Turn the block back on: both closed.</span></li><li><b class="say">Say</b><span>Defaults protect new things. Your oldest buckets are the ones to check, because they were made before the defaults changed.</span></li><li><b class="next">Next</b><span>"Storage isn't the only thing you can open to the world. Ports too."</span></li></ul></div>
+</section>
+
+<section class="slide" id="network" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// MISCONFIGURATIONS 02</p><h2>Open ports: who can reach what</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table net-table">
+        <thead><tr><th>Port</th><th>For</th><th>Allowed from</th></tr></thead>
+        <tbody id="net-rows"></tbody>
+      </table>
+      <div class="controls">
+        <label>Add a port, open to the internet<input id="net-port" class="short" inputmode="numeric" placeholder="8080" autocomplete="off"></label>
+      </div>
+      <p class="comment" id="net-out"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Scanners sweep the whole internet all day. masscan's authors say it can cover every IPv4 address in under five minutes, so "nobody knows the address" isn't protection.</li>
+        <li>Only the front door should face the internet: usually 443, through a load balancer.</li>
+        <li>Admin access (SSH, RDP) through the provider's session tools (AWS Systems Manager, Azure Bastion, Google IAP) or a VPN, not an open port.</li>
+        <li>Databases: private subnets, reachable only from the app's security group.</li>
+      </ul>
+      <p class="src">Source: <a href="https://github.com/robertdavidgraham/masscan" target="_blank" rel="noopener">masscan README</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start with everything open to 0.0.0.0/0. Change SSH to "nobody" (we use session tools) and the database to "web servers only". The exposure count drops to one: the front door.</span></li><li><b class="say">Say</b><span>Allow rules that point at another security group, not at IP ranges, follow your servers as they come and go.</span></li><li><b class="next">Next</b><span>"Encryption: usually one setting. The interesting question is who holds the key."</span></li></ul></div>
+</section>
+
+<section class="slide" id="encryption" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// MISCONFIGURATIONS 03</p><h2>Encryption is one setting. Keys are the decision</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>At rest</h3>
+      <ul class="rules">
+        <li>Since January 2023, S3 encrypts every new object by default with AES-256. Disks, databases and snapshots usually need one setting, often an account-wide default.</li>
+        <li>Turn on <b>encryption by default</b> for disks in every region, so nobody has to remember.</li>
+      </ul>
+      <h3>In transit</h3>
+      <ul class="rules">
+        <li>TLS everywhere, including inside your network. Refuse plain HTTP in the policy itself (the <code>aws:SecureTransport</code> condition from the simulator).</li>
+      </ul>
+      <p class="src">Source: <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/default-encryption-faq.html" target="_blank" rel="noopener">AWS S3 default encryption FAQ</a></p>
+    </div>
+    <div class="stack">
+      <h3>Who holds the key?</h3>
+      <div class="key-ladder">
+        <div><b>Provider-managed keys</b><span>On by default, nothing to manage. Protects against a stolen disk, not against someone with your permissions.</span></div>
+        <div><b>Customer-managed keys in a key service</b><span>AWS KMS, Azure Key Vault, Google Cloud KMS. You choose who may use the key, and every use is logged.</span></div>
+        <div><b>Your own hardware or external keys</b><span>For strict regulation. More control, more ways to lose your own data.</span></div>
+      </div>
+      <p class="note">Encryption at rest doesn't stop a <i>user who's allowed to read</i>. It moves the question back to identity: who can use the key? <a href="../crypto-101/">Crypto 101</a> explains the AES underneath.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Encryption at rest is table stakes and mostly automatic now. What it buys you depends on who can use the key: with a customer-managed key, revoking key access cuts off the data even if a bucket policy is wrong.</span></li><li><b class="next">Next</b><span>"Now the one that caught Capital One: the metadata service."</span></li></ul></div>
+</section>
+
+<section class="slide" id="metadata" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// MISCONFIGURATIONS 04</p><h2>The metadata service, and fetching URLs for users</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="note">Our app has a "link preview" feature: give it a URL, and the server fetches it.</p>
+      <div class="controls">
+        <label class="grow">URL to preview<input id="md-url" class="mono" value="https://example.com/" spellcheck="false" autocomplete="off"></label>
+        <button type="button" class="btn btn-sm" id="md-go">Preview</button>
+      </div>
+      <div class="md-presets" id="md-presets"></div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="md-v2"> Require IMDSv2 (session tokens)</label>
+        <label class="check"><input type="checkbox" id="md-block"> Refuse private and link-local addresses</label>
+      </div>
+      <pre class="code md-out" id="md-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Every cloud server can ask <code>169.254.169.254</code> about itself, <b>including for its role's credentials</b>.</li>
+        <li>If your server fetches URLs for users, a user can point it there. That's <b>server-side request forgery</b> (SSRF), and it's how Capital One's credentials were taken.</li>
+        <li><b>IMDSv2</b> needs a token from a PUT request first. A simple fetch can't get one. Since March 2024 you can make it the default for every new instance in an account; Amazon Linux 2023 turns off v1 itself.</li>
+        <li>Also: validate and allow-list the destinations your fetcher may reach, and keep the role small.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://aws.amazon.com/about-aws/whats-new/2024/03/set-imdsv2-default-new-instance-launches/" target="_blank" rel="noopener">AWS</a> · <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-new-instances.html" target="_blank" rel="noopener">EC2 docs</a> · <a href="https://krebsonsecurity.com/2019/08/what-we-can-learn-from-the-capital-one-hack/" target="_blank" rel="noopener">Krebs on Capital One</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Preview example.com: fine. Click the metadata preset: the server fetches its own role name, then the credentials. Tick IMDSv2: the same request gets 401. Untick it and tick "refuse private addresses" instead: blocked earlier. Use both.</span></li><li><b class="say">Say</b><span>Azure and Google have metadata services too, and both require a special header, which helps against the simplest version of this. The habit is the same: never let users choose where your server connects without a list.</span></li><li><b class="next">Next</b><span>"How do you catch all this before it ships? Check the code that builds it."</span></li></ul></div>
+</section>
+
+<section class="slide" id="iac-hunt" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// MISCONFIGURATIONS 05</p><h2>Misconfiguration hunt: review before deploy</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="note">Click every line you'd flag in review. Then run the policy check.</p>
+      <ol class="tf" id="tf-code"></ol>
+    </div>
+    <div class="stack">
+      <div class="controls"><button type="button" class="btn btn-sm" id="tf-run">Run the policy check</button><button type="button" class="btn btn-ghost btn-sm" id="tf-reset">Reset</button><output class="tf-score" id="tf-score"></output></div>
+      <ul class="tf-findings" id="tf-findings"></ul>
+      <p class="comment" id="tf-note"></p>
+      <ul class="rules">
+        <li><b>Infrastructure as code</b>: every change is a reviewed diff, and you can rebuild everything from it.</li>
+        <li><b>Policy as code</b> (Checkov, tfsec/Trivy, OPA/Conftest, cloud-native checks) fails the build on known-bad settings, every time, without getting tired.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Let the room call out lines. Click them. Then run the check: it lists what it found, and anything we missed lights up.</span></li><li><b class="say">Say</b><span>People are good at "why is this here?"; tools are good at "is this one of 500 known mistakes?". Use both, in the pull request, before anything reaches an account.</span></li><li><b class="tip">Tip</b><span>The check output is a made-up example in the style of these tools, not any one tool's real output.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why block public access at the account level, instead of checking each bucket?</p><details><summary>Hint</summary><p>Who makes the next bucket, and when?</p></details><details class="answer"><summary>Answer</summary><p>Because it covers buckets that don't exist yet and settings someone changes by mistake. Exceptions become deliberate, reviewed decisions.</p></details></li>
+      <li><p>Why does requiring IMDSv2 stop the link-preview attack?</p><details><summary>Hint</summary><p>What does the attacker control in the request?</p></details><details class="answer"><summary>Answer</summary><p>The attacker only controls the URL of a GET request. IMDSv2 wants a token from a PUT request with a special header first, which a simple fetch can't make.</p></details></li>
+      <li><p>Your policy checker passes. Is the infrastructure secure?</p><details><summary>Hint</summary><p>What can't a list of known mistakes see?</p></details><details class="answer"><summary>Answer</summary><p>Not necessarily. It catches known-bad settings; it can't tell whether a role is too broad for <i>this</i> job, or whether data should exist at all. That's what review is for.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="logging" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// GUARDRAILS 01</p><h2>Logs you can't erase, findings you read</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <table class="grid-table log-table">
+        <thead><tr><th></th><th>AWS</th><th>Azure</th><th>Google Cloud</th></tr></thead>
+        <tbody>
+          <tr><th>Who did what</th><td>CloudTrail</td><td>Activity log</td><td>Cloud Audit Logs</td></tr>
+          <tr><th>Threat findings</th><td>GuardDuty</td><td>Defender for Cloud</td><td>Security Command Center</td></tr>
+          <tr><th>Settings drift</th><td>Config, Security Hub</td><td>Azure Policy</td><td>Security Command Center</td></tr>
+          <tr><th>Guardrails</th><td>Service control policies</td><td>Azure Policy, management groups</td><td>Organization policies</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Turn on the audit log in <b>every account and region</b>, including the ones nobody uses. Attackers like those.</li>
+        <li>Send it to the separate <b>security account</b>, where production admins can read but not delete.</li>
+        <li>Turn on the provider's findings service. Then decide <b>who reads it and how often</b>: unread findings are just a bill.</li>
+        <li>Alert on a few things that should never happen: root sign-in, logging switched off, a new access key, a guardrail changed.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Logs answer "what happened?" after the fact, but only if they exist, cover everything, and the intruder couldn't delete them. Most incident reports that say "we don't know what was accessed" are missing one of those.</span></li><li><b class="tip">Tip</b><span>Service names change; check them before presenting. The four rows are what matters.</span></li><li><b class="next">Next</b><span>"And one detector everyone already has: the bill."</span></li></ul></div>
+</section>
+
+<section class="slide" id="billing" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// GUARDRAILS 02</p><h2>The billing alert: an intrusion detector you already pay for</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="bill-chart" id="bill-chart" aria-label="Daily cloud spend for one month"></div>
+      <div class="controls">
+        <label class="grow">Alert when a day costs more than<input type="range" id="bill-th" min="0" max="8" step="1" value="3"></label>
+        <output class="bill-th" id="bill-th-out"></output>
+      </div>
+      <p class="comment" id="bill-out"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A common first move with a stolen key: start expensive servers to mine cryptocurrency. It shows up in the bill before it shows up anywhere else.</li>
+        <li>Set <b>budgets and anomaly alerts</b> in every account (AWS Budgets and Cost Anomaly Detection, Azure Cost Management, Google Cloud budgets).</li>
+        <li>Send them to people who'll act, not just the finance inbox.</li>
+        <li>Also limit what can run: guardrails that block regions and instance types you never use.</li>
+      </ul>
+      <p class="note">The month on the left is made up, to show the idea.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>A normal month at about $40 a day, then a key leaks on day 9. With the alert at $100 a day, you hear about it that evening. Slide it to "none": you find out from the invoice on day 30.</span></li><li><b class="ask">Ask</b><span>"Why is a billing alert a security control?" Because attacks cost money, and money is the one signal every account already measures.</span></li><li><b class="next">Next</b><span>"Some habits that keep all of this tidy."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// GUARDRAILS 03</p><h2>Habits that keep a cloud tidy</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid">
+      <div class="habit"><b>Everything has an owner</b><span>Tag every resource with a team and a purpose. "Whose is this?" should never need a meeting.</span></div>
+      <div class="habit"><b>Change it in code</b><span>Console clicks are for exploring. Real changes go through a reviewed diff you can roll back.</span></div>
+      <div class="habit"><b>Delete what you don't use</b><span>Unused servers, keys and buckets don't get patched or watched. They just wait.</span></div>
+      <div class="habit"><b>Review on a calendar</b><span>Once a quarter: who has admin, which keys are over 90 days old, what's public, what costs money for no reason.</span></div>
+      <div class="habit"><b>Practise restoring</b><span>A backup you've never restored is a hope. Restore something real, on purpose, twice a year.</span></div>
+      <div class="habit"><b>Write the runbook first</b><span>"A key leaked", "the bill spiked", "root signed in": write down who does what before it happens.</span></div>
+      <div class="habit"><b>Read the defaults changelog</b><span>Providers keep making safer defaults, but only for new things. Once a year, bring old things up to date.</span></div>
+      <div class="habit"><b>Start small, then widen</b><span>New services start with no access and get more when someone needs it. Taking access away later is much harder.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>None of these are security features. They're the housekeeping that makes the security features work: you can't protect what nobody owns, and you can't review what isn't written down.</span></li><li><b class="next">Next</b><span>"Here's where to start, in order."</span></li></ul></div>
+</section>
+
+<section class="slide" id="plan" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// GUARDRAILS 04</p><h2>Your first week in a cloud account</h2></header>
+  <div class="slide-body stack">
+    <div class="plan" id="plan-list">
+      <div><b>Day 1</b>
+        <label><input type="checkbox"><span>Root or owner: security key MFA, no access keys</span></label>
+        <label><input type="checkbox"><span>Audit logs on everywhere, sent to a separate account</span></label>
+        <label><input type="checkbox"><span>Budgets and billing alerts set</span></label>
+        <label><input type="checkbox"><span>Block public access, account-wide</span></label>
+      </div>
+      <div><b>Week 1</b>
+        <label><input type="checkbox"><span>People sign in with SSO into roles</span></label>
+        <label><input type="checkbox"><span>Access keys over 90 days old found and replaced</span></label>
+        <label><input type="checkbox"><span>No SSH, RDP or database ports open to the internet</span></label>
+        <label><input type="checkbox"><span>IMDSv2 required by default</span></label>
+      </div>
+      <div><b>Month 1</b>
+        <label><input type="checkbox"><span>CI uses OIDC, not stored keys</span></label>
+        <label><input type="checkbox"><span>The findings service is on, and someone reads it</span></label>
+        <label><input type="checkbox"><span>Disk encryption on by default in every region</span></label>
+        <label><input type="checkbox"><span>Changes go through code review and a policy check</span></label>
+      </div>
+    </div>
+    <p class="comment" id="plan-note"></p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Twelve things, in order of value for effort. Your ticks are saved in this browser, so you can come back to it.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or about your own setup. (Please keep real account IDs and bucket names out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The checklist and the demos stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html" target="_blank" rel="noopener">AWS policy evaluation logic</a><span>The full order of allow and deny, with diagrams.</span></li>
+        <li><a href="https://www.cisecurity.org/cis-benchmarks" target="_blank" rel="noopener">CIS Benchmarks</a><span>Free, checklist-style baselines for AWS, Azure and Google Cloud.</span></li>
+        <li><a href="../identity-and-access/">Identity and Access Management</a><span>SSO, MFA strength and least privilege over time.</span></li>
+        <li><a href="../git-github-security/">Git and GitHub Security</a><span>OIDC from Actions, and keeping keys out of repositories.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The policies, servers, metadata service, bills and policy checker are simulations in your browser; no cloud account is touched and nothing you type is sent anywhere. Service names and defaults checked 30 October 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
