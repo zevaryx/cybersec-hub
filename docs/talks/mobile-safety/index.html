@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your Phone, Safely</title>
+<meta name="description" content="Your Phone, Safely: what protects the phone that holds your bank, your email and your two-factor codes, what apps can see, and what to do the moment it's lost. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/mobile-safety/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Your Phone, Safely">
+<meta property="og:description" content="Your phone holds your bank, your email and your two-factor codes. What protects it, what apps can see, and what to do the moment it's lost.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/mobile-safety/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/mobile-safety/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Your Phone, Safely in neon, beside a terminal that checks how guessable a passcode is.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Crect x='9' y='4' width='14' height='24' rx='3' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='23' r='1.8' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "mobile-safety", "title": "Your Phone, Safely", "footer": "PHONE", "subtitle": "GENERAL TRACK · 04",
+  "parts": [{ "name": "The lock and what's behind it", "minutes": 16 }, { "name": "Apps", "minutes": 20 }, { "name": "When it goes wrong", "minutes": 16 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">PHO<span>NE</span></a>
+  <div class="scroll-parts">
+    <a href="#lock" data-part="1"><b>01</b>Lock</a>
+    <a href="#permissions" data-part="2"><b>02</b>Apps</a>
+    <a href="#prepare" data-part="3"><b>03</b>Lost</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 04 · FOR EVERYONE, NO TECHNICAL BACKGROUND NEEDED</p>
+      <h1><span class="pre">Your Phone,</span> <span class="glitch" data-text="Safely">Safely</span></h1>
+      <p class="lede">Your phone holds your bank, your email and your two-factor codes. What protects it, what apps can see, and what to do the moment it's lost.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/mobile-safety/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ how-guessable --passcode&nbsp;<input id="hero-in" value="1234" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About fifty minutes, three parts, two checkpoints, no technical background needed. Bring your phone out: several slides have something you can check on it right now. Please don't type your real passcode into anything today, including this page.</span></li><li><b class="show">Show</b><span>The terminal: 1234 is the most popular four-digit code in a big study of leaked codes, so it's the first thing anyone tries. Change it to a random six-digit code and watch the verdict change.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try the rarest code from the 2012 study (8068), *#06#, an emergency number like 911, 112 or 999, an empty passcode, or "correct horse battery staple". In the permission audit, allow everything or deny everything, and pick a built-in torch; press "Remind me tomorrow" on the update slide a few times; get every myth right, or none; tick every box in the lost-phone checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#lock"><small>PART 1 · 16 MIN</small><b>The lock and what's behind it</b></a><span>Passcode or face?</span><span>How guessable is it?</span><span>Encryption, lock-screen leaks</span></li>
+      <li><a href="#permissions"><small>PART 2 · 20 MIN</small><b>Apps</b></a><span>Permissions</span><span>Stores, sideloading, fake apps</span><span>Updates</span><span>Wi-Fi and chargers</span></li>
+      <li><a href="#prepare"><small>PART 3 · 16 MIN</small><b>When it goes wrong</b></a><span>Lost or stolen</span><span>SIM swaps</span><span>Stalkerware and trackers</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First the lock, because everything else sits behind it. Then apps: what they can see and where they come from. Last, what to do when it goes wrong, and how to set that up today, while nothing is wrong.</span></li><li><b class="next">Next</b><span>"Why your phone, specifically?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Your phone is the key to everything else</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">It's your bank card, your post box and your front-door key. It also receives the codes that prove you're you, so whoever holds it, and its number, can often reset everything else.</p>
+      <ul class="rules">
+        <li>Most phone trouble is ordinary: a lost phone, an old one without updates, an app that asks for too much.</li>
+        <li>The defences are mostly settings you switch on once. You can do most of them during this talk.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Watched, then stolen, 2023</b><span>The Wall Street Journal reported thieves watching people type their passcode in bars, then stealing the phone and changing the owner's account password within minutes. Apple later added Stolen Device Protection, which targets exactly this.</span></div>
+      <div class="card"><b>A stolen phone number, 2024</b><span>Someone took over the US SEC's X account by getting control of the phone number tied to it in an apparent "SIM swap". The account's extra sign-in step had been turned off.</span></div>
+      <div class="card"><b>Fake apps, every year</b><span>Google says Play Protect found more than 27 million new malicious apps from outside Google Play in 2025.</span></div>
+      <p class="src">Sources: <a href="https://support.apple.com/en-us/120340" target="_blank" rel="noopener">Apple: Stolen Device Protection</a> · <a href="https://www.sec.gov/secgov-x-account" target="_blank" rel="noopener">SEC statement, Jan 2024</a> · <a href="https://blog.google/security/keeping-google-play-android-app-ecosystem-safe-2025/" target="_blank" rel="noopener">Google, Feb 2026</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Three short stories, three parts of this talk: a lock that someone watched you type, a phone number that moved to someone else's SIM, and apps that aren't what they say. None of these needed a genius attacker.</span></li><li><b class="tip">Tip</b><span>The WSJ reports (Joanna Stern and Nicole Nguyen, February and April 2023) are paywalled; Apple's own page describes the feature, not the reporting. The SEC statement is dated 22 January 2024: access to the number "occurred via the telecom carrier, not via SEC systems", and multi-factor authentication had been disabled by X Support at staff request in July 2023.</span></li><li><b class="next">Next</b><span>"Start with the lock."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="lock" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE LOCK 01</p><h2>Passcode or face? Both, for different jobs</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="vs"><b>The passcode</b><span>The real key. It unlocks the encryption, and it's what the phone falls back to.</span><span>Its risk: someone watching you type it.</span></div>
+      <div class="vs vs-c"><b>Face or fingerprint</b><span>A convenient stand-in, so you can use a long passcode without typing it fifty times a day.</span><span>It never leaves the phone's secure chip, and it doesn't replace the passcode.</span></div>
+      <p class="callout"><b>THE TRADE</b> A face or fingerprint lets you choose a <em>longer</em> passcode, because you'll rarely type it. That's the real security win.</p>
+    </div>
+    <div class="stack">
+      <h3>When an iPhone insists on the passcode</h3>
+      <ul class="rules">
+        <li>After it's switched on or restarted.</li>
+        <li>When it hasn't been unlocked for more than 48 hours.</li>
+        <li>After five failed face or fingerprint attempts.</li>
+        <li>After a remote lock, or when Emergency SOS or Medical ID is started.</li>
+        <li>If the passcode hasn't been used for 6.5 days and Face ID or Touch ID not for 4 hours.</li>
+      </ul>
+      <p class="note">Android: phones with the strongest class of fingerprint or face unlock must ask for the PIN, pattern or password at least every 72 hours, and always after a restart.</p>
+      <p class="src">Sources: <a href="https://support.apple.com/guide/iphone/set-a-passcode-iph14a867ae/ios" target="_blank" rel="noopener">Apple: set a passcode</a> · <a href="https://source.android.com/docs/security/features/biometric/measure" target="_blank" rel="noopener">Android: biometric classes</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>People argue "face or code?" as if you pick one. You don't: the face is a shortcut to the code. The phone asks for the real code at the moments when it matters most, like after a restart. That's also why you sometimes get asked for it out of the blue.</span></li><li><b class="ask">Ask</b><span>Who has been asked for their passcode this week even though Face ID or fingerprint is on? <em>Now you know why.</em></span></li><li><b class="tip">Tip</b><span>Apple's list is from its iPhone User Guide (iOS 27). Android's rule is the Android compatibility requirement for "Class 3" biometrics: up to 72 hours before falling back to the PIN, pattern or password. Weaker "Class 2" unlock has stricter limits (24 hours, or 4 hours idle).</span></li><li><b class="next">Next</b><span>"So how good is your passcode?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="guessable" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE LOCK 02</p><h2>How guessable is a passcode?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">A made-up passcode (never your real one)<input id="pc-in" class="mono" value="1234" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Examples" id="pc-presets">
+        <button type="button" data-v="1234">1234</button>
+        <button type="button" data-v="1990">A birth year</button>
+        <button type="button" data-rand="6d">6 random digits</button>
+        <button type="button" data-rand="6a">6 letters + digits</button>
+        <button type="button" data-rand="10A">10 mixed</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Phone" id="pc-phone">
+        <button type="button" data-p="ios" aria-pressed="true">iPhone</button>
+        <button type="button" data-p="android" aria-pressed="false">Android 16 QPR2+</button>
+      </div>
+      <div class="stats pc-stats" id="pc-stats"></div>
+      <p class="comment" id="pc-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The phone limits guesses.</b> Its secure chip adds growing delays after wrong tries: on an iPhone, about ten before it stops accepting more; on newer Android, twenty.</li>
+        <li><b>So the danger is a popular code.</b> In a 2012 study of 3.4 million leaked four-digit codes, 1234 alone was almost 11%, and the top 20 covered 27%.</li>
+        <li><b>Random beats long.</b> A random six-digit code is a good minimum. Letters and digits are better still, and your face or finger does the typing.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://support.apple.com/guide/security/passcodes-and-passwords-sec20230a10d/web" target="_blank" rel="noopener">Apple Platform Security</a> · <a href="https://source.android.com/docs/security/features/authentication/rate-limiting" target="_blank" rel="noopener">Android rate limiting</a> · <a href="https://www.datagenetics.com/blog/september32012/" target="_blank" rel="noopener">DataGenetics PIN study</a> · <a href="../crypto-101/#slow-hashing">Crypto 101 cracking estimator</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start on 1234: on the popular list, so a guesser probably gets it in the first few tries. Try "A birth year": years are a classic pattern. Then "6 random digits": one in a million, and with ten guesses the odds are tiny. Switch phone types to show the guess limits. The last line shows the time to try every code if someone could skip the delays and still run at the phone's own speed (Apple tunes each try to take about 80 ms).</span></li><li><b class="say">Say</b><span>On a laptop's password, length is everything because attackers can guess billions of times a second offline. A phone is different: the passcode is mixed with a secret built into the chip, so guesses have to happen on that phone, at its pace, with its delays. That's why the popular-list check matters more than the maths.</span></li><li><b class="tip">Tip</b><span>Apple's table (iOS Lock Screen): no delay for the first few tries, then 1 min, 5 min, 15 min, 1 h, 3 h, 8 h, and after 10 the device locks and needs a computer; Erase Data (optional) wipes after 10. Android 16 QPR2 and later default: 1 min after the 5th wrong guess, rising to years, and no guesses after 20; the bare Android 16 minimum is more lenient. Older or other Android phones vary by maker. A 2020 study (Markert et al., IEEE S&P) found six digits add little against a throttled guesser if people pick patterns, which is why the advice is "random".</span></li><li><b class="tip">Tip</b><span>The DataGenetics data is leaked four-digit passwords, used as a stand-in for PINs, so treat the percentages as "people are predictable", not as phone statistics. The Crypto 101 link goes to the general cracking estimator.</span></li><li><b class="next">Next</b><span>"What does the passcode actually lock?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="encryption" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// THE LOCK 03</p><h2>Encryption, and why "before first unlock" matters</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="bfu" id="bfu">
+        <div class="bfu-state" data-s="off"><b>Switched off or just restarted</b><span>Before first unlock. The keys for your data aren't in memory. Almost everything is unreadable until the passcode is typed.</span></div>
+        <div class="bfu-state" data-s="locked"><b>Locked, after first unlock</b><span>The screen is locked, but many keys stay in memory so messages and apps keep working in the background.</span></div>
+        <div class="bfu-state" data-s="open"><b>Unlocked</b><span>In use. Whoever holds it can see what you can.</span></div>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Phone state" id="bfu-pick">
+        <button type="button" data-s="off" aria-pressed="true">Just restarted</button>
+        <button type="button" data-s="locked" aria-pressed="false">Locked</button>
+        <button type="button" data-s="open" aria-pressed="false">Unlocked</button>
+      </div>
+      <div class="bfu-files" id="bfu-files" aria-hidden="true"></div>
+      <p class="comment" id="bfu-cap"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Setting a passcode switches on encryption. Modern iPhones and Android phones encrypt by default, and the key comes partly from your passcode.</li>
+        <li>A <b>restart</b> puts the phone in its strongest state. If you lose it, or it's about to leave your hands, a restart costs nothing.</li>
+        <li>Researchers found that iPhones (iOS 18.1 and later) restart themselves after about three days locked, for the same reason.</li>
+        <li>Encryption protects a phone that's <b>locked</b>. Nothing protects an unlocked phone in someone else's hand, apart from the theft features coming up next.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web" target="_blank" rel="noopener">Apple: data protection classes</a> · <a href="https://source.android.com/docs/security/features/encryption/file-based" target="_blank" rel="noopener">Android file-based encryption</a> · <a href="https://techcrunch.com/2024/11/14/new-apple-security-feature-reboots-iphones-after-3-days-researchers-confirm" target="_blank" rel="noopener">TechCrunch, Nov 2024</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Click the three states. The grid of "files" shows how much is readable in each: almost nothing after a restart, more once it has been unlocked once, everything when it's open in someone's hand.</span></li><li><b class="say">Say</b><span>Encryption is why a locked phone found in a taxi is a paperweight to most thieves. "After first unlock" is the everyday state: locked screen, but the phone has its keys ready so your messages arrive. A restart drops them.</span></li><li><b class="tip">Tip</b><span>Apple: third-party app data defaults to "Protected Until First User Authentication", which protects against attacks that involve a reboot. Android: all devices launching with Android 10 or later must use file-based encryption, with "credential encrypted" storage available only after the user first unlocks. The iPhone inactivity restart was found and confirmed by researchers (Jiska Classen; Magnet Forensics); Apple hasn't documented it. Reports say Android has been rolling out something similar through Google Play services, but its status is unclear, so don't promise it.</span></li><li><b class="next">Next</b><span>"What can people see without unlocking it at all?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="lockscreen" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// THE LOCK 04</p><h2>What your lock screen gives away</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="phone phone-lock" aria-hidden="true">
+        <div class="ph-time">09:41</div>
+        <div class="ph-note"><b>Messages · Bank</b><span id="ls-code">Your code is 482 913. Don't share it.</span></div>
+        <div class="ph-note"><b>Mail · Sam</b><span id="ls-mail">Door code for Friday is 4471#</span></div>
+        <div class="ph-note"><b>Calendar</b><span id="ls-cal">Hospital appointment, 3 pm</span></div>
+      </div>
+      <button type="button" class="btn btn-sm" id="ls-toggle" aria-pressed="false">Hide previews when locked</button>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Notification previews</b> can show sign-in codes, messages and appointments to anyone holding the phone. Set them to show only when unlocked.</li>
+        <li><b>Widgets and quick controls</b> on the lock screen are handy and also visible. Keep only what you'd show a stranger.</li>
+        <li><b>Do keep emergency info.</b> Medical ID (iPhone) or emergency information (Android) helps first responders, and is meant to be seen.</li>
+      </ul>
+      <div class="props props-2">
+        <div><b>iPhone</b><span>Settings › Notifications › Show Previews › When Unlocked. Lock-screen access: Settings › Face ID &amp; Passcode › Allow Access When Locked.</span></div>
+        <div><b>Android</b><span>Settings › Notifications › Notifications on lock screen › hide sensitive content. Names vary by maker.</span></div>
+      </div>
+      <p class="src">Sources: <a href="https://support.apple.com/guide/iphone/access-features-from-the-lock-screen-iphcd5c65ccf/ios" target="_blank" rel="noopener">Apple: Lock Screen</a> · <a href="https://support.apple.com/guide/iphone/turn-on-lock-screen-features-iph9a2a69136/ios" target="_blank" rel="noopener">Apple: Lock Screen features</a> · <a href="https://support.google.com/android/answer/9079661" target="_blank" rel="noopener">Android: lock screen notifications</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Press the button: the three previews turn into "Notification". Point out that the code in the first one is exactly what a thief or a nosy person needs to finish a sign-in.</span></li><li><b class="say">Say</b><span>Ten seconds of settings. The previews still show the moment you unlock, so you lose almost nothing. Apple's own guide puts it well: turning off lock-screen access protects your information, at the price of a little convenience.</span></li><li><b class="ask">Ask</b><span>Pick up your phone without unlocking it. What could a stranger learn about you right now?</span></li><li><b class="next">Next</b><span>"Checkpoint one."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why does a phone ask for your passcode after a restart, even if you use your face or fingerprint?</p><details><summary>Hint</summary><p>Where do the keys for your data come from, and where are they kept after a restart?</p></details><details class="answer"><summary>Answer</summary><p>After a restart the keys for most of your data aren't in memory: they're rebuilt from the passcode (mixed with a secret in the phone's chip). The face or fingerprint is only a shortcut that the phone accepts once the passcode has been used. That's also why a restarted phone is the hardest to get into.</p></details></li>
+      <li><p>Your four-digit passcode is your birth year. Why is that weaker than the "10,000 possible codes" suggests?</p><details><summary>Hint</summary><p>Does a guesser try codes in random order?</p></details><details class="answer"><summary>Answer</summary><p>Guessers start with popular codes and patterns: 1234, repeated digits, and years. The phone only allows a handful of tries, so being near the top of that list is what matters. A random code, ideally six digits or more, fixes it.</p></details></li>
+      <li><p>Name one thing on your own lock screen that a stranger could read right now.</p><details><summary>Hint</summary><p>Messages, codes, calendar, widgets…</p></details><details class="answer"><summary>Answer</summary><p>Common ones: message previews, sign-in codes, calendar entries, and smart-home or payment widgets. Set previews to "when unlocked" and trim the widgets. Keep emergency medical info: that one is meant to be seen.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>If someone asks "should I turn on Erase Data after 10 tries?": it's a real protection, but a toddler with the phone can trigger it, so only with good backups.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="permissions" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// APPS 01</p><h2>Permissions: what apps can see</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="props props-2">
+        <div><b>Location</b><span>"While using the app", not "always". Turn off <i>Precise</i> location where a rough area is enough.</span></div>
+        <div><b>Photos and contacts</b><span>Share <i>selected</i> photos or contacts, not the whole library.</span></div>
+        <div><b>Microphone and camera</b><span>Android: "Only this time". Both systems show a coloured dot while an app is using them.</span></div>
+        <div><b>Unused apps</b><span>Android removes permissions from apps you haven't used for a few months. On iPhone, review now and then.</span></div>
+      </div>
+      <p class="callout"><b>THE TEST</b> Does this app need it to do the thing I installed it for? If not, say no. You can always say yes later.</p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Apps must ask before using sensitive data, and you can change your answer at any time.</li>
+        <li>Saying no rarely breaks an app. It just loses that one feature.</li>
+        <li>Reviews: iPhone Settings › Privacy &amp; Security (each category, plus App Privacy Report). Android Settings › Security &amp; privacy › Privacy, or Settings › Apps › an app › Permissions.</li>
+        <li>For a deeper check of who and what you share with, iPhone has <b>Safety Check</b> (Settings › Privacy &amp; Security).</li>
+      </ul>
+      <p class="src">Sources: <a href="https://support.apple.com/guide/iphone/control-the-location-information-you-share-iph3dd5f9be/ios" target="_blank" rel="noopener">Apple: location</a> · <a href="https://support.apple.com/guide/iphone/control-access-to-hardware-features-iph168c4bbd5/ios" target="_blank" rel="noopener">Apple: camera and microphone</a> · <a href="https://support.google.com/android/answer/9431959" target="_blank" rel="noopener">Android: app permissions</a> · <a href="https://developer.android.com/training/permissions/requesting" target="_blank" rel="noopener">Android: one-time and auto-reset</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Both phones moved the same way over the last few years: smaller, shorter permissions. "While using" instead of "always", rough location instead of exact, a few photos instead of all of them. The default answer to a permission you don't understand is no.</span></li><li><b class="tip">Tip</b><span>Details: Android's "Only this time" (Android 11+) covers location, microphone and camera; indicators: iOS shows green for camera and orange for microphone; Android 12+ shows a green privacy indicator. Android resets the permissions of apps unused "for a few months" (apps targeting Android 11+); the setting is "Pause app activity if unused". iPhone offers "Limited Access" for contacts and selected photos. Menu names vary between versions and makers.</span></li><li><b class="next">Next</b><span>"Let's audit an app."</span></li></ul></div>
+</section>
+
+<section class="slide" id="audit" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// APPS 02</p><h2>Permission audit: a torch app</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="phone phone-app">
+        <div class="ph-head"><b>⚡ Mega Torch Pro</b><span>wants access to:</span></div>
+        <ul class="perm-list" id="pa-list"></ul>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="controls"><button type="button" class="btn btn-sm" id="pa-check">Check my answers</button><button type="button" class="btn btn-sm btn-ghost" id="pa-builtin">Use the built-in torch</button></div>
+      <p class="comment" id="pa-note">Tap each permission to allow or deny it, then check your answers.</p>
+      <ul class="pa-why" id="pa-why" hidden></ul>
+      <button type="button" class="btn btn-ghost btn-sm" id="pa-reveal">Show a real over-permissioned app</button>
+      <div class="pa-real" id="pa-real" hidden>
+        <b>A real one: Brightest Flashlight Free (2013)</b>
+        <span>The US FTC said this Android torch app, downloaded tens of millions of times, sent users' precise location and device ID to advertising networks, even before they could accept its terms. Its privacy policy didn't say so.</span>
+        <p class="src"><a href="https://www.ftc.gov/news-events/news/press-releases/2013/12/android-flashlight-app-developer-settles-ftc-charges-it-deceived-consumers" target="_blank" rel="noopener">FTC press release, 5 Dec 2013</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Ask the room to vote on each permission, tap it to allow or deny, then press "Check my answers". The only thing a torch needs is the light. Then reveal the real case.</span></li><li><b class="say">Say</b><span>"Mega Torch Pro" is made up, but the pattern is real: a simple free app pays for itself by collecting data. The 2013 FTC case is the famous example. Permissions are tighter today, but the question to ask hasn't changed.</span></li><li><b class="tip">Tip</b><span>Both iPhone and Android have a torch built in (Control Center / Quick Settings), so the best permission audit is not installing the app. The FTC settled with the developer, GoldenShores Technologies, in December 2013 with no fine (it was a free app), but required clear disclosure and consent.</span></li><li><b class="next">Next</b><span>"Where do the apps come from?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="stores" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// APPS 03</p><h2>App stores, sideloading and fake apps</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="card"><b>Official stores aren't perfect, but they help</b><span>Apps are reviewed, and bad ones get removed. Google Play Protect also checks apps from other sources on Android.</span></div>
+      <div class="card"><b>Sideloading is installing from elsewhere</b><span>Android asks you to allow a specific app to "install unknown apps". From 30 September 2026, Android starts requiring verified developers for apps installed from participating stores in Brazil, Indonesia, Singapore and Thailand, and Google plans to expand this worldwide in 2027. In the EU, iPhones can use alternative app marketplaces.</span></div>
+      <div class="card card-bad"><b>Fake apps copy names and logos</b><span>In February 2024 a "LassPass Password Manager" copied LastPass's branding on Apple's App Store until it was removed.</span></div>
+    </div>
+    <div class="stack">
+      <h3>Before you install</h3>
+      <ol class="rules rules-num">
+        <li>Get it from the official store, from the link on the company's own website.</li>
+        <li>Check the <b>developer name</b>, not just the app name and icon.</li>
+        <li>Be suspicious of few reviews, very new listings, or a store page full of typos.</li>
+        <li>Skip "cleaner", "booster" and "virus scanner" apps: phones manage their own memory, and pop-ups saying your phone has a virus are a scam.</li>
+        <li>Never install an app because someone on the phone told you to. That's how remote-access scams start.</li>
+      </ol>
+      <p class="src">Sources: <a href="https://support.google.com/googleplay/answer/2812853" target="_blank" rel="noopener">Google Play Protect</a> · <a href="https://developer.android.com/developer-verification" target="_blank" rel="noopener">Android developer verification</a> · <a href="https://support.apple.com/en-us/118110" target="_blank" rel="noopener">Apple: alternative distribution</a> · <a href="https://www.malwarebytes.com/blog/news/2024/02/warning-from-lastpass-as-fake-app-found-on-apple-app-store" target="_blank" rel="noopener">Malwarebytes on LassPass</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Most people never sideload, and that's the right default. The bigger everyday risk is a fake app inside the real store: same logo, almost the same name, a different developer. The LassPass copy had a single rating against tens of thousands for the real one.</span></li><li><b class="tip">Tip</b><span>Android developer verification (Google's timeline page): August 2026, developer APIs and an "advanced flow" for power users; 30 September 2026, protections begin for users installing apps from participating stores in Brazil, Indonesia, Singapore and Thailand on certified devices running Android 7+; 2027, expansion worldwide. Details are still changing, so check the page before you present. Apple's EU alternative distribution started with iOS 17.4 (March 2024) and requires an EU account and being in the EU; Apple's page now also lists Japan.</span></li><li><b class="tip">Tip</b><span>On "cleaners": this is general advice, not a claim that every such app is malicious. The thing to teach is that a web page or pop-up can't scan your phone, so "your phone has a virus" in a browser is always a sales pitch or a scam.</span></li><li><b class="next">Next</b><span>"And keep what you have up to date."</span></li></ul></div>
+</section>
+
+<section class="slide" id="updates" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// APPS 04</p><h2>Updates, and how long your phone gets them</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="upd" id="upd">
+        <b>Software Update</b>
+        <span>A security update is ready. It fixes issues that may have been actively exploited.</span>
+        <div class="controls"><button type="button" class="btn btn-sm" id="upd-now">Install tonight</button><button type="button" class="btn btn-sm btn-ghost" id="upd-later">Remind me tomorrow</button></div>
+        <p class="comment" id="upd-note"></p>
+      </div>
+      <ul class="rules">
+        <li>Turn on <b>automatic updates</b> for the system and for apps. iPhone: Settings › General › Software Update › Automatic Updates. Android: Settings › System › Software updates (names vary).</li>
+        <li>Some updates fix holes that attackers are already using. Sooner is safer.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>When does support end?</h3>
+      <div class="table-wrap"><table class="grid-table">
+        <thead><tr><th>Phone</th><th>Promise</th></tr></thead>
+        <tbody>
+          <tr><th>Google Pixel 8 and later</th><td>7 years from first US availability</td></tr>
+          <tr><th>Google Pixel 6 and 7</th><td>5 years</td></tr>
+          <tr><th>Samsung Galaxy S24</th><td>7 years of OS and security updates</td></tr>
+          <tr><th>iPhone</th><td>No fixed number: iOS 27 (2026) still supports the iPhone 11 from 2019</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">An old phone that still works isn't "fine" once updates stop: new holes stay open for good. Check your maker's support page when you buy, and plan the replacement.</p>
+      <p class="src">Sources: <a href="https://support.google.com/pixelphone/answer/4457705" target="_blank" rel="noopener">Google Pixel update policy</a> · <a href="https://9to5google.com/2024/01/17/samsung-galaxy-s24-android-updates-policy/" target="_blank" rel="noopener">9to5Google on Samsung S24</a> · <a href="https://support.apple.com/guide/iphone/update-ios-iph3e504502/ios" target="_blank" rel="noopener">Apple: update iOS</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>The fake prompt: press "Remind me tomorrow" a few times, then "Install tonight". Updates install overnight while charging, so "tonight" costs you nothing.</span></li><li><b class="say">Say</b><span>Updates are the most boring advice in this talk and among the most effective. Apple's own security notes often say an issue "may have been exploited", meaning someone was using it before the fix. Then the second question: how long will my phone get updates at all?</span></li><li><b class="tip">Tip</b><span>Support windows change and depend on model and country, so check the maker's page for the exact phone. Samsung's seven-year promise covers the S24 series; Samsung's A series and other makers differ. Apple publishes compatibility per iOS version, not a promise in years; the iOS 27 compatible list on Apple's iPhone User Guide starts at iPhone 11 and iPhone SE (2nd generation). Newer iPhones also get "Background Security Improvements" between updates (Settings › Privacy &amp; Security). The EU's ecodesign rules (from June 2025) push makers selling there toward at least five years of updates after a model stops being sold, but how strictly that binds is debated.</span></li><li><b class="next">Next</b><span>"Two worries people bring up a lot: café Wi-Fi and airport chargers."</span></li></ul></div>
+</section>
+
+<section class="slide" id="myths" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// APPS 05</p><h2>Public Wi-Fi and chargers: real risk or myth?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="mq-count" id="mq-count"></p>
+      <p class="mq-claim" id="mq-claim"></p>
+      <div class="controls" id="mq-btns">
+        <button type="button" class="btn" data-a="real">Real risk</button>
+        <button type="button" class="btn btn-ghost" data-a="myth">Mostly myth</button>
+        <button type="button" class="btn btn-ghost" id="mq-next" hidden>Next ›</button>
+      </div>
+      <p class="verdict" id="mq-verdict" hidden></p>
+      <p class="mq-why" id="mq-why"></p>
+      <p class="comment" id="mq-score"></p>
+    </div>
+    <div class="stack">
+      <h3>What to actually do</h3>
+      <ul class="rules">
+        <li><b>Wi-Fi:</b> fine for most things, because sites and apps encrypt. Be wary of a Wi-Fi sign-in page that asks for your email or social password.</li>
+        <li><b>Charging:</b> carry your own plug or power bank. Public USB attacks have been shown in research, but documented real-world cases are hard to find.</li>
+        <li><b>If a phone asks "Trust this computer?"</b> when you only wanted to charge it, say no.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://consumer.ftc.gov/articles/are-public-wi-fi-networks-safe-what-you-need-know" target="_blank" rel="noopener">FTC: public Wi-Fi</a> · <a href="https://www.usenix.org/conference/usenixsecurity25/presentation/draschbacher" target="_blank" rel="noopener">ChoiceJacking, USENIX 2025</a> · <a href="https://www.malwarebytes.com/blog/news/2025/06/juice-jacking-warnings-are-back-with-a-new-twist" target="_blank" rel="noopener">Malwarebytes on juice jacking</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Four claims. Vote, then reveal. The point: the scary stories are mostly yesterday's risks, and today's everyday risks are fake sign-in pages and fake alerts.</span></li><li><b class="say">Say</b><span>The FTC now says public Wi-Fi is "usually safe" because most sites encrypt. "Juice jacking" is a real research topic: in 2025 Graz University of Technology showed malicious chargers that could fake your "allow" tap on phones from eight vendors, and Apple and Google added stronger checks. But warnings outnumber documented cases, so the realistic advice is simply: your own plug.</span></li><li><b class="tip">Tip</b><span>ChoiceJacking: Draschbacher, Maar, Oberhuber and Mangard, USENIX Security 2025. Heise reported Apple closed the holes in iOS 18.4; Android fixes depend on the maker. The FCC's juice-jacking page and the FBI Denver post (2023) are the warnings people remember. The FTC Wi-Fi article is dated February 2023.</span></li><li><b class="next">Next</b><span>"Checkpoint two."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A free photo-editing app asks for your location "always" and all your contacts. What do you do?</p><details><summary>Hint</summary><p>Does editing a photo need either of those?</p></details><details class="answer"><summary>Answer</summary><p>Deny both. A photo editor needs the photos you choose, nothing more. If it refuses to work without them, find a different app.</p></details></li>
+      <li><p>Someone on the phone says they're from your bank and asks you to install an app "so we can secure your account". What's going on?</p><details><summary>Hint</summary><p>What can an app installed on someone's say-so do?</p></details><details class="answer"><summary>Answer</summary><p>A remote-access or fake-banking-app scam. Hang up, and call the bank on the number on your card. Treat any request to install an app during a call as a scam.</p></details></li>
+      <li><p>Your phone's maker stopped updates last year, but it works fine. Is it fine?</p><details><summary>Hint</summary><p>What happens to security holes found after support ends?</p></details><details class="answer"><summary>Answer</summary><p>It works, but new holes won't be fixed, so it gets less safe each month. Keep banking and email off it if you can, and plan a replacement.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The second question links to the phishing talk: install requests are a "the ask" signal.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="prepare" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// WHEN IT GOES WRONG 01</p><h2>Lost-phone checklist: set it up today</h2></header>
+  <div class="slide-body stack">
+    <div class="plan" id="lp-plan">
+      <div><b>1 · So you can find it</b>
+        <label><input type="checkbox" data-k="find"> Find My (iPhone) or Find Hub (Android) is turned on</label>
+        <label><input type="checkbox" data-k="web"> I know my Apple or Google password, so I can sign in from someone else's device</label>
+        <label><input type="checkbox" data-k="where"> I know the address: icloud.com/find or google.com/android/find</label>
+        <label><input type="checkbox" data-k="imei"> I've written down my phone's IMEI somewhere else (dial *#06#)</label>
+      </div>
+      <div><b>2 · So a thief can't use it</b>
+        <label><input type="checkbox" data-k="code"> Random passcode of six digits or more, not a pattern or a year</label>
+        <label><input type="checkbox" data-k="sdp"> Stolen Device Protection (iPhone) or Theft protection (Android) is on</label>
+        <label><input type="checkbox" data-k="preview"> Message previews show only when unlocked</label>
+        <label><input type="checkbox" data-k="pin"> My carrier account has a PIN or number lock</label>
+      </div>
+      <div><b>3 · So you can get back in</b>
+        <label><input type="checkbox" data-k="backup"> Automatic backup is on (iCloud or Google)</label>
+        <label><input type="checkbox" data-k="2fa"> My important accounts don't depend only on this phone: backup codes, a second device or a security key</label>
+        <label><input type="checkbox" data-k="contact"> Someone I trust knows what to do if I call from a borrowed phone</label>
+        <label><input type="checkbox" data-k="medical"> Emergency contact or Medical ID is set (optional)</label>
+      </div>
+    </div>
+    <p class="comment" id="lp-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Give the room a few minutes to tick these on their own phones. Ticks are saved in this browser only. Most people find one or two gaps; that's the point.</span></li><li><b class="say">Say</b><span>Nearly everything you can do after a loss depends on something set up before it. Find My can't be switched on from afar. Two-factor codes that only arrive on the lost phone are the classic trap: you need a second way in.</span></li><li><b class="tip">Tip</b><span>Stolen Device Protection needs Find My, Face ID or Touch ID and Significant Locations; since iOS 26.4 Apple turns it on by default for many users ("might be turned on by default", Apple says), so check. Android Theft protection is under Settings › Google › All services › Theft protection; Google Play services (May 2026) turns Remote Lock and Theft Detection Lock on by default on Android 17 devices. *#06# shows the IMEI on nearly every phone.</span></li><li><b class="next">Next</b><span>"And if it's gone, today."</span></li></ul></div>
+</section>
+
+<section class="slide" id="lost-now" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// WHEN IT GOES WRONG 02</p><h2>It's gone: the first hour</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <ol class="steps">
+        <li><b>Find it</b><span>From another device or the web: see where it is, play a sound.</span></li>
+        <li><b>Mark it as lost</b><span>Locks it, shows your contact message, and on iPhone suspends Apple Pay. Android: "Mark as lost", or Remote Lock at android.com/lock with just your number.</span></li>
+        <li><b>Call your carrier</b><span>Suspend the line, so your number and your texted codes can't be used.</span></li>
+        <li><b>Check your accounts</b><span>From a trusted device, check your Apple or Google account. If someone may have seen your passcode, change passwords now.</span></li>
+        <li><b>Report it</b><span>To the police, with the serial number or IMEI. Insurers usually need the report.</span></li>
+        <li><b>Erase it, when you've given up</b><span>Then leave it on your account: removing it lets a thief reset and sell it.</span></li>
+      </ol>
+    </div>
+    <div class="stack">
+      <div class="card card-bad"><b>"We found your iPhone!"</b><span>Thieves send texts and emails like this to trick you into typing your Apple password on a fake page. Apple says it will never contact you to say your device has been found.</span></div>
+      <div class="card"><b>No code needed for Find My on the web</b><span>Signing in to icloud.com/find doesn't ask for a two-factor code, because your trusted device may be the lost one.</span></div>
+      <p class="src">Sources: <a href="https://support.apple.com/en-us/101593" target="_blank" rel="noopener">Apple: if your iPhone is lost</a> · <a href="https://support.google.com/android/answer/6160491" target="_blank" rel="noopener">Google: find, lock or erase</a> · <a href="https://support.google.com/android/answer/15146908" target="_blank" rel="noopener">Google: Theft protection</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Speed matters in the first hour, and the order matters too: lock it before you chase it. Never go to recover a phone yourself if the map shows it at a stranger's address; give the location to the police.</span></li><li><b class="tip">Tip</b><span>Apple: don't remove the device from Find My even after erasing it, because that removes Activation Lock; if you have AppleCare+ Theft and Loss, don't remove it until the claim is approved. Google: after a factory reset the device no longer shows in Find Hub, and anyone setting it up needs your Google Account password. Remote Lock needs Theft protection set up beforehand (screen lock, verified number, Find Hub on).</span></li><li><b class="next">Next</b><span>"Sometimes it's not your phone that's stolen, but your number."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sim-swap" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// WHEN IT GOES WRONG 03</p><h2>SIM swaps: when someone steals your number</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">A criminal talks your carrier into moving your number to <b>their</b> SIM. Your calls and texts, including sign-in codes, now go to them.</p>
+      <div class="card card-bad"><b>The signs</b><span>Your phone suddenly has no service, no texts and no calls. Or your carrier tells you your SIM was activated on a new device.</span></div>
+      <div class="card"><b>The numbers</b><span>The FBI's crime centre received 971 SIM-swap complaints in 2025, with $17.4 million reported lost. Those are only the cases people reported.</span></div>
+    </div>
+    <div class="stack">
+      <h3>Protect your number</h3>
+      <ol class="rules rules-num">
+        <li>Add a <b>PIN or passcode</b> to your phone account.</li>
+        <li>Turn on your carrier's <b>number lock</b> (stops moving the number) and <b>SIM lock</b> (stops SIM changes), if it offers them. They're often separate switches.</li>
+        <li>Move important accounts <b>off text-message codes</b>: use an authenticator app, a passkey or a security key.</li>
+        <li>If your service drops for no reason, call the carrier from another phone straight away.</li>
+      </ol>
+      <p class="src">Sources: <a href="https://consumer.ftc.gov/consumer-alerts/2019/10/sim-swap-scams-how-protect-yourself" target="_blank" rel="noopener">FTC: SIM swap scams</a> · <a href="https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf" target="_blank" rel="noopener">FBI IC3 2025 report</a> · <a href="../passwords-and-accounts/">Passwords and Accounts talk</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This one is nasty because nothing happens to your phone: it simply stops working, and you assume a network fault. Meanwhile, every "we sent you a code" goes to someone else. The SEC example from the start was exactly this.</span></li><li><b class="ask">Ask</b><span>Does anyone know whether their carrier account has a PIN? <em>Most people don't, and it takes five minutes in the carrier's app.</em></span></li><li><b class="tip">Tip</b><span>US carrier names, from carrier help pages and press coverage (check the carrier's own page): Verizon has Number Lock and SIM Protection; AT&amp;T has Wireless Account Lock; T-Mobile has SIM Protection and Account Takeover Protection. The FCC adopted rules in November 2023 requiring carriers to verify customers before SIM changes and port-outs and to notify them; compliance dates were delayed, so don't promise they're in force everywhere. Elsewhere, ask your carrier for "port-out protection" or a SIM-change lock.</span></li><li><b class="tip">Tip</b><span>IC3 figures: 971 complaints and $17,366,758 in 2025, down from 982 and about $26.0 million in 2024 and 2,026 complaints in 2022. IC3 defines a SIM swap as social engineering against mobile carriers to move a victim's service to a criminal's device.</span></li><li><b class="next">Next</b><span>"The last topic needs care: when the person watching is someone you know."</span></li></ul></div>
+</section>
+
+<section class="slide" id="stalkerware" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WHEN IT GOES WRONG 04</p><h2>Stalkerware and unwanted trackers</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Sometimes the threat isn't a stranger. Monitoring apps and hidden trackers are used by partners, exes and family members. <b>It is never the fault of the person being watched.</b></p>
+      <ul class="rules">
+        <li><b>Signs:</b> they know where you've been or what you've said without being told. Fast battery drain or odd data use can be clues, but have many innocent causes.</li>
+        <li><b>Trackers:</b> iPhone (iOS 17.5+) and Android (6.0+) alert you when an unknown Bluetooth tracker travels with you, and can make it play a sound.</li>
+        <li><b>iPhone Safety Check</b> reviews who you share location and accounts with, and has an emergency reset.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card card-bad"><b>Safety first</b><span>Removing an app or a tracker can alert the person who placed it, and some people escalate. If you suspect this, talk to an advocate before changing anything, from a phone or computer they can't see.</span></div>
+      <div class="card"><b>Free, confidential help</b><span><b>US:</b> National Domestic Violence Hotline, 1-800-799-7233, or text START to 88788. <b>UK:</b> National Domestic Abuse Helpline, 0808 2000 247 (24 hours). <b>In danger now:</b> call your emergency number.</span></div>
+      <p class="src"><a href="https://techsafety.org/spyware-and-stalkerware-phone-surveillance" target="_blank" rel="noopener">NNEDV Safety Net</a> · <a href="https://consumer.ftc.gov/articles/stalkerware-what-know" target="_blank" rel="noopener">FTC: stalkerware</a> · <a href="https://stopstalkerware.org" target="_blank" rel="noopener">Coalition Against Stalkerware</a> · <a href="https://www.thehotline.org" target="_blank" rel="noopener">thehotline.org</a> · <a href="https://www.apple.com/newsroom/2024/05/apple-and-google-deliver-support-for-unwanted-tracking-alerts-in-ios-and-android/" target="_blank" rel="noopener">Apple and Google tracker alerts</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Keep your tone calm and matter-of-fact. Someone in the room may be living this. The message is: it's not your fault, help exists, and the safest next step is a conversation with an advocate, not a factory reset.</span></li><li><b class="tip">Tip</b><span>This slide has no demo or jokes on purpose. NNEDV: "Some people may escalate their abusive behavior when stalkerware is removed", and restoring from a backup can bring stalkerware back. The FTC says to contact advocates from a device that isn't monitored (a friend's phone, a library computer, or a prepaid phone). The US hotline site has a quick-exit button (Escape twice). Refuge runs the UK helpline and refugetechsafety.org. Swap in local services for other countries.</span></li><li><b class="tip">Tip</b><span>Tracker alerts follow the joint Apple/Google "Detecting Unwanted Location Trackers" specification (May 2024). Safety Check is in Settings › Privacy &amp; Security on iOS 16 and later.</span></li><li><b class="next">Next</b><span>"Six habits to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// WHEN IT GOES WRONG 05</p><h2>Six habits to take home</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid habits-3">
+      <div class="habit"><b>1 · A random passcode</b><span>Six digits or more, no patterns or years. Let your face or finger do the typing, and shield it in public.</span></div>
+      <div class="habit"><b>2 · Theft features on</b><span>Stolen Device Protection or Theft protection, plus Find My or Find Hub.</span></div>
+      <div class="habit"><b>3 · Quiet lock screen</b><span>Previews only when unlocked. Keep the emergency info.</span></div>
+      <div class="habit"><b>4 · Stingy permissions</b><span>While using, selected photos, rough location. No is a fine answer.</span></div>
+      <div class="habit"><b>5 · Automatic updates</b><span>System and apps. Know when your phone's support ends.</span></div>
+      <div class="habit"><b>6 · Protect your number</b><span>A carrier PIN or lock, and sign-in codes from an app or passkey, not texts.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Six settings, most of which you may already have ticked today. If you only do one tonight, make it the lost-phone checklist: it covers most of the other five.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a setting you couldn't find on your own phone. (Please don't share passcodes or account details.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The checklist and demos stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://support.apple.com/guide/personal-safety/welcome/web" target="_blank" rel="noopener">Apple Personal Safety User Guide</a><span>Safety Check, sharing, and trackers, step by step.</span></li>
+        <li><a href="https://support.google.com/android/answer/15146908" target="_blank" rel="noopener">Google: Theft protection</a><span>Theft Detection Lock, Remote Lock and Identity Check.</span></li>
+        <li><a href="../passwords-and-accounts/">Passwords and Accounts</a><span>Password managers, two-factor codes and passkeys.</span></li>
+        <li><a href="../phishing-and-scams/">Phishing and Scams in the Age of AI</a><span>Fake texts, calls and "we found your phone" messages.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The passcode checker, phone screens, permission audit, update prompt and quiz are simulations in your browser; nothing you type is sent anywhere. Phone menus differ by model and version. Facts checked 8 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. Offer to help people find a setting on their own phone after the talk.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
