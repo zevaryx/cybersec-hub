@@ -24,6 +24,9 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | Developer 3 | **Using Crypto Correctly in Code** | Intermediate | about 110 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-in-code/) |
 | Security 2 | **Cloud Security Fundamentals** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/cloud-security/) |
 | Security 3 | **Public Key Infrastructure in Depth** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/pki-in-depth/) |
+| General 4 | **Your Phone, Safely** | Beginner | about 55 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/mobile-safety/) |
+| Developer 4 | **Web Application Security Essentials** | Intermediate | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/web-app-security/) |
+| Security 4 | **Vulnerability and Patch Management** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/vulnerability-management/) |
 
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
@@ -53,6 +56,38 @@ Four parts, with checkpoints after parts 1 and 3:
 4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
 
 Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
+
+### Vulnerability and Patch Management
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Knowing what you run** (25 min): inventories and SBOMs, a "do we run it?" search over sample SBOMs with real version-range matching, an annotated advisory reader
+2. **Deciding what first** (30 min): why CVSS is severity not risk (a CVSS 4.0 context explorer), KEV and EPSS, CISA's BOD 26-04 timelines as a priority model, a priority sorter, Log4Shell from report to "fully patched"
+3. **Patching without fear** (20 min): a staged-rollout simulator, verifying the fix (a checklist that remembers your ticks), mitigations when you can't patch, end of life
+4. **Wrap-up** (10 min): metrics that matter, with a mean-versus-median demo
+
+CVSS 4.0, the KEV catalogue, EPSS data, BOD 26-04, the EU Cyber Resilience Act dates and the Log4Shell timeline were checked against primary sources on 8 November 2026; the unconfirmed items are listed in the slides' speaker notes.
+
+### Web Application Security Essentials
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Data vs code** (34 min): a toy SQL parser (concatenation versus parameters), raw versus escaped output in sandboxed frames, Content Security Policy against six injections
+2. **Who's allowed to do what** (36 min): a mock API for broken access control, a cookie builder, a CSRF and SameSite explorer, an SSRF checker
+3. **Making it routine** (30 min): version ranges and lock files, a header grader, a bundle secret scanner, which pipeline tool catches which bug
+4. **Wrap-up** (14 min): the OWASP Top 10:2025 as a clickable map, a review checklist that remembers your ticks
+
+Every demo is simulated in the page: no vulnerable server, and nothing you type runs. OWASP Top 10:2025, browser SameSite defaults and CSP Level 3 were checked on 9 November 2026.
+
+### Your Phone, Safely
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **The lock and what's behind it** (16 min): what a passcode and face unlock each protect, a guessability checker with real lockout limits, why a restarted phone is safest, lock-screen leaks
+2. **Apps** (20 min): a torch-app permission audit, app stores versus sideloading and fake apps, how long phones get updates, public Wi-Fi and charging myths
+3. **When it goes wrong** (16 min): a lost-phone checklist that remembers your ticks, Find My and Find Hub, theft protection, SIM-swap locks, and where to get help safely with stalkerware and unwanted trackers
+
+Phone features (iOS Stolen Device Protection, Android Theft Protection, lockout limits and update lifespans) were checked against Apple's and Google's own documentation on 8 November 2026.
 
 ### Public Key Infrastructure in Depth
 
@@ -227,7 +262,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/, mobile-safety/, web-app-security/, vulnerability-management/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos
