@@ -17,6 +17,7 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | Start here | **Crypto 101: Intro to Cryptography** | Beginner | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-101/) |
 | General 1 | **Passwords and Accounts, done properly** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/passwords-and-accounts/) |
 | General 2 | **How HTTPS Really Works** | Beginner | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/how-https-works/) |
+| General 3 | **Phishing and Scams in the Age of AI** | Beginner | about 60 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/phishing-and-scams/) |
 | Developer 1 | **Security Habits for New Developers** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
 | Security 1 | **Identity and Access Management** | Intermediate | about 80 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/) |
 | Developer 2 | **Git and GitHub Security** | Beginner to intermediate | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/git-github-security/) |
@@ -50,6 +51,16 @@ Four parts, with checkpoints after parts 1 and 3:
 4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
 
 Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
+
+### Phishing and Scams in the Age of AI
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **How scams work on people** (15 min): the five pressure tricks (urgency, authority, fear, secrecy, reward) and the "ask", a pressure-trick highlighter, and the channels scams arrive by
+2. **Spotting the fake** (25 min): a link reader that picks out the real site, a real-or-fake quiz, sender names versus addresses, a mock password manager and passkey that refuse a look-alike site, AI-written messages, voice clones and deepfake calls, the call-back rule with a family code phrase, and a scenario drill
+3. **If it happens** (15 min): a first-hour checklist that remembers your ticks, where to report, no shame, and six habits to take home
+
+Real examples: US FTC fraud figures for 2024, the Arup deepfake video call (2024) and FTC warnings on voice-clone family emergency calls. Reporting sites checked 8 November 2026.
 
 ### Cloud Security Fundamentals
 
@@ -192,7 +203,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos

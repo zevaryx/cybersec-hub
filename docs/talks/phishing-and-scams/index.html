@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phishing and Scams in the Age of AI</title>
+<meta name="description" content="Phishing and Scams in the Age of AI: how modern scams, voice clones and deepfakes work on people, and the few habits that beat them. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/phishing-and-scams/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Phishing and Scams in the Age of AI">
+<meta property="og:description" content="Scams no longer have bad spelling. How modern phishing, fake calls and deepfakes work on people, and the habits that beat them.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/phishing-and-scams/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/phishing-and-scams/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Phishing and Scams in the Age of AI in neon, beside a terminal that picks the real website out of a suspicious link.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M18 7v14a5 5 0 0 1-10 0' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='18' cy='7' r='2.6' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "phishing-and-scams", "title": "Phishing and Scams in the Age of AI", "footer": "SCAMS", "subtitle": "GENERAL TRACK · 03",
+  "parts": [{ "name": "How scams work on people", "minutes": 15 }, { "name": "Spotting the fake", "minutes": 25 }, { "name": "If it happens", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">SCA<span>MS</span></a>
+  <div class="scroll-parts">
+    <a href="#tricks" data-part="1"><b>01</b>People</a>
+    <a href="#link-reader" data-part="2"><b>02</b>Spotting</a>
+    <a href="#first-hour" data-part="3"><b>03</b>After</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 03 · FOR EVERYONE, NO TECHNICAL BACKGROUND NEEDED</p>
+      <h1><span class="pre">Phishing and Scams in the</span> <span class="glitch" data-text="Age of AI">Age of AI</span></h1>
+      <p class="lede">Scams no longer have bad spelling. How modern phishing, fake calls and deepfakes work on people, and the few habits that beat them.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/phishing-and-scams/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ whose-link https://<input id="hero-in" value="accounts.acmebank.com.secure-login.net/verify" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About an hour, three parts, two checkpoints, no technical background needed. By the end you'll be able to read a link without clicking it, handle a suspicious call with one rule, and know what to do in the first hour if you do get caught. Anyone can be fooled: it's about timing, not intelligence.</span></li><li><b class="show">Show</b><span>The terminal: the link starts with "accounts.acmebank.com", but the real site is the bit just before the first slash: secure-login.net. We'll learn that trick properly in part 2.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try example.com, 127.0.0.1, a real domain like google.com, or a certain famous video link; in the link reader, press the "Tap the long link" button for a surprise; get all nine in the real-or-fake quiz right, or none; run the pressure-trick checker on a perfectly boring message; tap "type it in by hand anyway" three times; pick a family code phrase ten times; tick every box in the first-hour checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#tricks"><small>PART 1 · 15 MIN</small><b>How scams work on people</b></a><span>Five pressure tricks</span><span>Where scams arrive</span></li>
+      <li><a href="#link-reader"><small>PART 2 · 25 MIN</small><b>Spotting the fake</b></a><span>Reading a link</span><span>Senders, fake login pages</span><span>AI messages, voice clones</span><span>The call-back rule</span></li>
+      <li><a href="#first-hour"><small>PART 3 · 15 MIN</small><b>If it happens</b></a><span>The first hour</span><span>Where to report</span><span>No shame</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, why scams work: they go after your feelings, not your computer. Then the practical skills: reading links, spotting fakes, and one rule for calls. Last, what to do if it happens, because it will happen to someone in this room.</span></li><li><b class="next">Next</b><span>"Why this talk, now?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Scams stopped being clumsy</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">The old advice was "look for spelling mistakes". AI writes clean text in any language, clones a voice from a short clip, and can fake a face on a video call.</p>
+      <ul class="rules">
+        <li>Scammers aim at <b>people</b>, because people are easier to talk round than software.</li>
+        <li>Anyone can be fooled, especially when tired, busy or worried. It's a matter of timing, not intelligence.</li>
+        <li>The good news: the tells are about <b>what is being asked</b> and <b>how</b>, and that hasn't changed.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>The scale</b><span>US consumers reported losing more than $12.5 billion to fraud in 2024, up 25% on 2023. Reported losses; the real total is higher.</span></div>
+      <div class="card"><b>Arup, 2024</b><span>A finance worker in Hong Kong joined a video call with the "CFO" and colleagues. Everyone else on it was a deepfake. After the call, 15 transfers totalling about HK$200 million (about US$25 million) went out.</span></div>
+      <div class="card"><b>Family emergency calls</b><span>The US FTC warns that a short audio clip of someone's voice can be enough to clone it for a fake "I'm in trouble" call to their family.</span></div>
+      <p class="src">Sources: <a href="https://www.ftc.gov/news-events/news/press-releases/2025/03/new-ftc-data-show-big-jump-reported-losses-fraud-125-billion-2024" target="_blank" rel="noopener">FTC, March 2025</a> · <a href="https://www.scmp.com/news/hong-kong/law-and-crime/article/3263151/uk-multinational-arup-confirmed-victim-hk200-million-deepfake-scam-used-digital-version-cfo-dupe" target="_blank" rel="noopener">SCMP</a> · <a href="https://consumer.ftc.gov/scams/family-emergency-scams" target="_blank" rel="noopener">FTC family emergency scams</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three numbers' worth of context. The FTC figure is what people reported; plenty of victims never report. Arup is the one to remember: even a trained finance worker on a live video call with faces they recognised. Ask yourself how you'd have checked.</span></li><li><b class="tip">Tip</b><span>Arup confirmed it was the victim in May 2024; the US dollar figure varies by outlet ($25-26 million), so say "about".</span></li><li><b class="next">Next</b><span>"Every one of these uses the same five levers."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="tricks" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// HOW SCAMS WORK ON PEOPLE 01</p><h2>Five pressure tricks</h2></header>
+  <div class="slide-body stack">
+    <div class="tricks">
+      <div class="trick"><b>Urgency</b><q>Your account will be closed in 2 hours.</q><span>Takes away time to think. <em>Counter: slow down. Urgent plus unexpected is the warning.</em></span></div>
+      <div class="trick"><b>Authority</b><q>This is your bank's fraud team / the police / your CEO.</q><span>We obey titles. <em>Counter: titles are free to claim. Contact them yourself.</em></span></div>
+      <div class="trick"><b>Fear</b><q>Suspicious activity. A warrant has been issued.</q><span>Fear shrinks our thinking. <em>Counter: real organisations don't threaten you into paying.</em></span></div>
+      <div class="trick"><b>Secrecy</b><q>Don't tell anyone. Don't call the branch.</q><span>Cuts you off from checking. <em>Counter: "keep this secret" is a reason to tell someone.</em></span></div>
+      <div class="trick"><b>Reward</b><q>You've won. A refund is waiting.</q><span>Greed and hope also switch off caution. <em>Counter: you can't win a contest you didn't enter.</em></span></div>
+    </div>
+    <p class="callout"><b>THE ASK</b> Look past the story at what you're asked to <em>do</em>: pay in gift cards or crypto, read out a code, install something, sign in, keep it secret. That's the part to verify.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Every scam uses some mix of these, in any channel and any language. They work by making you feel instead of think. Notice the effect on you: if your heart rate just went up, that's the signal.</span></li><li><b class="ask">Ask</b><span>Which of the five is hardest to resist for you, and when? <em>No wrong answers: it's often "authority" at work and "fear" at home.</em></span></li><li><b class="tip">Tip</b><span>Frame it kindly: these tricks work on everyone. We're not here to feel clever, but to have a plan for the moment we feel rushed.</span></li><li><b class="next">Next</b><span>"Let's see how many of them one message can carry."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tricks-demo" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// HOW SCAMS WORK ON PEOPLE 02</p><h2>Pressure-trick highlighter</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Sample messages" id="tk-samples">
+        <button type="button" data-s="bank">Bank text</button>
+        <button type="button" data-s="boss">"Your manager"</button>
+        <button type="button" data-s="prize">Prize</button>
+        <button type="button" data-s="boring">Normal message</button>
+      </div>
+      <label class="tk-label" for="tk-in">Message (or paste your own; nothing leaves your browser)</label>
+      <textarea id="tk-in" rows="6" spellcheck="false"></textarea>
+    </div>
+    <div class="stack">
+      <div class="tk-chips" id="tk-chips"></div>
+      <output class="tk-out" id="tk-out"></output>
+      <p class="comment" id="tk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Pick "Bank text": urgency, fear, authority and a secrecy line all in three sentences, then the ask at the end (verify, code). Then "Normal message": nothing lights up. Then edit a sample, removing the pressure but keeping the ask, to show the ask still matters.</span></li><li><b class="say">Say</b><span>This is a toy: it matches about sixty phrases. A real scam can use words it has never seen, and a harmless message can trip it. It's here to train your eye, not to replace it.</span></li><li><b class="tip">Tip</b><span>Messages are invented. Never paste a real scam that contains your own details into any online tool.</span></li><li><b class="next">Next</b><span>"Now: where do these messages arrive?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="channels" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// HOW SCAMS WORK ON PEOPLE 03</p><h2>Where scams arrive</h2></header>
+  <div class="slide-body stack">
+    <div class="channels">
+      <div class="chan"><b>Email</b><small>phishing</small><span>Fake invoices, "account problem", shared-document links.</span></div>
+      <div class="chan"><b>Text messages</b><small>smishing</small><span>Parcel fees, toll or fine notices, "wrong number" chats that turn friendly.</span></div>
+      <div class="chan"><b>Phone calls</b><small>vishing</small><span>"Your bank", "tech support", "the tax office", a relative in trouble. Caller ID can be faked.</span></div>
+      <div class="chan"><b>Chat and social</b><small>DMs</small><span>A friend's hacked account, fake jobs, romance and investment "opportunities".</span></div>
+      <div class="chan"><b>QR codes</b><small>quishing</small><span>A sticker over a real code on a poster or meter, or one inside an email. Your phone hides the address by default.</span></div>
+      <div class="chan"><b>Search and ads</b><small>look-alike sites</small><span>A paid ad above the real result, leading to a copy of the site.</span></div>
+    </div>
+    <p class="callout"><b>DELIVERY CHANGES, SCRIPTS DON'T</b> The channel is new every year. The five tricks and the "ask" aren't.</p>
+    <p class="src">Source for QR tampering: <a href="https://www.ic3.gov/PSA/2022/PSA220118" target="_blank" rel="noopener">FBI IC3 alert, January 2022</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>The odd names are worth knowing because they appear in news and bank warnings: smishing is text, vishing is voice, quishing is QR codes. The thing they share: someone you didn't expect to hear from asks you to do something. Even "wrong number" texts are a script: start friendly, move you to another app, then an investment or romance pitch.</span></li><li><b class="tip">Tip</b><span>Phones show a QR code's destination in a preview before you open it: read it with the same link rules from part 2. For payments, type the address or use the app.</span></li><li><b class="next">Next</b><span>"Checkpoint one."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Which pressure tricks are in "Your account will be closed in 2 hours unless you verify now"?</p><details><summary>Hint</summary><p>Think about the clock, and about what happens if you don't act.</p></details><details class="answer"><summary>Answer</summary><p>Urgency (2 hours) and fear (closure). The ask is "verify now", which usually means "sign in on my page". Authority is implied if it claims to be from your bank.</p></details></li>
+      <li><p>Your "boss" texts from an unknown number: "Quick favour, buy 5 gift cards, I'm in a meeting." Which of the five are in it, and what do you do?</p><details><summary>Hint</summary><p>Who is the "ask" for, and is gift cards a normal way for a company to pay?</p></details><details class="answer"><summary>Answer</summary><p>Authority, urgency and (often) secrecy, with an unusual payment as the ask. Don't reply to that thread. Contact your manager on a number or app you already use, and tell your security team.</p></details></li>
+      <li><p>Name a time you felt rushed by a message, even a real one. What made it feel urgent?</p><details><summary>Hint</summary><p>Real messages can be urgent too. What's different about how a real organisation behaves?</p></details><details class="answer"><summary>Answer</summary><p>Real organisations give you ways to check (log in yourself, call the number on your card), don't demand odd payment methods, and don't forbid you from telling anyone.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The third question invites stories. Thank people for them: it sets up the "no shame" slide.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="link-reader" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 01</p><h2>Reading a link without clicking it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <label class="lr-label" for="lr-in">Paste or type a link (nothing is opened or sent)</label>
+      <input id="lr-in" class="lr-in" value="https://login.acmebank.com.account-review.net/verify?id=4821" spellcheck="false" autocomplete="off">
+      <div class="seg-pick" role="group" aria-label="Example links" id="lr-presets">
+        <button type="button" data-u="https://login.acmebank.com/verify?id=4821">Real</button>
+        <button type="button" data-u="https://login.acmebank.com.account-review.net/verify?id=4821">Prefix trick</button>
+        <button type="button" data-u="https://acmebank.com@account-review.net/verify">The @ trick</button>
+        <button type="button" data-u="https://acrnebank.com/login">rn looks like m</button>
+        <button type="button" data-u="https://bit.ly/3xYz9Ab">Short link</button>
+        <button type="button" id="lr-long">Tap the long link</button>
+      </div>
+      <div class="lr-line" id="lr-line" aria-live="polite"></div>
+      <p class="lr-real" id="lr-real"></p>
+      <ul class="lr-warn" id="lr-warn"></ul>
+    </div>
+    <div class="stack">
+      <ol class="rules rules-num">
+        <li>The site is the <b>host</b>: the text between <code>://</code> and the next <code>/</code>, <code>?</code> or <code>#</code>.</li>
+        <li>If there's an <code>@</code>, everything before it is just a username. The host is what follows.</li>
+        <li>Read the host from the <b>right</b>. The last two parts (<code>acmebank.com</code>) are the site. Everything to the left is a label the owner chose.</li>
+        <li>So <code>acmebank.com.account-review.net</code> belongs to <code>account-review.net</code>.</li>
+      </ol>
+      <p class="callout"><b>LOOK-ALIKES</b> <code>rn</code> for <code>m</code>, <code>0</code> for <code>o</code>, <code>1</code> for <code>l</code>, and letters from other alphabets. Short links hide the destination. When unsure: don't click, and go to the site yourself.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Click "Real": the site is acmebank.com (login. is just a subdomain). "Prefix trick": same start, but the real site flips to account-review.net. "The @ trick": the bank name sits before the @, where it's only a username. "rn": the tool warns about the swapped letters. "Short link": nothing to read, so the advice is to avoid it.</span></li><li><b class="say">Say</b><span>The padlock and "https" only mean the connection is private, not that the site is honest: criminals can get certificates too. The skill is reading the host, and the habit is not needing to: bookmark the sites you use for money and go through the bookmark.</span></li><li><b class="tip">Tip</b><span>This tool knows a short list of multi-part endings like .co.uk; it's a teaching toy, not a browser. The browser's own address bar is the truth.</span></li><li><b class="next">Next</b><span>"Now a game: real or fake?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="link-quiz" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 02</p><h2>Real or fake? Judge the address</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lq-count" id="lq-count"></p>
+      <p class="lq-url" id="lq-url"></p>
+      <div class="controls lq-btns" id="lq-btns">
+        <button type="button" class="btn" data-a="real">Real</button>
+        <button type="button" class="btn btn-ghost" data-a="fake">Fake</button>
+        <button type="button" class="btn btn-ghost" id="lq-next" hidden>Next ›</button>
+      </div>
+      <p class="verdict" id="lq-verdict" hidden></p>
+    </div>
+    <div class="stack">
+      <div class="lr-line" id="lq-line" aria-live="polite"></div>
+      <p class="lr-real" id="lq-real"></p>
+      <p class="comment" id="lq-why"></p>
+      <p class="lq-score" id="lq-score"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Take a show of hands for each link before revealing. Nine links: five fake, four real. Two real ones look odd on purpose (login.microsoftonline.com is genuine). The point is that real can look strange, so the rule is "read the host", not "does it look nice".</span></li><li><b class="say">Say</b><span>We're judging addresses, not pages. A genuine address can still host a page that has been compromised, but that's rarer than a look-alike.</span></li><li><b class="tip">Tip</b><span>The Cyrillic "a" in the apple link is invisible to the eye. Your browser shows it as xn--… in the real host, which is the clue.</span></li></ul></div>
+</section>
+
+<section class="slide" id="sender" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 03</p><h2>Who is it really from?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="mail" id="mail">
+        <div class="mail-row"><span>From</span><b id="mail-from">Acme Bank Security</b></div>
+        <div class="mail-row mail-more" hidden><span>Address</span><b class="bad">alerts@acmebank-notices.net</b></div>
+        <div class="mail-row mail-more" hidden><span>Reply-To</span><b class="bad">help@acme-bank-recovery.com</b></div>
+        <div class="mail-row"><span>Subject</span><b>Action required: unusual sign-in</b></div>
+      </div>
+      <button type="button" class="btn" id="mail-toggle" aria-pressed="false">Show the real sender</button>
+      <p class="comment" id="mail-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The <b>display name</b> is whatever the sender typed. Anyone can call themselves "Acme Bank Security".</li>
+        <li>The <b>address</b> after it is what counts. Read its domain the same way as a link.</li>
+        <li><b>Reply-To</b> decides where your answer goes. If it differs from the sender, ask why.</li>
+        <li>Mail checks (SPF, DKIM, DMARC) prove which domain sent a message, not that the domain is honest. Criminals can set up checks for their own look-alike domains.</li>
+        <li>On a phone, tap the sender's name to see the address. Many mail apps hide it.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Press the button: the display name looks official, but the real address is a look-alike domain and replies go to a third one.</span></li><li><b class="say">Say</b><span>Same rule as links: find the real domain. Then ask the better question: did I expect this? If your bank really wants you, it will still be there when you open the app yourself.</span></li><li><b class="next">Next</b><span>"What happens when you do click and the page asks you to sign in?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="manager-demo" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 04</p><h2>Password managers and passkeys refuse fake sites</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <label class="lr-label" for="pm-site">The link took you to</label>
+      <select id="pm-site">
+        <option value="https://www.acmebank.com/login">https://www.acmebank.com/login</option>
+        <option value="https://www.acmebank.com.secure-login.net/login" selected>https://www.acmebank.com.secure-login.net/login</option>
+        <option value="https://acrnebank.com/login">https://acrnebank.com/login</option>
+        <option value="https://acmebank-support.com/login">https://acmebank-support.com/login</option>
+      </select>
+      <div class="fakepage" id="pm-page">
+        <div class="fp-bar"><span id="pm-bar"></span></div>
+        <div class="fp-body">
+          <b class="fp-logo">ACME BANK</b>
+          <label>Username<input id="pm-user" type="text" autocomplete="off" readonly placeholder="username"></label>
+          <label>Password<input id="pm-pass" type="password" autocomplete="off" readonly placeholder="password"></label>
+          <div class="fp-btns"><button type="button" class="btn btn-sm" id="pm-hand">Type it in by hand anyway</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="pm" id="pm-box">
+        <b>Password manager</b>
+        <p id="pm-status"></p>
+        <button type="button" class="btn btn-sm" id="pm-fill" hidden>Fill acmebank.com login</button>
+      </div>
+      <div class="pm pk" id="pk-box"><b>Passkey</b><p id="pk-status"></p></div>
+      <p class="comment" id="pm-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start on the fake (prefix trick): the manager offers nothing and no passkey appears. Switch to the real address: both offer to fill. Then go back to a fake and press "Type it in by hand anyway" to see what that means.</span></li><li><b class="say">Say</b><span>The manager compares the real domain it saved against the page's real domain, not the logo or wording on the page. A passkey is bound to the site it was made for in the same way (a callback to the passwords talk and Crypto 101). If your manager doesn't offer your login where you expect it, that's the warning: stop, and check the address.</span></li><li><b class="tip">Tip</b><span>This is a simulation inside the page; no real manager or site is involved. Real managers and browsers can also miss a login on legitimate sites that changed address: then go to the site via your bookmark.</span></li><li><b class="next">Next</b><span>"What about messages with perfect grammar?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="ai-messages" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 05</p><h2>AI writes perfect scams. Judge the request, not the writing</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stack">
+        <div class="card card-bad"><b>No longer reliable</b><span>Spelling and grammar mistakes · a generic greeting · a clumsy translation · an ugly logo. AI fixes all of these in seconds, in any language.</span></div>
+        <div class="card"><b>Still reliable</b><span>You weren't expecting it · it creates pressure · it asks for money, a code, a sign-in or secrecy · it comes by a channel the sender doesn't normally use.</span></div>
+      </div>
+      <p class="callout"><b>PERSONALISED NOW</b> Scammers can use what's public about you (your job, your boss, a holiday post) to make a message fit. Tidier privacy settings mean less raw material.</p>
+    </div>
+    <div class="stack">
+      <h3>Three questions before you act</h3>
+      <ol class="rules rules-num">
+        <li><b>Did I expect this?</b> A surprise isn't proof of a scam, but it earns a closer look.</li>
+        <li><b>What am I being asked to do?</b> Pay, sign in, share a code, install, keep quiet?</li>
+        <li><b>Can I check another way?</b> Use a number, app or website I already have, not the one in the message.</li>
+      </ol>
+      <p class="comment">Perfect grammar proves nothing. It only means the writer had a good tool.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>People were taught "spot the typos". That worked when scammers wrote by hand in a second language. Today an AI can write in your colleague's tone using their public posts. So we move the defence from the writing to the situation: three questions that work no matter who or what wrote the message.</span></li><li><b class="tip">Tip</b><span>The privacy point is general advice: set social accounts to friends-only where you can, and think before posting travel dates, workplace details or family names.</span></li><li><b class="next">Next</b><span>"Same idea, but with voices and faces."</span></li></ul></div>
+</section>
+
+<section class="slide" id="deepfakes" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 06</p><h2>Voice clones and deepfake calls</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="card"><b>"Family emergency"</b><span>A call or voice note in a relative's voice: arrested, in an accident, stranded. They need money fast, and "please don't tell Mum".</span></div>
+      <div class="card"><b>"The boss wants a transfer"</b><span>A call or video meeting with a familiar face: a confidential deal, pay this invoice today. Arup lost about US$25 million this way.</span></div>
+      <div class="card"><b>"Your bank's fraud team"</b><span>Caller ID shows the real bank. They ask you to "move your money to a safe account". No real bank does that.</span></div>
+    </div>
+    <div class="stack">
+      <h3>Defend with a process, not a sharp eye</h3>
+      <ul class="rules">
+        <li>Don't rely on spotting glitches. The fakes keep getting better, and a good one is fine on a bad line.</li>
+        <li><b>Hang up and call back</b> on a number you already have.</li>
+        <li><b>Agree a code phrase</b> with family, and use it for any money request.</li>
+        <li>At work: <b>two people approve</b> payments and changes of bank details, and the second one calls the requester on a known number.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://consumer.ftc.gov/scams/family-emergency-scams" target="_blank" rel="noopener">FTC family emergency scams</a> · <a href="https://www.theguardian.com/technology/article/2024/may/17/uk-engineering-arup-deepfake-scam-hong-kong-ai-video" target="_blank" rel="noopener">The Guardian on Arup</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Each of these arrives with a voice or face you trust. That's why the defence can't be "does it sound right?" It has to be a rule you follow even when it sounds exactly right. Caller ID can be faked, so "the number matched" isn't proof.</span></li><li><b class="tip">Tip</b><span>No real bank will ask you to move money to a "safe account". That sentence on its own is the whole warning.</span></li><li><b class="next">Next</b><span>"The rule, then."</span></li></ul></div>
+</section>
+
+<section class="slide" id="callback" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 07</p><h2>The call-back rule, and a family code phrase</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">If someone contacts you and asks for money, a code or a sign-in: <b>stop, hang up, and reach them yourself</b>, using a number or app you already had.</p>
+      <ol class="rules rules-num">
+        <li>Don't use the phone number, link or "reply" button in the message.</li>
+        <li>Use the number on the back of your card, your contacts, or the company's own site.</li>
+        <li>If the real person answers, you've lost two minutes. If not, you've dodged a scam.</li>
+        <li>For an urgent "family" call, ring the person, or someone who's with them, directly.</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <div class="phrase">
+        <b>Family code phrase</b>
+        <output id="cp-out" class="cp-out">press the button</output>
+        <button type="button" class="btn" id="cp-go">Pick a phrase</button>
+        <p class="m">Agree it in person. Say it out loud; don't text it. Avoid pet names, birthdays or anything on social media.</p>
+        <p class="comment" id="cp-note"></p>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>One rule covers nearly everything: you start the contact, not them. The phrase is for the moment the voice sounds exactly right: a real relative can answer it, a clone can't.</span></li><li><b class="show">Show</b><span>Pick a phrase: three random words chosen in your browser with the browser's own secure random numbers. It isn't sent or stored anywhere. In real life pick your own and agree it face to face.</span></li><li><b class="tip">Tip</b><span>Set a rule for the phrase too: if the caller can't say it, hang up, even if it feels rude. A real relative will understand.</span></li><li><b class="next">Next</b><span>"Practice time."</span></li></ul></div>
+</section>
+
+<section class="slide" id="drill" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// SPOTTING THE FAKE 08</p><h2>What would you do?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="dr-count" id="dr-count"></p>
+      <p class="dr-story" id="dr-story"></p>
+      <div class="dr-opts" id="dr-opts"></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="dr-verdict" hidden></p>
+      <p class="dr-why" id="dr-why"></p>
+      <button type="button" class="btn btn-ghost" id="dr-next" hidden>Next ›</button>
+      <p class="comment" id="dr-score"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Three short scenes. Take a vote on each before pressing an answer. In each case there's one answer that moves the conversation to a channel you control.</span></li><li><b class="say">Say</b><span>"Ask them a question only they'd know" is better than nothing, but answers can be found online or guessed: it's a weaker check than a call-back or code phrase. The rule always works: leave the thread, contact them yourself.</span></li><li><b class="next">Next</b><span>"Checkpoint two."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your "boss" calls with an urgent request to buy gift cards. What do you do?</p><details><summary>Hint</summary><p>Which tricks are in it, and who starts the next contact?</p></details><details class="answer"><summary>Answer</summary><p>Hang up, then contact your boss on a number or app you already use, and tell your security team. A real boss will understand, and gift cards are not a normal way to pay a supplier.</p></details></li>
+      <li><p>In <code>https://acmebank.com.review-account.net/login</code>, what is the real site?</p><details><summary>Hint</summary><p>Read the host from the right.</p></details><details class="answer"><summary>Answer</summary><p>review-account.net. The "acmebank.com." at the start is just a label chosen by whoever owns review-account.net.</p></details></li>
+      <li><p>Why is perfect grammar no longer a good sign?</p><details><summary>Hint</summary><p>Who writes scam messages now?</p></details><details class="answer"><summary>Answer</summary><p>AI writes clean text in any language, so mistakes are no longer a tell. Judge the request: unexpected, pressured, and asking for money, a code, a sign-in or secrecy.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="first-hour" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// IF IT HAPPENS 01</p><h2>The first hour</h2></header>
+  <div class="slide-body stack">
+    <div class="plan" id="fh-plan">
+      <div><b>1 · Stop and secure</b>
+        <label><input type="checkbox" data-k="stop"> Stop replying. Close the page or end the call</label>
+        <label><input type="checkbox" data-k="install"> Installed something or gave remote access? Go offline, then call IT</label>
+        <label><input type="checkbox" data-k="pw"> Change the password, from the real site (bookmark), on a trusted device</label>
+        <label><input type="checkbox" data-k="reuse"> Change it anywhere else you used it</label>
+      </div>
+      <div><b>2 · Lock the doors</b>
+        <label><input type="checkbox" data-k="signout"> Sign out of all other sessions and devices</label>
+        <label><input type="checkbox" data-k="recovery"> Check recovery email, phone and MFA devices are still yours</label>
+        <label><input type="checkbox" data-k="rules"> Look for mail forwarding rules or new connected apps you didn't add</label>
+        <label><input type="checkbox" data-k="bank"> Paid or shared card details? Call the bank on the number on your card</label>
+      </div>
+      <div><b>3 · Tell someone</b>
+        <label><input type="checkbox" data-k="work"> Work or school account? Tell IT or security now</label>
+        <label><input type="checkbox" data-k="platform"> Report it to the platform or service it came through</label>
+        <label><input type="checkbox" data-k="authority"> Report it to your national fraud site (next slide)</label>
+        <label><input type="checkbox" data-k="family"> Warn family or colleagues who might be targeted next</label>
+      </div>
+    </div>
+    <p class="comment" id="fh-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Be kind about this slide: someone here will use it. Speed matters more than perfection, and the first three or four boxes do most of the good. A password changed within minutes can stop most of the damage. If money moved, the bank can sometimes stop or recall it, but only if you call quickly.</span></li><li><b class="show">Show</b><span>Tick boxes as you go through them. They're saved in this browser only, so a visitor can come back and use it for real.</span></li><li><b class="tip">Tip</b><span>If you entered a password: change it, and change it anywhere it was reused (the case for a password manager and unique passwords). If you entered a one-time code, the attacker may have used it already, so sign out all sessions as well.</span></li><li><b class="next">Next</b><span>"Who to tell."</span></li></ul></div>
+</section>
+
+<section class="slide" id="report" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// IF IT HAPPENS 02</p><h2>Where to report</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="card"><b>First: closest to you</b><span><b>Work or school:</b> your IT or security team, before anything else. <b>The service it came through:</b> use the "report phishing / spam / impersonation" button. <b>Your bank or card company:</b> if money or card details are involved.</span></div>
+      <div class="card"><b>Then: the national site</b><span><b>US:</b> reportfraud.ftc.gov, and ic3.gov for internet crime or money lost. <b>UK:</b> forward emails to report@phishing.gov.uk and texts to 7726. <b>Canada:</b> the Canadian Anti-Fraud Centre. <b>Australia:</b> Scamwatch.</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Reports help get fake sites taken down and warn others, even if you didn't lose anything.</li>
+        <li>Report even if you only <b>nearly</b> fell for it. Near misses are the cheapest lessons.</li>
+        <li>Keep evidence: take a screenshot, keep the message, note the number or address. Don't forward a scam to friends "as a warning" without saying so.</li>
+        <li>Your country not listed? Search for "report fraud" and the country name, and check the site is the government's own.</li>
+      </ul>
+      <p class="src"><a href="https://reportfraud.ftc.gov" target="_blank" rel="noopener">reportfraud.ftc.gov</a> · <a href="https://www.ic3.gov" target="_blank" rel="noopener">ic3.gov</a> · <a href="https://www.ncsc.gov.uk/collection/phishing-scams" target="_blank" rel="noopener">NCSC</a> · <a href="https://antifraudcentre-centreantifraude.ca" target="_blank" rel="noopener">CAFC</a> · <a href="https://www.scamwatch.gov.au" target="_blank" rel="noopener">Scamwatch</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Start at the closest layer and work outwards. At work, the security team wants to hear about it fast: one report about a phishing email protects everyone else who received it. Say the list is not exhaustive and swap in your own country's service.</span></li><li><b class="tip">Tip</b><span>Check these before presenting to a new audience: reporting sites and numbers change, and anything country-specific should be swapped for where the audience is.</span></li><li><b class="next">Next</b><span>"One more thing about being fooled."</span></li></ul></div>
+</section>
+
+<section class="slide" id="no-shame" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// IF IT HAPPENS 03</p><h2>No shame: fast reports beat flawless people</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Nobody avoids every scam forever. The people who come out best aren't the ones who never get fooled: they're the ones who <b>tell someone quickly</b>.</p>
+      <ul class="rules">
+        <li>Scammers count on embarrassment, and secrecy is one of their five tricks. Silence helps them.</li>
+        <li>Fast reporting limits the damage, for you and for everyone else who got the same message.</li>
+        <li>Telling a friend or relative first is fine. Then tell the bank or the security team.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>If you run a team or a family</h3>
+      <ul class="rules">
+        <li>Say out loud: "If you're ever fooled, tell me straight away. You won't be in trouble."</li>
+        <li>Make reporting <b>one click</b>: a report-phishing button, or one address everyone knows.</li>
+        <li>Thank people for reports, including false alarms. A 'false alarm' report is a success.</li>
+        <li>Practise: run a tabletop of the scenarios from earlier.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>This is the most important slide for the people who lead. If reporting feels risky, people hide mistakes, and the attacker gets days of head start instead of minutes. Make the report button the easiest thing to do.</span></li><li><b class="ask">Ask</b><span>What's the easiest way to report something suspicious where you work, and would you know it without looking it up?</span></li><li><b class="next">Next</b><span>"Six habits to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// IF IT HAPPENS 04</p><h2>Six habits to take home</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid habits-3">
+      <div class="habit"><b>1 · Pause</b><span>Urgent and unexpected is the warning. Take a breath before you click, pay or reply.</span></div>
+      <div class="habit"><b>2 · Check the ask</b><span>Money, a code, a sign-in, an install or secrecy? That's what to verify.</span></div>
+      <div class="habit"><b>3 · Go yourself</b><span>Bookmark the sites you use for money, and use the app. Don't use the link in the message.</span></div>
+      <div class="habit"><b>4 · Call back</b><span>Reach people on a number you already have. Agree a family code phrase.</span></div>
+      <div class="habit"><b>5 · Use the tools</b><span>A password manager and passkeys refuse fake sites. Turn on MFA, and keep software updated.</span></div>
+      <div class="habit"><b>6 · Report fast</b><span>Tell the right people within the hour. No shame, no waiting.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Six things, none of which need technical skill. If you remember only one, make it number one: scammers need you to act before you think, so the best defence is to wait ten minutes.</span></li><li><b class="tip">Tip</b><span>Offer a one-page summary: the slide itself works, and the scroll view prints well (use the PDF button).</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a message you're still unsure about. (Please don't share real account details or personal numbers.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://consumer.ftc.gov/scams/family-emergency-scams" target="_blank" rel="noopener">FTC: family emergency scams</a><span>What the calls sound like, and what to do.</span></li>
+        <li><a href="https://www.cisa.gov/secure-our-world/recognize-and-report-phishing" target="_blank" rel="noopener">CISA: recognize and report phishing</a><span>A short, plain-language guide.</span></li>
+        <li><a href="../passwords-and-accounts/">Passwords and Accounts</a><span>Password managers, two-factor codes and passkeys.</span></li>
+        <li><a href="../how-https-works/">How HTTPS Really Works</a><span>What the padlock does and doesn't prove.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The link reader, quiz, highlighter, password manager and scenarios are simulations in your browser; no link is opened and nothing you type is sent anywhere. Reporting sites and figures checked 8 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe a scam they've seen, with the details taken out.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
