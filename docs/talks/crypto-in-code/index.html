@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Using Crypto Correctly in Code</title>
+<meta name="description" content="Using Crypto Correctly in Code: pick the right high-level tool, use authenticated encryption with nonces and associated data, store passwords and compare secrets properly, and spot the misuse patterns code reviews keep finding. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/crypto-in-code/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Using Crypto Correctly in Code">
+<meta property="og:description" content="You shouldn't write crypto, but you'll certainly call it. How to pick the right tool and avoid the mistakes code reviews keep finding, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/crypto-in-code/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/crypto-in-code/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Using Crypto Correctly in Code in neon, beside a terminal that seals a message with AES-GCM and a fresh random nonce.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Ccircle cx='11' cy='16' r='5' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M16 16h11M23 16v5M27 16v4' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='11' cy='16' r='1.6' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "crypto-in-code", "title": "Using Crypto Correctly in Code", "footer": "CRYPTO", "subtitle": "DEVELOPER TRACK · 03",
+  "parts": [{ "name": "Choosing tools", "minutes": 20 }, { "name": "Encryption without footguns", "minutes": 35 },
+            { "name": "Everything else that goes wrong", "minutes": 32 }, { "name": "Review practice", "minutes": 18 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">CRY<span>PTO</span></a>
+  <div class="scroll-parts">
+    <a href="#decision" data-part="1"><b>01</b>Tools</a>
+    <a href="#aead" data-part="2"><b>02</b>Encrypt</a>
+    <a href="#passwords" data-part="3"><b>03</b>The rest</a>
+    <a href="#bug-hunt" data-part="4"><b>04</b>Review</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 03 · FOR ANYONE WHO CALLS A CRYPTO API · CRYPTO 101 RECOMMENDED</p>
+      <h1><span class="pre">Using Crypto Correctly</span> <span class="glitch" data-text="in Code">in Code</span></h1>
+      <p class="lede">You shouldn't write crypto, but you'll certainly call it. How to pick the right tool, hold it properly, and spot the mistakes code reviews keep finding.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/crypto-in-code/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ seal("<input id="hero-in" value="meet at noon" spellcheck="false" autocomplete="off">")</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 110 minutes, four parts, three checkpoints, aimed at developers who call crypto libraries rather than write them. Crypto 101 helps but isn't required. The theme: the algorithms are almost never what breaks. The call around them is.</span></li><li><b class="show">Show</b><span>The terminal runs real AES-GCM in your browser with a fresh random key and a fresh random nonce on every keystroke. Same message, different output each time: that's the nonce doing its job. The tag at the end is what lets the receiver reject tampering.</span></li><li><b class="tip">Eggs</b><span>On the title slide, seal "hello world", "password", a run of identical letters, an empty message, or 42; in the nonce slide, push the message count to 2^32 with 96-bit nonces, or switch to 192-bit nonces; in the nonce-reuse slide, reuse a nonce; in the key slide, put "password" in the HKDF label, use two equal labels, or leave one empty; in the versioned-formats slide, upgrade all six records to v2; in the red-flag sorter, get all six right; in the timing slide, guess the token exactly or with the wrong length; in the random slide, make two weak tokens in the same second; in the TLS slide, flip through every language; in the bug hunt, find every bug in one snippet; and tick all twelve boxes of the review checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#decision"><small>PART 1 · 20 MIN</small><b>Choosing tools</b></a><span>Want X, use Y</span><span>Platform APIs and high-level libraries</span><span>Red flags in a dependency</span></li>
+      <li><a href="#aead"><small>PART 2 · 35 MIN</small><b>Encryption without footguns</b></a><span>Authenticated encryption</span><span>Nonces, and what reuse breaks</span><span>Associated data</span><span>Keys, envelopes, versions</span></li>
+      <li><a href="#passwords"><small>PART 3 · 32 MIN</small><b>Everything else that goes wrong</b></a><span>Passwords</span><span>Comparing secrets, randomness</span><span>Signatures and JWTs</span><span>TLS, logs and errors</span></li>
+      <li><a href="#bug-hunt"><small>PART 4 · 18 MIN</small><b>Review practice</b></a><span>Spot-the-bug</span><span>A review checklist to take home</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, picking the right tool, which removes most mistakes before you start. Then encryption, where the details bite hardest. Then the other places crypto goes wrong: passwords, comparisons, randomness, tokens, TLS and logs. Last, we practise reviewing code.</span></li><li><b class="next">Next</b><span>"Why this talk?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>The maths holds. The calls around it don't</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Real incidents rarely break AES. They break the call: a weak random seed, a check switched off, a comparison that gives itself away.</p>
+      <ul class="rules">
+        <li>You will <b>call</b> crypto far more often than you'll write it. The skill is choosing and holding it correctly.</li>
+        <li>Prefer the <b>highest-level</b> API that does the job: every knob is a mistake you can make.</li>
+        <li>Test the <b>failure paths</b>: tampered data, wrong key, expired token.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://android-developers.googleblog.com/2013/08/some-securerandom-thoughts.html" target="_blank" rel="noopener">Android</a> · <a href="https://crypto.stanford.edu/~dabo/pubs/abstracts/ssl-client-bugs.html" target="_blank" rel="noopener">Georgiev et al.</a> · <a href="https://groups.google.com/g/keyczar-discuss/c/VXHsoJSLKhM" target="_blank" rel="noopener">Keyczar</a> · <a href="https://www.usenix.org/conference/woot16/workshop-program/presentation/bock" target="_blank" rel="noopener">Böck et al.</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Android, 2013</b><span>Java's <code>SecureRandom</code> could return weak values on some devices. A compromised bitcoin transaction led to wallet-app updates on 11 August.</span></div>
+      <div class="card"><b>Certificate checks, 2012</b><span>Certificate validation was broken in many non-browser programs: logic errors, or checks switched off.</span></div>
+      <div class="card"><b>A comparison, 2009</b><span>Keyczar's HMAC check stopped at the first wrong byte, so timing leaked information. Fixed in May 2009.</span></div>
+      <div class="card"><b>Repeated nonces, 2016</b><span>184 HTTPS servers reused AES-GCM nonces, which breaks the authenticity of their connections.</span></div>
+
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Four incidents, four kinds of mistake: bad randomness, a safety check disabled or botched, a leaky comparison, a repeated nonce. We'll meet each of these again with a demo. None of them needed a cryptanalyst: they needed someone to hold the tool wrongly.</span></li><li><b class="tip">Tip</b><span>Android: the post says apps that set up TLS through HttpClient or java.net weren't affected, and apps running only on Android 4.4 or later needed no workaround. Don't overstate it as "all Android crypto was broken".</span></li><li><b class="tip">Tip</b><span>Georgiev et al., CCS 2012: affected libraries included Apache HttpClient, cURL, and PHP and Python SSL code; developers also turned validation off during testing. Böck et al. (WOOT 2016) also found over 70,000 servers using random nonces, a lower-severity case: that's the next topic.</span></li><li><b class="next">Next</b><span>"So how do you choose the right tool?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="decision" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// CHOOSING TOOLS 01</p><h2>Want X, use Y</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Job to do" id="job-pick">
+        <button type="button" data-j="encrypt" aria-pressed="true">Encrypt data</button>
+        <button type="button" data-j="password">Store passwords</button>
+        <button type="button" data-j="sign">Sign and verify</button>
+        <button type="button" data-j="kx">Agree on a key</button>
+        <button type="button" data-j="hash">Hash a file</button>
+        <button type="button" data-j="mac">Authenticate a partner's message</button>
+        <button type="button" data-j="token">Make a token or ID</button>
+        <button type="button" data-j="pubenc">Encrypt to a public key</button>
+      </div>
+      <div class="job-use"><small>USE</small><b id="job-use"></b><span id="job-why"></span></div>
+      <p class="job-never"><b>Never</b> <span id="job-never"></span></p>
+    </div>
+    <div class="stack">
+      <table class="grid-table job-table" aria-label="API names">
+        <tbody>
+          <tr><th scope="row">Web Crypto</th><td id="job-web"></td></tr>
+          <tr><th scope="row">Python</th><td id="job-py"></td></tr>
+          <tr><th scope="row">Node / libsodium / Tink</th><td id="job-other"></td></tr>
+        </tbody>
+      </table>
+      <p class="src">Based on <a href="https://www.latacora.com/blog/cryptographic-right-answers/" target="_blank" rel="noopener">Latacora, Cryptographic Right Answers</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Cryptographic Storage</a> and each library's documentation. Check current support before relying on a newer algorithm in a browser.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Click through the eight jobs. For each there's one boring answer. Notice the "Never" line: those are the shapes code reviews keep finding. Pause on "Agree on a key" (raw shared secret is not a key) and "Make a token" (UUIDs are for identifying things, not for keeping secrets: RFC 9562 says so).</span></li><li><b class="say">Say</b><span>You don't need to remember algorithm names. You need to remember that every job has a standard answer, and that the answer is in your platform or a mainstream library. If you can't find the standard answer for your job, stop and ask: that's the moment to talk to someone who does this for a living.</span></li><li><b class="tip">Tip</b><span>The names change slowly but they do change. Latacora's page dates from 2018 and still reads as sensible; browser support for newer curves (Ed25519, X25519) varies, so check support tables.</span></li><li><b class="next">Next</b><span>"Which layer of the library should you call?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="layers" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// CHOOSING TOOLS 02</p><h2>Call the highest layer that does the job</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="layers">
+        <div class="layer l3"><b>3 · Recipes</b><span><code>secretbox</code>, Tink's <code>Aead</code>, Fernet, <code>crypto_pwhash_str</code>. Pick a key, call seal and open. Defaults are chosen for you.</span><em>Start here</em></div>
+        <div class="layer l2"><b>2 · Constructions</b><span>AES-GCM, ChaCha20-Poly1305, HKDF, HMAC, Ed25519. You manage nonces, formats and key use.</span><em>When no recipe fits</em></div>
+        <div class="layer l1"><b>1 · Raw primitives</b><span>One AES block, one hash round, raw RSA. Safe only inside someone else's construction.</span><em>Don't call these</em></div>
+      </div>
+    </div>
+    <div class="stack">
+      <h3>Choosing a library</h3>
+      <ul class="rules">
+        <li><b>Platform first:</b> Web Crypto in browsers, the OS keychain for stored secrets, your language's standard library.</li>
+        <li><b>Mainstream and maintained:</b> libsodium, Google's Tink, Python's <code>cryptography</code>. Many eyes, regular releases, security contacts.</li>
+        <li><b>Safe defaults:</b> the easy path should be the safe path. Be wary of APIs that make you pick modes, padding or IV lengths.</li>
+        <li><b>Boring wins:</b> a library everyone uses beats a clever one nobody has reviewed.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://developers.google.com/tink" target="_blank" rel="noopener">Tink</a> · <a href="https://libsodium.gitbook.io/doc/secret-key_cryptography/secretbox" target="_blank" rel="noopener">libsodium secretbox</a> · <a href="https://cryptography.io/en/latest/hazmat/primitives/aead/" target="_blank" rel="noopener">Python cryptography</a> (its "hazmat" layer is labelled for experts)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Libraries come in layers. The lower you go, the more you must know, and the more ways there are to hold it wrong. The Python <code>cryptography</code> package even names its low-level section "hazmat" and warns you to be 100% sure before using it. Start at the top layer and only drop down when you have a reason.</span></li><li><b class="ask">Ask</b><span>What crypto does your team call today, and at which layer? <em>Often: JWT libraries, password hashing, and an AES call someone wrote in 2016.</em></span></li><li><b class="next">Next</b><span>"How do you spot a bad dependency?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="redflags" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CHOOSING TOOLS 03</p><h2>Red flags in a dependency: use or avoid?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="rf-count" id="rf-count"></p>
+      <blockquote class="rf-readme" id="rf-readme"></blockquote>
+      <div class="controls rf-btns" id="rf-btns">
+        <button type="button" class="btn" data-a="use">Use it</button>
+        <button type="button" class="btn btn-ghost" data-a="avoid">Avoid it</button>
+        <button type="button" class="btn btn-ghost" id="rf-next" hidden>Next ›</button>
+      </div>
+      <p class="verdict" id="rf-verdict" hidden></p>
+    </div>
+    <div class="stack">
+      <ul class="rf-list" id="rf-flags"></ul>
+      <p class="comment" id="rf-why"></p>
+      <p class="rf-score" id="rf-score"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Six invented packages, none real. Take a vote on each. The two safe ones are boring on purpose: a thin wrapper over libsodium, and the platform's own AES-GCM.</span></li><li><b class="say">Say</b><span>Red flags: marketing words ("military-grade", "unbreakable"), home-made algorithms, no review, no tests for the failure paths, an old last commit with open bug reports about silent wrong results, and speed as the selling point for a password hash. Green flags: thin wrappers over a trusted core, tests that tamper with data, boring words.</span></li><li><b class="tip">Tip</b><span>"Never been broken" is a claim about attention, not strength. Algorithms earn trust by surviving public attack for years.</span></li><li><b class="next">Next</b><span>"Checkpoint one."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>You need to store users' passwords. Which function do you reach for, and what do you <em>not</em> do?</p><details><summary>Hint</summary><p>Which layer of the library, and is speed a virtue here?</p></details><details class="answer"><summary>Answer</summary><p>The library's password-hashing function (Argon2id, or scrypt, bcrypt or PBKDF2 where required) with its verify function. Don't use a plain SHA-256 or MD5, and don't write your own loop.</p></details></li>
+      <li><p>A package's README says "military-grade, proprietary algorithm, never broken". What do you do?</p><details><summary>Hint</summary><p>Who has reviewed it?</p></details><details class="answer"><summary>Answer</summary><p>Walk away. Home-made algorithms and marketing claims are red flags. Use a mainstream library with a standard algorithm that has survived public attack.</p></details></li>
+      <li><p>Why prefer a recipe like <code>secretbox</code> over calling AES directly?</p><details><summary>Hint</summary><p>How many choices does each one leave you?</p></details><details class="answer"><summary>Answer</summary><p>A recipe has safe defaults and fewer choices to get wrong (mode, padding, tag). Every knob you can turn is a mistake you can make.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="aead" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 01</p><h2>Authenticated encryption only: why the tag matters</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Message<input id="ae-msg" class="mono" value="Pay Alice $100.00 today" spellcheck="false" autocomplete="off" maxlength="40"></label>
+      </div>
+      <div class="ae-cts">
+        <small>CIPHERTEXT (the attacker can change any byte)</small>
+        <div class="ae-bytes" id="ae-bytes" role="group" aria-label="Ciphertext bytes. Press one to flip a bit in it."></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ae-preset">Change the 1 to a 9</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ae-reset">Untamper</button>
+      </div>
+      <p class="comment" id="ae-note"></p>
+    </div>
+    <div class="stack">
+      <div class="ae-box"><b>No tag (a stream mode alone)</b><output id="ae-plain"></output><span class="m">Decryption "works". The change goes through, and nothing says so.</span></div>
+      <div class="ae-box ae-gcm"><b>With a tag (AES-GCM)</b><output id="ae-gcm"></output><span class="m">The tag no longer matches, so the message is rejected before anyone reads it.</span></div>
+      <ul class="rules">
+        <li>Use <b>AES-GCM</b> or <b>ChaCha20-Poly1305</b>, or a recipe built on them.</li>
+        <li>Plain CBC or CTR need a separate MAC, applied <b>encrypt-then-MAC</b>. Easier to avoid them.</li>
+        <li>Decrypt <b>fails closed</b>: on a bad tag, throw. Never use the plaintext.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press "Change the 1 to a 9". The no-tag panel decrypts to $900.00, the GCM panel rejects. Then click individual ciphertext bytes to flip a bit anywhere: the no-tag side changes exactly that spot in the plaintext, and GCM still rejects.</span></li><li><b class="say">Say</b><span>Encryption hides content; it doesn't stop changes. In a stream mode, flipping a ciphertext bit flips the same plaintext bit, so someone who knows the format can edit the message without the key. That's why we only use authenticated encryption: the tag covers the ciphertext, and checking it comes first.</span></li><li><b class="tip">Tip</b><span>CBC has its own failure: padding oracles (Vaudenay, 2002), where error behaviour while checking padding leaks plaintext. Moxie Marlinspike's "Cryptographic Doom Principle" (2011) argues you should verify the MAC before touching the ciphertext at all, which is what an AEAD does for you. OWASP: "Where available, authenticated modes should always be used."</span></li><li><b class="next">Next</b><span>"AEAD has one big rule: nonces."</span></li></ul></div>
+</section>
+
+<section class="slide" id="nonces" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 02</p><h2>Nonces: random or counter, and how long a key lasts</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Nonce size<select id="nn-bits"><option value="16">16 bits</option><option value="24">24 bits</option><option value="32">32 bits</option><option value="40">40 bits</option><option value="64">64 bits</option><option value="96" selected>96 bits (AES-GCM)</option><option value="192">192 bits (XChaCha20)</option></select></label>
+        <button type="button" class="btn" id="nn-run">Draw random nonces until one repeats</button>
+      </div>
+      <output class="nn-out" id="nn-out"></output>
+      <div class="controls">
+        <label class="grow">Messages under one key (power of 2)<span class="range"><input type="range" id="nn-k" min="8" max="64" value="32"><output id="nn-k-out"></output></span></label>
+      </div>
+      <output class="nn-prob" id="nn-prob"></output>
+      <p class="comment" id="nn-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A nonce is "number used once" <b>per key</b>. Repeat one and the guarantees go.</li>
+        <li><b>Random</b> nonces need a big space. With random 96-bit nonces NIST caps a key at <b>2<sup>32</sup> messages</b> (collision odds stay under 2<sup>-32</sup>).</li>
+        <li><b>Counters</b> never repeat, but state must survive restarts, crashes and many servers. Lose the count and you repeat.</li>
+        <li><b>Long random nonces</b> (XChaCha20's 192 bits) make "random" safe without counting.</li>
+        <li>Better: let the library make the nonce, and rotate the key long before the limit.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf" target="_blank" rel="noopener">NIST SP 800-38D</a>, §5.2.1.1 and §8.3 (a revision is in progress) · <a href="https://www.rfc-editor.org/rfc/rfc8439" target="_blank" rel="noopener">RFC 8439</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Choose 16 bits and draw: a repeat after a few hundred nonces. Try 24, 32, 40: each step takes longer. Then move to 96 bits: the button explains it can't run (about 2<sup>48</sup> draws expected, centuries of work). Slide the message count to 32 with 96 bits: roughly 1 in 8.6 billion. Push it to 48 and watch it become real.</span></li><li><b class="say">Say</b><span>That's the birthday effect: a repeat shows up near the square root of the space. NIST's rule for random 96-bit IVs is a limit of 2<sup>32</sup> invocations per key, which keeps the chance of any repeat below 2<sup>-32</sup>. Reuse isn't a small risk: next slide.</span></li><li><b class="tip">Check</b><span>SP 800-38D (November 2007) §8.3: the total number of invocations "shall not exceed 2<sup>32</sup>" for the RBG-based construction; §5.2.1.1 recommends 96-bit IVs; §5.2.1.1 also limits plaintext to 2<sup>39</sup>-256 bits per call. NIST has announced a revision (a draft was in public comment in 2026): check its current status before quoting limits.</span></li><li><b class="next">Next</b><span>"And what exactly breaks when a nonce repeats?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="reuse" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 03</p><h2>What a repeated nonce breaks</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Nonce policy" id="ru-pick">
+        <button type="button" data-m="fresh" aria-pressed="true">A fresh nonce each time</button>
+        <button type="button" data-m="same">The same nonce twice</button>
+      </div>
+      <div class="controls">
+        <label class="grow">Message A (a known template)<input id="ru-a" class="mono" value="Dear customer, your code is 000000" spellcheck="false" autocomplete="off" maxlength="40"></label>
+        <label class="grow">Message B (a secret)<input id="ru-b" class="mono" value="Dear customer, your code is 482913" spellcheck="false" autocomplete="off" maxlength="40"></label>
+      </div>
+      <table class="grid-table ru-table">
+        <tbody>
+          <tr><th scope="row">Ciphertext A</th><td id="ru-c1"></td></tr>
+          <tr><th scope="row">Ciphertext B</th><td id="ru-c2"></td></tr>
+          <tr><th scope="row">A ⊕ B</th><td id="ru-xp"></td></tr>
+          <tr><th scope="row">cipher A ⊕ cipher B</th><td id="ru-xc"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="ru-verdict"></p>
+      <p class="ru-rec" id="ru-rec"></p>
+      <ul class="rules">
+        <li>Stream-style modes (CTR, GCM, ChaCha20) make a <b>keystream</b> from key and nonce. Same pair, same keystream.</li>
+        <li>XOR the two ciphertexts and the keystream cancels: you have A ⊕ B. Know one message, get the other.</li>
+        <li>In GCM it also lets someone recover the <b>authentication key</b>, and forge messages.</li>
+      </ul>
+      <p class="src">Source: <a href="https://www.usenix.org/conference/woot16/workshop-program/presentation/bock" target="_blank" rel="noopener">Böck et al., WOOT 2016</a>: 184 HTTPS servers repeated nonces, and the paper's proof of concept forged traffic.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>With "A fresh nonce each time": the two XORs look unrelated, and the recovered text is noise. Switch to "The same nonce twice": the last two rows match exactly and the secret reappears. Edit message B and watch the recovery follow.</span></li><li><b class="say">Say</b><span>This is the "two-time pad": the oldest mistake in stream encryption. Real messages have predictable structure (headers, templates, JSON keys), so "I don't know either message" is not much protection. With GCM it gets worse, because the authentication key leaks too: the forgery attack Böck et al. demonstrated against live HTTPS servers.</span></li><li><b class="tip">Tip</b><span>This demo shows what reuse does, using the same AES-GCM used elsewhere in the talk. It only recovers text you could already compare against; it's not a tool.</span></li><li><b class="next">Next</b><span>"Next: bind the ciphertext to where it belongs."</span></li></ul></div>
+</section>
+
+<section class="slide" id="aad" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 04</p><h2>Associated data: bind a ciphertext to its context</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <label class="check ad-check"><input type="checkbox" id="ad-on" checked> Bind each ciphertext to its user and record (associated data)</label>
+      <table class="grid-table ad-table" id="ad-table"><thead><tr><th>Row</th><th>Owner</th><th>Stored ciphertext</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ad-swap">Copy Alice's ciphertext into Bob's row</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ad-reset">Reset</button>
+      </div>
+    </div>
+    <div class="stack">
+      <output class="ad-out" id="ad-out"></output>
+      <ul class="rules">
+        <li>Associated data (AAD) is <b>authenticated, not encrypted</b>. You pass the same value to decrypt.</li>
+        <li>Put in what the data belongs to: user ID, record ID, purpose, format version.</li>
+        <li>Then a valid ciphertext moved to another row, another user, or another purpose <b>fails to open</b>.</li>
+        <li>Store the AAD or rebuild it from context. Never trust one that came with the ciphertext.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>With the box ticked, read Bob's row (his own data). Press "Copy Alice's ciphertext into Bob's row" and read Bob again: rejected. Untick the box, reset and copy again: Bob's row now cheerfully shows Alice's salary.</span></li><li><b class="say">Say</b><span>Without AAD every ciphertext is valid anywhere the key works. That's how "a user can read another user's record" bugs appear in encrypted databases: nobody tampered with the bytes, they just moved them. Binding the context costs nothing and removes a whole class of confusion.</span></li><li><b class="tip">Tip</b><span>Python <code>cryptography</code>: <code>AESGCM(key).encrypt(nonce, data, associated_data)</code>; decrypting with different associated data raises <code>InvalidTag</code>, the same as a changed ciphertext. Node: <code>cipher.setAAD()</code> before update. Web Crypto: <code>additionalData</code> in the algorithm parameters.</span></li><li><b class="next">Next</b><span>"Where do the keys come from?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="keys" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 05</p><h2>Keys: generate them, or derive them the right way</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="lr-label" for="ky-src">Where does the starting secret come from?</label>
+      <select id="ky-src">
+        <option value="random">Random bytes from the secure generator</option>
+        <option value="key">An existing strong key (one master key, many jobs)</option>
+        <option value="password">A password a person typed</option>
+      </select>
+      <div class="ky-card" id="ky-card"></div>
+      <table class="grid-table ky-table">
+        <thead><tr><th>Password KDF (OWASP minimums)</th><th>Settings</th></tr></thead>
+        <tbody>
+          <tr><td>Argon2id</td><td>m = 19 MiB, t = 2, p = 1</td></tr>
+          <tr><td>scrypt</td><td>N = 2<sup>17</sup>, r = 8, p = 1</td></tr>
+          <tr><td>bcrypt</td><td>cost 10 or more (72-byte limit)</td></tr>
+          <tr><td>PBKDF2-HMAC-SHA256</td><td>600,000 iterations</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack">
+      <h3>HKDF: one master key, separate keys per job</h3>
+      <div class="hk-master"><small>MASTER KEY (random, 32 bytes)</small><code id="hk-master"></code><button type="button" class="btn btn-ghost btn-sm" id="hk-rotate">New master</button></div>
+      <div class="controls"><label class="grow">Label for key 1<input id="hk-l1" class="mono" value="v1/encrypt/invoices" spellcheck="false" autocomplete="off"></label></div>
+      <p class="hk-out"><small>KEY 1</small><code id="hk-k1"></code></p>
+      <div class="controls"><label class="grow">Label for key 2<input id="hk-l2" class="mono" value="v1/mac/invoices" spellcheck="false" autocomplete="off"></label></div>
+      <p class="hk-out"><small>KEY 2</small><code id="hk-k2"></code></p>
+      <p class="comment" id="hk-note"></p>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Password Storage</a> · <a href="https://www.rfc-editor.org/rfc/rfc5869" target="_blank" rel="noopener">RFC 5869 (HKDF)</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey" target="_blank" rel="noopener">MDN deriveKey</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Pick each source in turn: random bytes need no derivation; a master key goes through HKDF with a label per purpose; a password goes through a deliberately slow password function. Then edit the HKDF labels: one character changes the whole key. Press "New master" and both keys change.</span></li><li><b class="say">Say</b><span>Two different questions. If the secret is already strong, you want fast and separate: HKDF with a label per job so the encryption key and the MAC key are never the same. If the secret is a human's password, you want slow on purpose, because a guesser gets to try millions of candidates. MDN says it plainly: HKDF "is not designed to derive keys from relatively low-entropy inputs such as passwords. For that, use PBKDF2".</span></li><li><b class="tip">Check</b><span>OWASP Password Storage cheat sheet (checked 8 Nov 2026): Argon2id m=19456 KiB, t=2, p=1 (equivalents 46 MiB with t=1, or 12 MiB with t=3); scrypt N=2^17, r=8, p=1; bcrypt cost 10+ with a 72-byte password limit and only for legacy systems; PBKDF2-HMAC-SHA256 600,000 iterations (when FIPS-140 is required). The HKDF here is the real RFC 5869 construction from the shared Lab code.</span></li><li><b class="next">Next</b><span>"What about the keys themselves? Envelopes."</span></li></ul></div>
+</section>
+
+<section class="slide" id="envelope" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 06</p><h2>Envelope encryption: wrap the data keys</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="ev-kek"><b>Key-encryption key (KEK)</b><span id="ev-kek-state"></span></div>
+      <table class="grid-table ev-table" id="ev-table"><thead><tr><th>Document</th><th>Size</th><th>Wrapped data key</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ev-rotate">Rotate the KEK</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ev-destroy">Destroy the KEK</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ev-reset">Reset</button>
+      </div>
+    </div>
+    <div class="stack">
+      <output class="ev-log" id="ev-log"></output>
+      <ul class="rules">
+        <li>Each document gets its own <b>data key (DEK)</b>. A <b>KEK</b>, kept in a KMS or HSM, encrypts the DEKs.</li>
+        <li>Store the wrapped DEK next to the data. Only the KEK needs strong protection.</li>
+        <li><b>Rotate the KEK</b> by re-wrapping tiny keys, not re-encrypting the data.</li>
+        <li><b>Destroy the KEK</b> and the data is unreadable (often called crypto-shredding).</li>
+      </ul>
+      <p class="src">Sources: <a href="https://docs.aws.amazon.com/kms/latest/developerguide/kms-cryptography.html#enveloping" target="_blank" rel="noopener">AWS KMS: envelope encryption</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Cryptographic Storage</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Read a document: the KEK unwraps its DEK, the DEK opens the data. Press "Rotate the KEK": four 32-byte keys are re-wrapped instead of re-encrypting 83 MB, and reads still work. Press "Destroy the KEK": every read now fails, though the ciphertext is still there.</span></li><li><b class="say">Say</b><span>Envelope encryption is how cloud KMS products work: AWS KMS describes it as encrypting plaintext data with a data key, then encrypting the data key under another key. The benefits are the ones in the demo: wrapped keys are safe to store beside the data, and re-keying means re-wrapping, not re-encrypting. OWASP says the KEK must be stored separately from the DEK.</span></li><li><b class="tip">Tip</b><span>The demo uses real AES-GCM from the shared Lab code with small sample texts, and shows the sizes as stated. Wrapped keys bind the document ID as associated data, so a wrapped key can't be moved to another document.</span></li><li><b class="next">Next</b><span>"One more habit: version your ciphertexts."</span></li></ul></div>
+</section>
+
+<section class="slide" id="formats" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// ENCRYPTION WITHOUT FOOTGUNS 07</p><h2>Version your ciphertexts so you can change later</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table fm-table" id="fm-table"><thead><tr><th>Record</th><th>Stored blob</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="fm-all">Read every record</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="fm-reset">Reset</button>
+      </div>
+      <p class="fm-prog" id="fm-prog"></p>
+    </div>
+    <div class="stack">
+      <output class="fm-log" id="fm-log"></output>
+      <ul class="rules">
+        <li>Start every blob with a <b>version</b>: <code>v1.nonce.ciphertext.tag</code>. Include the algorithm if you can have more than one.</li>
+        <li>On read, the version picks the code path. On write, always use the <b>newest</b>.</li>
+        <li><b>Upgrade lazily</b>: re-encrypt old records as they're read, with a background job for the rest.</li>
+        <li>Without a version, changing algorithm means guessing, or a risky big-bang migration.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>The six records start as v1 (no associated data, like the one in the previous demo that moves between rows). Read one: it opens with the v1 rules and is rewritten as v2, which binds the record ID. "Read every record" does the whole lot.</span></li><li><b class="say">Say</b><span>You will need to change algorithms, parameters or key hierarchy someday: a limit lowers, a weakness appears, or you learn about AAD after shipping. A version byte is the cheapest insurance you can add. Good password hash strings already do this: they carry the algorithm and parameters inside the string.</span></li><li><b class="next">Next</b><span>"Checkpoint two."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your teammate encrypts with AES-CBC and no tag "because it's standard". What do you suggest, and why?</p><details><summary>Hint</summary><p>What can someone do to the ciphertext, without the key?</p></details><details class="answer"><summary>Answer</summary><p>Use an authenticated mode (AES-GCM or ChaCha20-Poly1305) or a recipe like secretbox. Without a tag, ciphertext can be altered undetected, and CBC's padding errors can become an oracle.</p></details></li>
+      <li><p>When is a random nonce fine, and when do you need a counter (or a longer nonce)?</p><details><summary>Hint</summary><p>Think of the birthday effect and the NIST limit of 2<sup>32</sup> messages.</p></details><details class="answer"><summary>Answer</summary><p>Random 96-bit nonces are fine below about 2<sup>32</sup> messages per key. Beyond that, rotate the key, use a safe counter, or use a long random nonce such as XChaCha20's 192 bits.</p></details></li>
+      <li><p>Why add the record ID as associated data?</p><details><summary>Hint</summary><p>What happens if a valid ciphertext is copied to another row?</p></details><details class="answer"><summary>Answer</summary><p>It binds the ciphertext to its context, so a ciphertext moved to another record, user or purpose fails to decrypt instead of being accepted.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="passwords" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE THAT GOES WRONG 01</p><h2>Passwords: hash, verify, and rehash on login</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <label class="lr-label" for="pw-pick">A stored value in your database</label>
+      <select id="pw-pick">
+        <option value="a2">argon2id, 19 MiB, t=2, p=1</option>
+        <option value="a2old">argon2id, 4 MiB, t=3, p=1 (an older default)</option>
+        <option value="bc">bcrypt, cost 8</option>
+        <option value="pb">PBKDF2-HMAC-SHA256, 100,000 iterations</option>
+        <option value="sha">Plain SHA-256 of the password</option>
+      </select>
+      <pre class="code pw-stored" id="pw-stored"></pre>
+      <div class="controls"><button type="button" class="btn" id="pw-login">A user signs in with the right password</button></div>
+      <output class="pw-out" id="pw-out"></output>
+    </div>
+    <div class="stack">
+      <ol class="rules rules-num">
+        <li><b>hash(password)</b> returns one string holding the algorithm, settings and a random salt.</li>
+        <li><b>verify(stored, password)</b> reads the settings from that string. Don't compare hashes yourself.</li>
+        <li><b>needs_rehash(stored)</b>: after a correct sign-in, if the settings are below today's policy, store a new hash now.</li>
+      </ol>
+      <p class="callout"><b>RAISING THE BAR</b> You can only rehash when you have the password, so do it at sign-in. Accounts that never come back keep the old hash: some teams retire those hashes and require a reset instead.</p>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Password Storage</a> · <a href="https://argon2-cffi.readthedocs.io/en/stable/api.html" target="_blank" rel="noopener">argon2-cffi API</a> · <a href="../passwords-and-accounts/">Passwords and Accounts talk</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start with the current Argon2id string: sign in and it says no change needed. Switch through the others: each gets a different verdict, and the plain SHA-256 is flagged as not a password hash at all. This demo doesn't compute a slow hash: it parses the stored string and applies a policy.</span></li><li><b class="say">Say</b><span>The library does the work: salting, parameters, encoding, comparison. Your code stays three lines: hash, verify, check needs-rehash. The most common mistakes are rolling your own loop, comparing hashes yourself, and never raising the work factor as hardware improves.</span></li><li><b class="tip">Check</b><span>Policy numbers shown are OWASP's minimums (checked 8 Nov 2026, see the keys slide). The sample hashes are illustrative strings, not real hashes. Raising the bar for old SHA-256 hashes: you can wrap them (Argon2id of the old hash) right away, then drop the wrapper on the next sign-in.</span></li><li><b class="next">Next</b><span>"Next: comparing secrets."</span></li></ul></div>
+</section>
+
+<section class="slide" id="compare" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE THAT GOES WRONG 02</p><h2>Comparing secrets: don't stop early</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Secret token (8 characters)<input id="cm-secret" class="mono" value="a3f9c1d7" spellcheck="false" autocomplete="off" maxlength="8"></label>
+        <label class="grow">A guess<input id="cm-guess" class="mono" value="a3f9ffff" spellcheck="false" autocomplete="off" maxlength="8"></label>
+      </div>
+      <div class="cm-charts">
+        <div><b>Early-exit compare (<code>==</code>)</b><div class="cm-bars" id="cm-early"></div></div>
+        <div><b>Constant-time compare</b><div class="cm-bars" id="cm-const"></div></div>
+      </div>
+      <p class="cm-note" id="cm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>An early-exit compare takes <b>longer the more leading bytes match</b>. The time itself is information.</li>
+        <li>Over a network the difference is tiny and noisy, but attackers average many tries. This was <b>reported in real libraries</b> (Keyczar, OpenID).</li>
+        <li>A constant-time compare always looks at every byte, so the time says nothing.</li>
+        <li>Use the standard one, and compare <b>equal-length</b> values such as HMAC outputs:</li>
+      </ul>
+      <pre class="code">Python   hmac.compare_digest(a, b)
+Node     crypto.timingSafeEqual(a, b)   // same length only
+Go       subtle.ConstantTimeCompare(a, b)</pre>
+      <p class="src">The timings here are <b>simulated</b>: 40 ns plus 25 ns per matching byte, no real clock. Sources: <a href="https://docs.python.org/3/library/hmac.html#hmac.compare_digest" target="_blank" rel="noopener">Python docs</a> · <a href="https://nodejs.org/api/crypto.html#cryptotimingsafeequala-b" target="_blank" rel="noopener">Node docs</a> · <a href="https://groups.google.com/g/keyczar-discuss/c/VXHsoJSLKhM" target="_blank" rel="noopener">Keyczar advisory</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Type guesses that match the secret for 0, 1, 2… leading characters and watch the early-exit bar grow while the constant-time bar stays flat. Then guess it exactly.</span></li><li><b class="say">Say</b><span>Ordinary comparison returns as soon as it finds a difference. That makes a signature or token check into a measuring device. It's easy to avoid: use the comparison function your language provides for this exact job. Also: it protects the value you compare, not the length, so compare fixed-size digests.</span></li><li><b class="tip">Check</b><span>Python docs say <code>compare_digest</code> avoids "content-based short circuiting behaviour"; Node says <code>timingSafeEqual</code> uses a constant-time algorithm and throws when lengths differ. Keyczar's fix was checked in on 28 May 2009; Lawson reported the same problem across OpenID libraries in July 2010. The 40 ns and 25 ns are made up for the picture.</span></li><li><b class="next">Next</b><span>"Randomness."</span></li></ul></div>
+</section>
+
+<section class="slide" id="randomness" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE THAT GOES WRONG 03</p><h2>Randomness: the system's secure generator, nothing else</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn" id="rn-weak">Make a reset token the weak way</button>
+        <button type="button" class="btn btn-ghost" id="rn-strong">Make one the right way</button>
+      </div>
+      <div class="rn-rows">
+        <div class="rn-row"><small>WEAK: seeded with the clock</small><code id="rn-w-tok">—</code><span id="rn-w-seed" class="m"></span></div>
+        <div class="rn-row"><small>STRONG: 16 bytes from the secure generator</small><code id="rn-s-tok">—</code><span class="m">128 bits from the operating system</span></div>
+      </div>
+      <output class="rn-out" id="rn-out"></output>
+      <p class="comment" id="rn-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>General-purpose generators (<code>Math.random</code>, Python's <code>random</code>) are for simulations and games. They're built for speed and can be predicted.</li>
+        <li>A clock-based seed leaves only a few thousand candidates. The token's <b>length</b> doesn't help if the <b>source</b> is small.</li>
+        <li>Use the system generator: <code>crypto.getRandomValues</code>, Python <code>secrets</code>, Node <code>crypto.randomBytes</code>. 16 bytes (128 bits) at least; 32 is a common default.</li>
+        <li>UUIDs identify things; they are not secrets. RFC 9562 says implementations must not use them as security capabilities.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://docs.python.org/3/library/secrets.html" target="_blank" rel="noopener">Python secrets</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues" target="_blank" rel="noopener">MDN getRandomValues</a> · <a href="https://www.rfc-editor.org/rfc/rfc9562#section-8" target="_blank" rel="noopener">RFC 9562 §8</a> · <a href="https://android-developers.googleblog.com/2013/08/some-securerandom-thoughts.html" target="_blank" rel="noopener">Android, 2013</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Press the weak button twice quickly: the same token twice, because the seed is the current second. The count under it shows how many seconds there are in an hour: the whole guessing space for anyone who knows roughly when the token was made. The strong token is different every time and the space is 2<sup>128</sup>.</span></li><li><b class="say">Say</b><span>The Android story is the same shape: a generator that wasn't properly seeded produced values that weren't random enough, and keys and signatures made from them were exposed. "Randomness" bugs hide because the output looks random. Python's own docs: <code>random</code> is for modelling and simulation, "not security or cryptography".</span></li><li><b class="tip">Tip</b><span>Python's <code>secrets</code> docs say 32 bytes was believed enough "as of 2015" for the typical use case and note the right amount grows over time. Don't hand-roll tokens from timestamps, counters, or hashes of user data either.</span></li><li><b class="next">Next</b><span>"Tokens that are signed: JWTs."</span></li></ul></div>
+</section>
+
+<section class="slide" id="jwt" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE THAT GOES WRONG 04</p><h2>Signed tokens: pin the algorithm, check the claims</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Sample token" id="jw-pick">
+        <button type="button" data-t="valid" aria-pressed="true">Valid</button>
+        <button type="button" data-t="expired">Expired</button>
+        <button type="button" data-t="none">"alg": "none"</button>
+        <button type="button" data-t="tampered">Edited payload</button>
+        <button type="button" data-t="aud">Wrong audience</button>
+        <button type="button" data-t="otherkey">Someone else's key</button>
+      </div>
+      <p class="jw-token" id="jw-token"></p>
+      <pre class="code jw-json" id="jw-json"></pre>
+    </div>
+    <div class="stack">
+      <div class="jw-verdict" id="jw-naive"></div>
+      <div class="jw-verdict" id="jw-pinned"></div>
+      <ul class="rules">
+        <li><b>You</b> choose the algorithm and key. Never let the token's own header choose.</li>
+        <li>Tie each key to <b>one</b> algorithm. Check <code>exp</code>, <code>iss</code> and <code>aud</code> every time.</li>
+        <li>Use a maintained library and pass the allowed algorithms explicitly.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc8725#section-3.1" target="_blank" rel="noopener">RFC 8725 §3.1</a> · <a href="https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries" target="_blank" rel="noopener">McLean, 2015</a> · <a href="https://pyjwt.readthedocs.io/en/stable/usage.html" target="_blank" rel="noopener">PyJWT usage</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Click through the samples. Both verifiers accept "Valid". The "naive" verifier is the kind of bug some libraries once had: it believes the token's own header. It accepts "alg: none" (no signature at all) and doesn't check expiry or audience. The pinned verifier uses the algorithm you chose, checks the real HMAC-SHA256 in constant time, and then checks the claims.</span></li><li><b class="say">Say</b><span>Why did "alg: none" ever exist? The JWT spec allows unsecured tokens for cases where integrity comes from somewhere else, and some libraries trusted the header, so an attacker could simply say "no signature needed". In 2015 Tim McLean reported this, and the related trick of making an RS256 verifier treat a public key as an HMAC secret, across several libraries. RFC 8725 now says libraries must let the caller specify the allowed algorithms and each key must be used with exactly one.</span></li><li><b class="tip">Check</b><span>The tokens here are signed with real HMAC-SHA256 from the Lab code using a key generated when the page loads. The samples are fixed presets: nothing here edits or forges a token. RFC 8725 is the BCP from February 2020; a revision draft exists, so check status before citing. RS256/HS256 key confusion is mentioned in the notes only.</span></li><li><b class="next">Next</b><span>"And TLS in your own code."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tls" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE THAT GOES WRONG 05</p><h2>TLS in code: never switch checks off "just for testing"</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Language" id="tl-pick">
+        <button type="button" data-l="py" aria-pressed="true">Python</button>
+        <button type="button" data-l="node">Node.js</button>
+        <button type="button" data-l="go">Go</button>
+        <button type="button" data-l="curl">curl</button>
+      </div>
+      <div class="tl-box tl-bad"><small>DON'T</small><pre class="code" id="tl-bad"></pre></div>
+      <div class="tl-box tl-good"><small>DO</small><pre class="code" id="tl-good"></pre></div>
+      <p class="comment" id="tl-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Turning verification off accepts <b>any</b> certificate, including an attacker's. Python's docs say it makes your app vulnerable to man-in-the-middle attacks.</li>
+        <li>"Just for testing" ships. Flags get copied, environment variables stay set.</li>
+        <li>Test with a <b>test CA</b>: make one, trust it only in the test setup, and keep verification on.</li>
+        <li>Add a lint rule or a CI check that fails on <code>verify=False</code>, <code>rejectUnauthorized: false</code>, <code>InsecureSkipVerify</code> and <code>-k</code>.</li>
+        <li>Hostname checking matters as much as the chain: a valid certificate for the <i>wrong</i> name must still fail.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification" target="_blank" rel="noopener">Requests docs</a> · <a href="https://nodejs.org/api/tls.html#tlsconnectoptions-callback" target="_blank" rel="noopener">Node tls.connect</a> · <a href="https://crypto.stanford.edu/~dabo/pubs/abstracts/ssl-client-bugs.html" target="_blank" rel="noopener">Georgiev et al., 2012</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Flip through the four tools: each has a one-line way to switch checking off and an equally short way to trust a test CA instead.</span></li><li><b class="say">Say</b><span>The 2012 study found that many non-browser programs had broken certificate validation, some because of API misuse and some because developers disabled checks while testing. Switching verification off turns encryption into a lock with the door open: the connection is private to whoever is in the middle. The fix is almost never harder than the shortcut.</span></li><li><b class="tip">Check</b><span>Names verified against docs: Requests <code>verify=False</code> and <code>verify="/path/to/certfile"</code>; Node <code>rejectUnauthorized</code> (default true) and the <code>ca</code> option in tls/https; also the <code>NODE_TLS_REJECT_UNAUTHORIZED=0</code> environment variable (Node CLI docs). Go's <code>InsecureSkipVerify</code> and <code>RootCAs</code>, and curl's <code>-k</code>/<code>--insecure</code> and <code>--cacert</code>, come from their documentation and general knowledge: confirm for your versions.</span></li><li><b class="next">Next</b><span>"What your code says about secrets: logs and errors."</span></li></ul></div>
+</section>
+
+<section class="slide" id="logs" data-part="3" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE THAT GOES WRONG 06</p><h2>Logs and errors: say little to callers, keep secrets out of logs</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Log sample" id="lg-pick">
+        <button type="button" data-s="web" aria-pressed="true">Web request log</button>
+        <button type="button" data-s="app">App debug log</button>
+        <button type="button" data-s="clean">A clean log</button>
+      </div>
+      <textarea id="lg-in" rows="5" spellcheck="false" aria-label="Log text"></textarea>
+      <output class="lg-out" id="lg-out"></output>
+      <p class="comment" id="lg-note"></p>
+    </div>
+    <div class="stack">
+      <div class="lg-err"><div class="card card-bad"><b>Detailed errors to the caller</b><span><code>"padding invalid at byte 14"</code> versus <code>"MAC check failed"</code>. Two answers let someone tell which step failed, and that can turn the decryption service into an oracle.</span></div>
+      <div class="card card-ok"><b>One generic error, full detail in your logs</b><span><code>"decryption failed"</code> for every cause, plus a request ID. Log the real reason privately, without the secret.</span></div></div>
+      <ul class="rules">
+        <li>Never log keys, tokens, passwords, or whole request headers. Redact at the logger, not by remembering.</li>
+        <li>Log <b>events</b> (a key was rotated, a token was rejected), not values.</li>
+        <li>Treat a leaked log as a leaked secret: rotate.</li>
+      </ul>
+      <p class="src">The scrubber is a toy with about six patterns, using fake secrets. Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Logging</a> · <a href="https://www.iacr.org/archive/eurocrypt2002/23320530/cbc02_e02d.pdf" target="_blank" rel="noopener">Vaudenay, 2002</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Pick the web log: a bearer token, a JWT, a cloud key ID and a password in a URL light up, and the right-hand text shows the redacted version. The clean log has nothing to flag, but the note says that proves little: the toy only knows a few shapes.</span></li><li><b class="say">Say</b><span>Two habits. First, secrets in logs: logs are copied, shipped, indexed and retained far longer than the request, and many more people can read them. Second, errors: when decryption fails, say the same thing every time. Vaudenay's 2002 paper showed how different errors for padding versus MAC failures made CBC decryption an oracle; AEAD removes the padding step, but uniform errors are still the habit.</span></li><li><b class="tip">Tip</b><span>All secrets in the samples are fake. <code>AKIAIOSFODNN7EXAMPLE</code> is the key ID AWS uses in its own documentation. Check OWASP's Logging cheat sheet for the data-to-exclude list your audience's rules require.</span></li><li><b class="next">Next</b><span>"Checkpoint three."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is <code>if (token == expected)</code> a problem for secret tokens?</p><details><summary>Hint</summary><p>What does an early exit tell someone who can measure time?</p></details><details class="answer"><summary>Answer</summary><p>A normal comparison stops at the first different byte, so the time can reveal how much of the guess was right. Use the constant-time comparison from your standard library, on equal-length values.</p></details></li>
+      <li><p>A reset token is made with <code>Math.random().toString(36)</code>. What's wrong, and what's the fix?</p><details><summary>Hint</summary><p>What is <code>Math.random</code> built for?</p></details><details class="answer"><summary>Answer</summary><p>It isn't a secure generator, so tokens can be predicted. Use the system generator (<code>crypto.getRandomValues</code>, <code>secrets.token_urlsafe</code>, <code>crypto.randomBytes</code>) with at least 16 bytes, and store only a hash of the token.</p></details></li>
+      <li><p>A JWT library lets the token say which algorithm to verify with. What can go wrong?</p><details><summary>Hint</summary><p>Think of "alg": "none".</p></details><details class="answer"><summary>Answer</summary><p>An attacker can pick an algorithm that skips or weakens verification. Pin the algorithm (and key type) on the server, and check exp, iss and aud.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="bug-hunt" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// REVIEW PRACTICE 01</p><h2>Spot the bug: click the lines that worry you</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Snippet" id="bh-pick"></div>
+      <ol class="tf bh-code" id="bh-code" aria-label="Code. Press a line to mark it."></ol>
+      <div class="controls">
+        <button type="button" class="btn" id="bh-check">Reveal the bugs</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="bh-reset">Clear marks</button>
+        <span class="tf-score" id="bh-score"></span>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="bh-title" id="bh-title"></p>
+      <ul class="tf-findings" id="bh-findings"></ul>
+      <p class="comment" id="bh-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~10 min</p><ul><li><b class="show">Show</b><span>Five snippets, in Python and JavaScript, all invented. Give the room a minute per snippet: click suspicious lines (click again to unmark), then reveal. Lines marked green were found, red were missed, grey were extra marks that weren't bugs.</span></li><li><b class="say">Say</b><span>Review habit: for each line that touches crypto, ask the checklist questions on the next slide. Where does the key come from? Where does the nonce come from? What happens on failure? Who can see the error? And always ask what's missing, because the commonest bug is the line nobody wrote (no tag check, no expiry check, no replay protection).</span></li><li><b class="tip">Tip</b><span>Defender-framed on purpose: every bug here is a mistake in your own code, not an exploit. Real review also looks at what happens to tampered input, so ask for the test that proves the failure path.</span></li><li><b class="next">Next</b><span>"Take the checklist home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="review" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// REVIEW PRACTICE 02</p><h2>A crypto code-review checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="lib"> A standard, maintained library at its highest-level API, not hand-built from blocks</label>
+      <label><input type="checkbox" data-k="aead"> Encryption is authenticated (AEAD). No ECB, and no CBC or CTR without a MAC</label>
+      <label><input type="checkbox" data-k="nonce"> Nonces are unique per key: library-made, a safe counter, or long and random</label>
+      <label><input type="checkbox" data-k="aad"> Associated data binds each ciphertext to its user, record, purpose and version</label>
+      <label><input type="checkbox" data-k="keys"> Keys come from a secure generator or a proper KDF: not a password, not hard-coded, not logged</label>
+      <label><input type="checkbox" data-k="pw"> Passwords use Argon2id (or scrypt, bcrypt, PBKDF2) via hash and verify, and rehash on sign-in</label>
+      <label><input type="checkbox" data-k="cmp"> Secrets are compared in constant time, on equal-length values</label>
+      <label><input type="checkbox" data-k="rand"> Random values come from the system generator, at least 128 bits for secrets</label>
+      <label><input type="checkbox" data-k="jwt"> Signed tokens: algorithm pinned, key tied to one algorithm, exp, iss and aud checked</label>
+      <label><input type="checkbox" data-k="tls"> TLS verification is on everywhere. Tests use a test CA, not <code>verify=False</code></label>
+      <label><input type="checkbox" data-k="ver"> Ciphertexts are versioned, and there's a plan to rotate keys and algorithms</label>
+      <label><input type="checkbox" data-k="err"> Errors to callers are generic, secrets stay out of logs, and tests cover tampering and failure paths</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what your current project does, and treat each unticked box as a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which one box would catch the bug most likely to be in your codebase today?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="25">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or code you're unsure about. (Keep real keys and customer data out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://www.latacora.com/blog/cryptographic-right-answers/" target="_blank" rel="noopener">Cryptographic Right Answers</a><span>A short, opinionated "use this" list (2018).</span></li>
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Cryptographic Storage</a><span>Algorithms, key hierarchies, rotation and secure random.</span></li>
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Password Storage</a><span>Current Argon2id, scrypt, bcrypt and PBKDF2 settings.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>The ideas under every demo here.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The demos use this page's own teaching crypto code, never for real data: use Web Crypto or a vetted library. Nothing you type is sent anywhere. Facts checked 8 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite code in questions: describe a snippet from your project (with names and keys removed) and we'll run the checklist on it.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
