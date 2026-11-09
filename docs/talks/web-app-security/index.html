@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Web Application Security Essentials</title>
+<meta name="description" content="Web Application Security Essentials: the bug classes behind most web breaches (injection, cross-site scripting, broken access control, CSRF, SSRF) and the framework features and habits that prevent them. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/web-app-security/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Web Application Security Essentials">
+<meta property="og:description" content="The bug classes behind most web breaches, why they happen, and the framework features and habits that prevent them, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/web-app-security/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/web-app-security/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Web Application Security Essentials in neon, beside a terminal that shows one input safely placed into HTML, SQL and a URL.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M11 9l-6 7 6 7M21 9l6 7-6 7' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M18 7l-4 18' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "web-app-security", "title": "Web Application Security Essentials", "footer": "WEBSEC", "subtitle": "DEVELOPER TRACK · 04",
+  "parts": [{ "name": "Data vs code", "minutes": 34 }, { "name": "Who's allowed to do what", "minutes": 36 },
+            { "name": "Making it routine", "minutes": 30 }, { "name": "Wrap-up", "minutes": 14 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">WEB<span>SEC</span></a>
+  <div class="scroll-parts">
+    <a href="#data-code" data-part="1"><b>01</b>Data vs code</a>
+    <a href="#access" data-part="2"><b>02</b>Who's allowed</a>
+    <a href="#deps" data-part="3"><b>03</b>Routine</a>
+    <a href="#owasp-map" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 04 · FOR WEB DEVELOPERS · INTERMEDIATE</p>
+      <h1><span class="pre">Web Application</span> <span class="glitch" data-text="Security Essentials">Security Essentials</span></h1>
+      <p class="lede">The handful of bug classes behind most web breaches, why they keep happening, and the framework features and habits that prevent them.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/web-app-security/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ place --as-data "<input id="hero-in" value="O'Brien &lt;3" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About two hours with breaks for three checkpoints, aimed at people who build web applications. No hacking tools today: every demo is a simulation in this page, and every bug is one you'd find in your own code.</span></li><li><b class="show">Show</b><span>The terminal takes one input and places it into three places at once: an HTML page, a SQL query and a URL. Each line uses that place's own safe method, so the input stays data everywhere. Type anything: quotes, angle brackets, ampersands. That's the whole of part 1 in one picture.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try Robert'); DROP TABLE Students;--, a script tag, ' OR '1'='1, admin, ../../etc/passwd, a marquee tag, or an empty input; in the SQL demo, run the classic comic name; in the encoding demo, post a marquee; in the access demo, ask for invoice 404, or for invoice "1042 OR 1=1"; in the cookie builder, name the cookie "monster", or build a perfect __Host- cookie; in the CSRF demo, turn on every defence; in the SSRF demo, try a gopher:// URL; in the version-range demo, ask for "*"; in the header grader, paste an X-Clacks-Overhead header or a 418 status line, or score full marks; in the bundle scanner, find AWS's own example key; in the tool sorter, get all six right; open all ten OWASP tiles; and tick all twelve boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#data-code"><small>PART 1 · 34 MIN</small><b>Data vs code</b></a><span>The one idea behind injection</span><span>SQL injection and parameters</span><span>XSS and output encoding</span><span>CSP as a safety net</span></li>
+      <li><a href="#access"><small>PART 2 · 36 MIN</small><b>Who's allowed to do what</b></a><span>Broken access control</span><span>Sessions and cookies</span><span>CSRF and SameSite</span><span>Server-side request forgery</span></li>
+      <li><a href="#deps"><small>PART 3 · 30 MIN</small><b>Making it routine</b></a><span>Dependencies</span><span>Security headers</span><span>Secrets in front-end code</span><span>Tools in the pipeline</span></li>
+      <li><a href="#owasp-map"><small>PART 4 · 14 MIN</small><b>Wrap-up</b></a><span>The OWASP Top 10 as a map</span><span>A review checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First the bugs where data turns into code. Then the bugs about who may do what, which are the commonest serious ones. Then how to make the defences routine so you don't rely on remembering. Last, a map and a checklist to take home.</span></li><li><b class="next">Next</b><span>"Why these few bugs?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Old bug classes, real breaches</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Most web breaches come from a few well-known kinds of bug. Each one has a standard defence, and your framework probably ships it already.</p>
+      <ul class="rules">
+        <li>Keep <b>data as data</b>: never let input become code.</li>
+        <li>Check <b>who's asking</b> on every request, on the server.</li>
+        <li>Make the safe way the <b>default</b> way: framework features, CI checks, review habits.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a" target="_blank" rel="noopener">CISA AA23-158A</a> · <a href="https://www.sec.gov/news/press-release/2021-102" target="_blank" rel="noopener">SEC 2021-102</a> · <a href="https://www.justice.gov/usao-wdwa/pr/former-seattle-tech-worker-convicted-wire-fraud-and-computer-intrusions" target="_blank" rel="noopener">US DOJ</a> · <a href="https://www.theregister.com/2018/09/11/british_airways_website_scripts/" target="_blank" rel="noopener">The Register</a> · <a href="https://www.cnbc.com/2020/10/16/british-airways-fined-20-million-for-data-breach-by-ico.html" target="_blank" rel="noopener">CNBC</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>MOVEit Transfer, 2023 · injection</b><span>A SQL injection in a file-transfer product was exploited from 27 May 2023 to plant a web shell and steal data from its database.</span></div>
+      <div class="card"><b>First American, 2019 · access control</b><span>Changing digits in a document link showed other people's files: over 800 million document images, dating back to 2003.</span></div>
+      <div class="card"><b>Capital One, 2019 · server-side requests</b><span>A misconfigured web application firewall let outside commands reach a server, which handed over cloud credentials. Data on over 100 million people in the US was copied.</span></div>
+      <div class="card"><b>British Airways, 2018 · scripts</b><span>A modified script on the payment pages copied card details to the attackers. The UK regulator fined BA £20m (429,612 people affected).</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Four breaches, four of today's topics: injection, access control, server-side requests, and scripts running in your page. None needed a new technique. Each was a known bug class with a known defence that wasn't in place.</span></li><li><b class="tip">Tip</b><span>MOVEit: CVE-2023-34362, exploited by the CL0P group, per the CISA/FBI advisory. First American: reported by a journalist in May 2019; the SEC's 2021 order (a $487,616 penalty) found security staff had known of the flaw for months. Capital One: the DOJ says the attacker scanned for servers whose web application firewall misconfigurations let outside commands run, and the criminal complaint says "a firewall misconfiguration permitted commands to reach and be executed by that server", and the first command obtained credentials; many analyses describe it as a server-side request to the cloud's metadata service, which the complaint itself doesn't spell out. The OCC fined the bank $80m in 2020. British Airways: RiskIQ found a modified copy of the Modernizr library sending payment data to a look-alike domain for about two weeks (21 August to 5 September 2018); the ICO's figure is 429,612 people, and its fine was £20m in October 2020.</span></li><li><b class="next">Next</b><span>"Part 1: the one idea behind injection."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="data-code" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// DATA VS CODE 01</p><h2>Injection: user data treated as code</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="dc-pic" aria-label="A query template with a slot for user data">
+        <code class="dc-line"><span class="dc-code">… WHERE name = '</span><span class="dc-data">alice</span><span class="dc-code">'</span></code>
+        <code class="dc-line"><span class="dc-code">… WHERE name = '</span><span class="dc-data">x</span><span class="dc-code">' OR '1'='1</span><span class="dc-code">'</span></code>
+        <p class="m">Top: the data stays in its slot. Bottom: a quote in the data closed the slot, and the rest became <b>code</b>.</p>
+      </div>
+      <p class="big-lede">Every injection bug is the same bug: text from outside is glued into something an interpreter will run.</p>
+      <p class="callout"><b>THE FIX</b> Keep data in a separate channel: parameters, auto-escaping, argument arrays. Validating input helps, but it isn't the fix.</p>
+    </div>
+    <div class="stack">
+      <table class="grid-table dc-table">
+        <thead><tr><th scope="col">Interpreter</th><th scope="col">Separate channel</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">SQL</th><td>Parameterised queries, ORM query builders</td></tr>
+          <tr><th scope="row">HTML</th><td>Templates that escape by default</td></tr>
+          <tr><th scope="row">Shell</th><td>An argument array, no shell at all</td></tr>
+          <tr><th scope="row">File paths</th><td>IDs mapped to paths, or resolve and check the folder</td></tr>
+          <tr><th scope="row">Templates</th><td>Never build a template from user text</td></tr>
+          <tr><th scope="row">NoSQL, LDAP</th><td>The driver's query objects, not strings</td></tr>
+        </tbody>
+      </table>
+      <p class="src">See <a href="https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Injection Prevention</a> and <a href="https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html" target="_blank" rel="noopener">OS Command Injection Defence</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>SQL, HTML, a shell command, a file path, a template: each is a little language, and each has a way to pass data without it ever being read as code. If you remember one sentence from part 1, make it this: don't glue strings together for an interpreter.</span></li><li><b class="tip">Tip</b><span>Input validation is still worth doing, as an allow-list of what a field should look like (a number, a date, one of five values). But it can't be the fix: names contain apostrophes, comments contain angle brackets, and the right escaping depends on where the data ends up, which the validator doesn't know.</span></li><li><b class="next">Next</b><span>"Let's watch it happen in SQL."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sqli" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// DATA VS CODE 02</p><h2>SQL injection, and why parameters fix it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m sq-who">Signed in as <b>alice</b> (owner_id 7). "Search my invoices by customer":</p>
+      <div class="controls">
+        <label class="grow">Customer<input id="sq-in" class="mono" value="Northwind" spellcheck="false" autocomplete="off" maxlength="80"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Try an input" id="sq-presets">
+        <button type="button" data-v="Northwind">Northwind</button>
+        <button type="button" data-v="O'Brien">O'Brien</button>
+        <button type="button" data-v="' OR '1'='1">' OR '1'='1</button>
+        <button type="button" data-v="x' OR owner_id = 8 --">owner_id = 8 --</button>
+        <button type="button" data-v="x'; DROP TABLE invoices; --">DROP TABLE</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="How the query is built" id="sq-mode">
+        <button type="button" data-m="concat" aria-pressed="true">String concatenation</button>
+        <button type="button" data-m="param">Parameterised</button>
+      </div>
+      <pre class="term sq-code" id="sq-code"></pre>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What the database receives</small>
+      <pre class="term sq-sql" id="sq-sql"></pre>
+      <p class="verdict" id="sq-verdict"></p>
+      <div class="table-wrap"><table class="grid-table sq-rows" id="sq-rows" aria-label="Rows returned"></table></div>
+      <p class="comment" id="sq-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~9 min</p><ul><li><b class="show">Show</b><span>Start with Northwind in concatenation mode: one row, all fine. Click O'Brien: a real customer name breaks the query with a syntax error. Then ' OR '1'='1: every invoice comes back, including Bob's and Carol's, because AND binds tighter than OR. Then the owner_id one, which comments out the rest. Then switch to Parameterised and click the same buttons: the SQL text never changes, and the input is just an odd customer name that matches nothing (O'Brien is found correctly).</span></li><li><b class="say">Say</b><span>With parameters the query's shape is fixed before the data arrives, so no input can change it. Your ORM does this for you as long as you use its query builder, not its raw-string escape hatch. Escaping quotes yourself is fragile: different databases, encodings and contexts have different rules.</span></li><li><b class="tip">Tip</b><span>Parameters can't hold identifiers: a column to sort by or a table name. Map those from an allow-list ("price" becomes amount, anything else becomes the default). Stored procedures are only safe if they don't build SQL strings inside. Whether "; DROP TABLE" runs depends on the driver: many refuse several statements in one call, but the OR and comment tricks need nothing extra. The demo is a toy parser in this page; no database is involved.</span></li><li><b class="next">Next</b><span>"Same bug, in HTML."</span></li></ul></div>
+</section>
+
+<section class="slide" id="xss" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// DATA VS CODE 03</p><h2>Cross-site scripting and output encoding</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls controls-col">
+        <label class="grow">Comment<textarea id="xs-in" rows="3" spellcheck="false" aria-label="Comment text"></textarea></label>
+        <label class="grow">Website<input id="xs-url" class="mono" value="https://example.com" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Try a comment" id="xs-presets">
+        <button type="button" data-p="plain">Plain text</button>
+        <button type="button" data-p="bold">&lt;b&gt;</button>
+        <button type="button" data-p="img">img onerror</button>
+        <button type="button" data-p="script">script tag</button>
+        <button type="button" data-p="jsurl">javascript: link</button>
+        <button type="button" data-p="form">Fake login form</button>
+      </div>
+      <ul class="rules">
+        <li>Use templates that <b>escape by default</b> (React, Jinja2, Django, Razor, Go html/template…).</li>
+        <li>Review every <b>escape hatch</b>: <code>innerHTML</code>, <code>dangerouslySetInnerHTML</code>, <code>|safe</code>, <code>v-html</code>.</li>
+        <li>Links need a <b>scheme check</b> too: escaping doesn't stop <code>javascript:</code>.</li>
+        <li>Need rich HTML? <b>Sanitise</b> it with a maintained library such as DOMPurify.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="xs-pair">
+        <figure><figcaption>Raw: <code>innerHTML = comment</code></figcaption><iframe id="xs-raw" sandbox="" title="Comment inserted as raw HTML (sandboxed: scripts can't run)"></iframe></figure>
+        <figure><figcaption>Escaped, link scheme checked</figcaption><iframe id="xs-safe" sandbox="" title="Comment inserted as text (sandboxed)"></iframe></figure>
+      </div>
+      <ul class="xs-findings" id="xs-findings"></ul>
+      <p class="comment" id="xs-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~9 min</p><ul><li><b class="show">Show</b><span>Click through the presets. Both panels are sandboxed frames where no script can run, so the list underneath says what <i>would</i> have run on a real page. The img onerror and the script tag become live code in the raw panel and harmless text in the escaped one. The javascript: link is the surprise: HTML-escaping leaves it intact, so the escaped side also checks the scheme. The fake login form needs no script at all, which matters on the next slide.</span></li><li><b class="say">Say</b><span>Cross-site scripting is injection into HTML. Script running in your page can do anything the user can: read the page, call your API with their cookies, change what they see. The fix is output encoding for the place the data lands, and the easiest way to get it is a template engine that does it by default, plus a rule that every escape hatch gets a second reviewer.</span></li><li><b class="tip">Tip</b><span>Different places need different encoding: HTML text, an attribute, a URL, inside a script. Templates handle the common ones; data placed inside a script block or an inline event handler is the case to avoid. Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP XSS Prevention</a>.</span></li><li><b class="next">Next</b><span>"What if one slips through anyway?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="csp" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// DATA VS CODE 04</p><h2>Content Security Policy: the safety net</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Policy" id="cs-pick">
+        <button type="button" data-c="none" aria-pressed="true">No policy</button>
+        <button type="button" data-c="inline">Allow-list + unsafe-inline</button>
+        <button type="button" data-c="list">Allow-list</button>
+        <button type="button" data-c="strict">Strict (nonce)</button>
+      </div>
+      <pre class="term cs-policy" id="cs-policy"></pre>
+      <table class="grid-table cs-table" aria-label="Injected content and whether the policy stops it"><tbody id="cs-rows"></tbody></table>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Prefer a <b>nonce-based</b> policy with <code>'strict-dynamic'</code>, <code>object-src 'none'</code> and <code>base-uri 'none'</code>.</li>
+        <li>Host allow-lists are easy to get around: most of the policies one large study examined could be bypassed.</li>
+        <li>Roll out with <code>Content-Security-Policy-Report-Only</code> first, then enforce.</li>
+        <li>It's a <b>safety net</b>. Encoding is still the fix: CSP doesn't stop injected HTML that needs no script.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://web.dev/articles/strict-csp" target="_blank" rel="noopener">web.dev: Strict CSP</a> · <a href="https://research.google/pubs/csp-is-dead-long-live-csp-on-the-insecurity-of-whitelists-and-the-future-of-content-security-policy/" target="_blank" rel="noopener">Weichselbaum et al., CCS 2016</a> · <a href="https://www.w3.org/TR/CSP3/" target="_blank" rel="noopener">CSP Level 3</a></p>
+      <p class="comment" id="cs-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Step through the four policies and watch the table. No policy: everything runs. 'unsafe-inline' undoes most of the benefit. A host allow-list stops inline script, but not a script from an allowed host that can be made to run attacker code (a JSONP endpoint, an old library on a CDN). The strict nonce policy stops all the script attacks; the fake form still gets through.</span></li><li><b class="say">Say</b><span>CSP tells the browser which scripts it may run. With a nonce, only script tags carrying this response's random value run; injected markup can't know the value. 'strict-dynamic' lets your trusted scripts load their own dependencies, so you don't maintain host lists. base-uri 'none' matters with nonces: an injected base tag could otherwise point your trusted relative script URLs at another server.</span></li><li><b class="tip">Tip</b><span>The 2016 Google study (Weichselbaum, Spagnuolo, Lekies, Janc) found 94.72% of distinct policies could be bypassed, and 14 of the 15 most commonly allow-listed script hosts had unsafe endpoints. CSP Level 3 is still a W3C Working Draft but its core directives are supported across major browsers. frame-ancestors (clickjacking) comes back in part 3.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What do SQL injection and XSS have in common at the root?</p><details><summary>Hint</summary><p>What does the database or browser think the input is?</p></details><details class="answer"><summary>Answer</summary><p>Both treat user data as code: text is glued into something an interpreter runs. The fix for both is to keep data in a separate channel (parameters, context-aware encoding).</p></details></li>
+      <li><p>A teammate makes queries safe by doubling every single quote. Why still switch to parameters?</p><details><summary>Hint</summary><p>Is a quote the only thing that matters, in every database and every place in a query?</p></details><details class="answer"><summary>Answer</summary><p>Hand escaping depends on the database, encoding and position (numbers and identifiers have no quotes to escape), and one missed call is enough. Parameters remove the whole class: the query's shape is fixed before data arrives.</p></details></li>
+      <li><p>Your React app shows user bios with <code>dangerouslySetInnerHTML</code> so people can use bold and links. What do you do?</p><details><summary>Hint</summary><p>Do you need HTML, or a few formats?</p></details><details class="answer"><summary>Answer</summary><p>Prefer a safe format (Markdown rendered by a library that escapes HTML). If you must accept HTML, sanitise it with a maintained sanitiser such as DOMPurify, allow only http(s) links, and keep a CSP as the net.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="access" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// WHO'S ALLOWED 01</p><h2>Broken access control: the commonest serious bug</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Signed in as <b>alice</b> (user 7). The app only <i>shows</i> her own invoices: 1041, 1043 and 1046.</p>
+      <div class="seg-pick" role="group" aria-label="Request" id="ac-route">
+        <button type="button" data-r="invoice" aria-pressed="true">Read an invoice</button>
+        <button type="button" data-r="profile">Update my profile</button>
+        <button type="button" data-r="admin">Admin user list</button>
+      </div>
+      <div class="ac-bar">
+        <code id="ac-method">GET</code>
+        <input id="ac-url" class="mono" value="/api/invoices/1041" spellcheck="false" autocomplete="off" aria-label="Request path">
+        <button type="button" class="btn btn-sm" id="ac-send">Send</button>
+      </div>
+      <pre class="term ac-body" id="ac-body" hidden></pre>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="ac-prev">‹ id − 1</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ac-next">id + 1 ›</button>
+        <label class="check"><input type="checkbox" id="ac-hide" checked> Hide other people's items in the UI</label>
+        <label class="check"><input type="checkbox" id="ac-check"> Check on the server</label>
+      </div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Response</small>
+      <pre class="term ac-out" id="ac-out"></pre>
+      <p class="verdict" id="ac-verdict"></p>
+      <p class="comment" id="ac-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="show">Show</b><span>Send /api/invoices/1041: Alice's own invoice. Press "id + 1": 1042 is Bob's, and it comes back, because the server only checked that Alice was signed in. Notice "Hide other people's items in the UI" changes nothing: the API is the boundary, not the page. Tick "Check on the server" and repeat. Then try "Update my profile", which sends a role field, and "Admin user list".</span></li><li><b class="say">Say</b><span>Authentication says who you are; authorisation says what you may do, to which object. Most frameworks give you the first by default and leave the second to you, endpoint by endpoint. That's why OWASP's 2025 list has broken access control at number one: in its data, every application tested had some form of it.</span></li><li><b class="tip">Tip</b><span>First American (2019) is this exact bug at scale: change a number in a document link, get someone else's document. The SEC order found staff had flagged it months before. Unguessable IDs (random UUIDs) make guessing harder, but they aren't access control: links leak through logs, referrers and screenshots. Answering 404 rather than 403 avoids confirming that an object exists; either is fine if the check is there.</span></li><li><b class="next">Next</b><span>"So where does the check go?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="authz" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// WHO'S ALLOWED 02</p><h2>Deny by default, check every request</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="code-pair">
+        <figure class="card-bad"><figcaption>Checks who you are, not what you may touch</figcaption><pre class="code">invoice = db.invoices.get(id)
+return invoice</pre></figure>
+        <figure class="card-good"><figcaption>The object is fetched <i>through</i> the user</figcaption><pre class="code">invoice = db.invoices.get(
+    id=id, owner_id=current_user.id)
+if invoice is None:
+    raise NotFound()
+return invoice</pre></figure>
+      </div>
+      <p class="src">See <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authorization Cheat Sheet</a> and <a href="https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html" target="_blank" rel="noopener">Mass Assignment</a></p>
+    </div>
+    <div class="stack">
+      <ul class="rules rules-num">
+        <li><b>Deny by default.</b> A new endpoint should be closed until someone writes its rule.</li>
+        <li>Check the <b>object</b>, not just the route: "may Alice see <i>this</i> invoice?"</li>
+        <li>Put the rule in <b>one place</b> (a policy layer or middleware) so every endpoint uses it.</li>
+        <li>Never trust what the client sends about <b>who it is or what it's allowed</b>: role fields, user IDs, prices, hidden form fields.</li>
+        <li>On writes, <b>allow-list the fields</b> a user may set (mass assignment).</li>
+        <li>Write the test: <b>user A can't read or change user B's things</b>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>The left-hand bug is the one in the demo, and it reads perfectly naturally in review. The right-hand shape makes the safe version the easy version: you can't fetch an invoice without saying whose. Scoping queries to the current user (or tenant) catches whole families of bugs at once.</span></li><li><b class="ask">Ask</b><span>In your current codebase, where would I look to find who may read an invoice? If the answer is "in each handler", that's the risk.</span></li><li><b class="next">Next</b><span>"How does the server know who's asking? Sessions."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sessions" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// WHO'S ALLOWED 03</p><h2>Sessions and cookies: set the flags</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Cookie name<input id="ck-name" class="mono" value="session" spellcheck="false" autocomplete="off" maxlength="40"></label>
+        <label>SameSite<select id="ck-ss"><option value="">(not set)</option><option>Lax</option><option>Strict</option><option>None</option></select></label>
+        <label>Domain<select id="ck-dom"><option value="">(not set)</option><option value="example.com">example.com</option></select></label>
+      </div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="ck-http"> HttpOnly</label>
+        <label class="check"><input type="checkbox" id="ck-sec"> Secure</label>
+        <label class="check"><input type="checkbox" id="ck-path" checked> Path=/</label>
+      </div>
+      <pre class="term ck-line" id="ck-line"></pre>
+      <ul class="ck-list" id="ck-list"></ul>
+      <p class="comment" id="ck-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>HttpOnly</b>: scripts (including injected ones) can't read it.</li>
+        <li><b>Secure</b>: never sent over plain HTTP.</li>
+        <li><b>SameSite=Lax</b> or <b>Strict</b>: not sent on most cross-site requests.</li>
+        <li>The <b>__Host-</b> prefix makes the browser enforce Secure, no Domain and Path=/.</li>
+        <li>Issue a <b>new session ID at sign-in</b>; expire sessions on the server, idle and absolute; sign-out ends the server session.</li>
+        <li>Keep session tokens out of <code>localStorage</code>: any script in the page can read it.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie" target="_blank" rel="noopener">MDN Set-Cookie</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Session Management</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with the bare cookie: every line of the list is a warning. Tick HttpOnly and Secure, set SameSite to Lax, and watch them clear. Then rename it __Host-session: try adding Domain and watch the browser reject it. SameSite=None without Secure is rejected too.</span></li><li><b class="say">Say</b><span>The session cookie is the user, as far as your server is concerned. Three flags and a prefix shut most of the ways it leaks: read by injected script, sent over plain HTTP, sent along with requests another site started, or shared with a subdomain you forgot about. Sign-in is better with passkeys or a second factor, but whatever the method, it ends in one of these cookies.</span></li><li><b class="tip">Tip</b><span>MDN: setting Domain "makes the cookie available to that domain and all its subdomains"; leaving it out makes a host-only cookie, which is stricter. HttpOnly cookies are still sent with fetch() from the page, so it limits theft, not misuse by injected script: XSS is still game over for that session while it runs.</span></li><li><b class="next">Next</b><span>"What does SameSite actually protect against? CSRF."</span></li></ul></div>
+</section>
+
+<section class="slide" id="csrf" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// WHO'S ALLOWED 04</p><h2>CSRF, and how SameSite changed it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">You're signed in to <b>bank.example</b>. Another page tries to make your browser send <code>POST /transfer</code>.</p>
+      <div class="controls">
+        <label class="grow">The request comes from<select id="cf-from">
+          <option value="post">a form on evil.example that submits itself (POST)</option>
+          <option value="get">a link on evil.example (GET /transfer?to=…)</option>
+          <option value="sub">a form on forum.bank.example (a sibling subdomain)</option>
+        </select></label>
+        <label class="grow">Session cookie's SameSite<select id="cf-ss">
+          <option value="unset-c">not set, in Chrome or Edge (treated as Lax)</option>
+          <option value="unset-f">not set, in Firefox (no Lax default)</option>
+          <option value="Lax">Lax</option>
+          <option value="Strict">Strict</option>
+          <option value="None">None</option>
+        </select></label>
+      </div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="cf-token"> Require a CSRF token</label>
+        <label class="check"><input type="checkbox" id="cf-origin"> Reject unless Sec-Fetch-Site is same-origin</label>
+        <label class="check"><input type="checkbox" id="cf-postonly" checked> /transfer only accepts POST</label>
+      </div>
+      <ol class="cf-steps" id="cf-steps"></ol>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="cf-verdict"></p>
+      <ul class="rules">
+        <li>Use your framework's <b>CSRF protection</b> for anything that changes state.</li>
+        <li><b>GET never changes state.</b></li>
+        <li>Set <b>SameSite</b> yourself: only Chromium browsers default to Lax.</li>
+        <li>"Same-site" means the same registrable domain: <b>sibling subdomains count as same-site</b>.</li>
+        <li>Fetch Metadata (<code>Sec-Fetch-Site</code>) or an <code>Origin</code> check is a cheap extra layer.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.chromium.org/updates/same-site/" target="_blank" rel="noopener">Chromium SameSite updates</a> · <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1617609" target="_blank" rel="noopener">Mozilla bug 1617609</a> · <a href="https://web.dev/articles/fetch-metadata" target="_blank" rel="noopener">web.dev Fetch Metadata</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP CSRF</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with the default: a self-submitting form on evil.example, cookie without SameSite, in Chrome. The cookie isn't sent, so it fails. Switch to "in Firefox": it's sent and the transfer goes through. Switch to a sibling subdomain with Lax or Strict: still same-site, so the cookie goes. Then tick the CSRF token: blocked in every case. The Sec-Fetch-Site check blocks it too.</span></li><li><b class="say">Say</b><span>CSRF is the browser helpfully attaching your cookie to a request someone else's page started. SameSite cookies cut it down a lot, which is why it fell down the rankings. But the default only applies in some browsers, Lax still allows top-level GET navigations, and a subdomain you don't fully control counts as the same site. Keep the token or an origin check.</span></li><li><b class="tip">Tip</b><span>Chrome began treating unmarked cookies as Lax in 2020 (Chrome 80 onward, rolled out gradually), with a two-minute exception for top-level POSTs right after a cookie is set. Mozilla closed its Lax-by-default bug as WONTFIX; a 2025 comment says Firefox uses None when no SameSite is set and has no plans to change. Safari's behaviour isn't covered by a primary source here: test it rather than assume. Sec-Fetch-Site is sent by Chrome, Edge, Firefox and Safari 16.4+; accept requests that lack it.</span></li><li><b class="next">Next</b><span>"Now a request your own server makes."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ssrf" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// WHO'S ALLOWED 05</p><h2>Server-side request forgery: when your server fetches URLs</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">"Paste an image URL and we'll fetch it for your profile." The server fetches from <i>inside</i> your network.</p>
+      <div class="controls">
+        <label class="grow">URL<input id="sf-in" class="mono" value="https://images.example.net/cat.png" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Try a URL" id="sf-presets">
+        <button type="button" data-v="https://images.example.net/cat.png">cat.png</button>
+        <button type="button" data-v="http://169.254.169.254/latest/meta-data/">metadata</button>
+        <button type="button" data-v="http://LOCALHOST:6379/">LOCALHOST</button>
+        <button type="button" data-v="http://2130706433/">2130706433</button>
+        <button type="button" data-v="https://images.example.net@10.0.0.5/">user@host</button>
+        <button type="button" data-v="https://internal.example.com/admin">internal name</button>
+        <button type="button" data-v="https://short.example/x">redirect</button>
+        <button type="button" data-v="https://rebind.example/">DNS rebinding</button>
+        <button type="button" data-v="file:///etc/passwd">file:</button>
+      </div>
+      <div class="sf-cols">
+        <div><b class="sf-h">Naive: block "localhost" and "169.254.169.254"</b><ol class="sf-log" id="sf-naive"></ol></div>
+        <div><b class="sf-h">Robust: parse, resolve, check the IP, pin it</b><ol class="sf-log" id="sf-robust"></ol></div>
+      </div>
+      <p class="comment" id="sf-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Best: an <b>allow-list</b> of hosts you expect.</li>
+        <li>Otherwise: allow only <b>http(s)</b>; resolve the name; block loopback, private, link-local and metadata ranges; connect to <b>the IP you checked</b>.</li>
+        <li>Don't follow <b>redirects</b>, or check every hop.</li>
+        <li>Fetch from a <b>network that can't reach</b> internal services.</li>
+        <li>In the cloud, require the hardened metadata service (AWS: IMDSv2).</li>
+      </ul>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP SSRF Prevention</a> · <a href="https://aws.amazon.com/blogs/security/defense-in-depth-open-firewalls-reverse-proxies-ssrf-vulnerabilities-ec2-instance-metadata-service/" target="_blank" rel="noopener">AWS: IMDSv2</a> · <a href="https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html" target="_blank" rel="noopener">OCC 2020-101</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>cat.png passes both checkers. The metadata address is the one cloud servers use to get their own credentials: both catch the obvious spelling. Then LOCALHOST in capitals, the decimal 2130706433 and the user@host trick: the naive string check misses them all, because URL parsers turn them into 127.0.0.1 and 10.0.0.5. The internal name, the redirect and DNS rebinding look fine as text; only resolving, checking the IP, connecting to that IP and refusing redirects catches them.</span></li><li><b class="say">Say</b><span>SSRF turns your server into the attacker's proxy, with your server's network position and permissions. Block-lists of strings always lose to the many ways of writing an address. Decide on the IP, after parsing and resolving, or better, only talk to hosts you expected.</span></li><li><b class="tip">Tip</b><span>OWASP's 2025 list folds SSRF into Broken Access Control (A01). AWS introduced IMDSv2 in November 2019: a session token fetched with a PUT, which most SSRF bugs, open firewalls and reverse proxies can't send. 169.254.169.254 is the metadata address on AWS, Azure and Google Cloud. All hosts and addresses in the demo are made up or documentation ranges; nothing is fetched.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A user changes <code>/invoices/1041</code> to <code>/invoices/1042</code> and sees someone else's invoice. What's the fix?</p><details><summary>Hint</summary><p>Where should the rule live, and what should the query include?</p></details><details class="answer"><summary>Answer</summary><p>Check on the server, for every request, that this user may access this object: fetch it scoped to the user (owner_id = current user) and return 404 otherwise. Hiding links or using random IDs doesn't fix it. Add a test that user A can't read user B's invoice.</p></details></li>
+      <li><p>Your session cookie is <code>SameSite=Lax</code>. Do you still need CSRF protection?</p><details><summary>Hint</summary><p>Think about GET handlers, sibling subdomains and other browsers.</p></details><details class="answer"><summary>Answer</summary><p>Yes, keep it. Lax still sends cookies on top-level GET navigations (so state-changing GETs are exposed), sibling subdomains count as same-site, and defaults differ between browsers. A framework token or a Sec-Fetch-Site/Origin check is cheap.</p></details></li>
+      <li><p>Your app fetches link previews for any URL a user posts. Name two checks.</p><details><summary>Hint</summary><p>What can your server reach that the user can't?</p></details><details class="answer"><summary>Answer</summary><p>Any two of: http(s) only; resolve the host and block private, loopback, link-local and metadata addresses; connect to the IP you checked; don't follow redirects (or re-check each); fetch from an isolated network; require IMDSv2 in the cloud.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="deps" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT ROUTINE 01</p><h2>Dependencies: what does your version range let in?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Package <code>left-padder</code>. Your lock file says <b>1.4.2</b>. Versions on the registry:</p>
+      <ol class="sv-list" id="sv-list"></ol>
+      <div class="controls">
+        <label class="grow">Range in package.json<input id="sv-in" class="mono" value="^1.4.2" spellcheck="false" autocomplete="off" maxlength="30"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Try a range" id="sv-presets">
+        <button type="button" data-v="^1.4.2">^1.4.2</button>
+        <button type="button" data-v="~1.4.2">~1.4.2</button>
+        <button type="button" data-v="1.4.2">1.4.2</button>
+        <button type="button" data-v=">=1.4.0">&gt;=1.4.0</button>
+        <button type="button" data-v="latest">latest</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="How you install" id="sv-how">
+        <button type="button" data-h="fresh" aria-pressed="true">Fresh install, no lock file</button>
+        <button type="button" data-h="ci">Install from the lock file</button>
+      </div>
+      <p class="verdict" id="sv-verdict"></p>
+      <p class="comment" id="sv-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Commit the lock file</b> and install from it in CI (<code>npm ci</code>, <code>pip install --require-hashes</code>, <code>cargo build --locked</code>…).</li>
+        <li>Let an <b>update bot</b> open small, reviewable pull requests (Dependabot, Renovate).</li>
+        <li>Consider a <b>cooldown</b> before taking brand-new releases. Dependabot now waits 3 days by default; security fixes skip the wait.</li>
+        <li><b>Fail CI</b> on known-vulnerable packages, and know what you ship (an SBOM).</li>
+        <li>Fewer dependencies is fewer maintainers to trust.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://top10.owasp.org/2025/A03_2025-Software_Supply_Chain_Failures/" target="_blank" rel="noopener">OWASP A03:2025</a> · <a href="https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference" target="_blank" rel="noopener">Dependabot options</a> · <a href="https://docs.renovatebot.com/key-concepts/minimum-release-age/" target="_blank" rel="noopener">Renovate minimumReleaseAge</a> · <a href="https://docs.npmjs.com/cli/commands/npm-ci" target="_blank" rel="noopener">npm ci</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>With ^1.4.2 and no lock file, a fresh install picks 1.6.0, published two hours ago by whoever controls the package today. ~1.4.2 only takes patches, and the exact pin takes nothing new. Switch to "Install from the lock file": every range installs 1.4.2, and new versions arrive only through an update you review.</span></li><li><b class="say">Say</b><span>Most of the code you ship, you didn't write. Two separate risks: old versions with known holes (you need to update), and new versions that are malicious (you need to not update blindly). A lock file, an update bot and a short cooldown handle both: you move deliberately, in small steps, with a diff to look at.</span></li><li><b class="tip">Tip</b><span>OWASP's 2025 list added Software Supply Chain Failures at A03. In September 2025, a maintainer of chalk, debug and other very widely used npm packages was phished by an email posing as npm support, and malicious versions were live for a few hours before removal. In December 2021, Log4Shell (CVE-2021-44228) showed the other risk: one logged string made servers fetch and run code, and the fix was an update everyone had to find and ship. The package name and versions in the demo are made up.</span></li><li><b class="next">Next</b><span>"Headers: cheap, and often missing."</span></li></ul></div>
+</section>
+
+<section class="slide" id="headers" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT ROUTINE 02</p><h2>Security headers: a grader</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Sample responses" id="hd-pick">
+        <button type="button" data-s="bare" aria-pressed="true">A fresh app</button>
+        <button type="button" data-s="typical">Typical</button>
+        <button type="button" data-s="good">Well set up</button>
+      </div>
+      <textarea id="hd-in" rows="11" spellcheck="false" aria-label="Response headers"></textarea>
+      <p class="m">Paste headers from your own site's response (browser dev tools, Network tab). Nothing is sent anywhere.</p>
+    </div>
+    <div class="stack">
+      <p class="hd-score" id="hd-score"></p>
+      <ul class="hd-list" id="hd-list"></ul>
+      <p class="comment" id="hd-note"></p>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP HTTP Headers</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS" target="_blank" rel="noopener">MDN CORS</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-XSS-Protection" target="_blank" rel="noopener">MDN X-XSS-Protection</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="show">Show</b><span>Start with the fresh app: almost everything is missing. "Typical" has some headers but an unsafe-inline CSP, a cookie without flags and a CORS policy that reflects any origin with credentials. "Well set up" passes. Then invite people to paste their own site's headers during the break.</span></li><li><b class="say">Say</b><span>Most of these are a few lines of config in your framework or proxy, set once for every response. HSTS keeps browsers on HTTPS. nosniff stops content-type guessing. frame-ancestors stops other sites framing yours (clickjacking). Referrer-Policy limits what URLs leak. CORS is not a protection: it relaxes the browser's same-origin rule, so the risky setting is reflecting any Origin while allowing credentials.</span></li><li><b class="tip">Tip</b><span>X-XSS-Protection is deprecated; MDN warns it can create XSS holes in otherwise safe sites, so remove it or set it to 0 and rely on CSP. HSTS preload lists require max-age of at least one year (31536000), includeSubDomains and the preload token. Version numbers in Server or X-Powered-By headers are a small leak, not a vulnerability: worth removing, not worth panicking over. This grader is a teaching toy, not a scanner.</span></li><li><b class="next">Next</b><span>"What's in your JavaScript bundle?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="secrets" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT ROUTINE 03</p><h2>Secrets in front-end code are public</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">main.3f9a1c.js (what every visitor downloads)</small>
+      <pre class="term sc-bundle" id="sc-bundle"></pre>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="sc-scan">Search the bundle</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sc-reset">Clear</button>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="sc-list" id="sc-list"><li class="m">Press "Search the bundle", like anyone with dev tools can.</li></ul>
+      <ul class="rules">
+        <li>Anything the browser gets, <b>every visitor gets</b>. Minifying isn't hiding.</li>
+        <li>Build tools inline some environment variables: Vite exposes <code>VITE_*</code>, Next.js <code>NEXT_PUBLIC_*</code>. Only put public values there.</li>
+        <li>Call secret-key APIs from <b>your server</b>, and give it only the access it needs.</li>
+        <li>A leaked key must be <b>revoked and replaced</b>: deleting the commit doesn't un-leak it.</li>
+      </ul>
+      <p class="comment" id="sc-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Press "Search the bundle". Two finds are public by design: a publishable payment key and a browser maps key (which should be restricted to your site in the provider's console). The rest are real problems: a secret API key, a database URL with a password, a cloud access key and a private key.</span></li><li><b class="say">Say</b><span>Front-end code is published code. Some keys are made to be public, and the provider says so (publishable keys). Anything called secret, any password, any private key, belongs on a server. Secret scanning in CI and on your code host catches most of these before they ship.</span></li><li><b class="tip">Tip</b><span>Source maps published to production can expose your original source, comments and all. All keys in the demo are fake; the AWS one is the example key from AWS's own documentation.</span></li><li><b class="next">Next</b><span>"Which tool catches what?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="pipeline" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT ROUTINE 04</p><h2>Tools in the pipeline, and their limits</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Which tool is most likely to catch each bug?</p>
+      <table class="grid-table pl-table" aria-label="Bugs and tools"><tbody id="pl-rows"></tbody></table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="pl-check">Check my answers</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="pl-reset">Reset</button>
+        <span class="tf-score" id="pl-score"></span>
+      </div>
+      <p class="comment" id="pl-note"></p>
+    </div>
+    <div class="stack">
+      <dl class="pl-tools">
+        <dt>Secret scanning</dt><dd>Known key formats in commits and pushes. Cheap, fast, few false alarms.</dd>
+        <dt>Dependency scanning (SCA)</dt><dd>Your lock file against advisory databases.</dd>
+        <dt>SAST</dt><dd>Reads your code for risky patterns. Sees every path, guesses at intent, raises false alarms.</dd>
+        <dt>DAST</dt><dd>Pokes a running app from outside. Finds real behaviour, only on the pages it reaches.</dd>
+        <dt>Review and tests</dt><dd>The only one that knows who <i>should</i> see what.</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Let the room call out an answer for each row, set the dropdowns, then check. Some rows accept two answers.</span></li><li><b class="say">Say</b><span>Tools are great at patterns and terrible at intent. A scanner can see you built SQL from a string; it can't know that Bob shouldn't see Alice's invoice. So put the cheap, quiet tools (secret scanning, dependency checks) where they block a merge, run the noisier ones where someone triages them, and keep access control in tests and review. A clean scan means "nothing these tools know how to find".</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why isn't a Content Security Policy enough on its own?</p><details><summary>Hint</summary><p>What does it control, and what does injected HTML do without script?</p></details><details class="answer"><summary>Answer</summary><p>It's a safety net that limits which scripts run. It doesn't fix the injection: fake forms and other script-free HTML still work, allow-list policies are often bypassable, and one 'unsafe-inline' undoes most of it. Output encoding is the fix; CSP limits the damage when one slips.</p></details></li>
+      <li><p>Your front-end bundle contains an API key. When is that fine?</p><details><summary>Hint</summary><p>What does the provider call the key?</p></details><details class="answer"><summary>Answer</summary><p>Only when the provider designs it to be public (a publishable key, or a browser key restricted to your site). Secret keys, passwords and private keys belong on the server; if one shipped, revoke and replace it.</p></details></li>
+      <li><p>Every scanner in your pipeline is green. Are you secure?</p><details><summary>Hint</summary><p>What can't a tool know about your app?</p></details><details class="answer"><summary>Answer</summary><p>Not necessarily. Tools find patterns and known issues; they miss logic bugs, especially access control. Keep review and tests for "who may do what", and treat green as "nothing these tools know how to find".</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="owasp-map" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>The OWASP Top 10 (2025) as a map of this talk</h2></header>
+  <div class="slide-body stack">
+    <ol class="ow-grid" id="ow-grid"></ol>
+    <p class="ow-detail" id="ow-detail">Click a category to see where it came up today.</p>
+    <p class="src">Source: <a href="https://top10.owasp.org/2025/" target="_blank" rel="noopener">OWASP Top 10:2025</a>. It's an awareness list of risk categories, not a complete standard; for a checklist to build and test against, see the <a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener">OWASP ASVS</a>.</p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Click through the ten. Most map straight onto a slide from today; the tile links jump there. Two point outward: cryptographic failures (the Crypto in Code talk) and logging (which deserves its own session).</span></li><li><b class="say">Say</b><span>The Top 10 is ranked from contributed test data and a community survey, so it's a good map of where to look, not a checklist of everything. Two new categories in 2025: software supply chain failures, and mishandling of exceptional conditions, which means failing open, leaking errors, or leaving things half-done when something goes wrong.</span></li><li><b class="tip">Tip</b><span>OWASP's project page calls the 2025 edition "the most current released version". The categories here were checked against top10.owasp.org on 9 November 2026.</span></li><li><b class="next">Next</b><span>"Take the checklist home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>A web security review checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="sql"> Queries use parameters or a query builder; sort columns and table names come from an allow-list</label>
+      <label><input type="checkbox" data-k="esc"> Templates escape by default; every escape hatch is reviewed; rich HTML is sanitised; links are http(s) only</label>
+      <label><input type="checkbox" data-k="csp"> A nonce-based CSP with object-src and base-uri 'none', rolled out through Report-Only</label>
+      <label><input type="checkbox" data-k="authz"> Every endpoint checks this user may act on this object; new endpoints are denied by default</label>
+      <label><input type="checkbox" data-k="trust"> The server ignores client-sent roles, user IDs and prices; writes allow-list their fields</label>
+      <label><input type="checkbox" data-k="cookie"> Session cookies are HttpOnly, Secure, SameSite set, ideally <code>__Host-</code></label>
+      <label><input type="checkbox" data-k="session"> New session ID at sign-in; idle and absolute expiry on the server; sign-out ends the session</label>
+      <label><input type="checkbox" data-k="csrf"> State changes need POST and a CSRF token or an Origin / Sec-Fetch-Site check</label>
+      <label><input type="checkbox" data-k="ssrf"> Server-side fetches use an allow-list, or check the resolved IP, pin it and refuse redirects</label>
+      <label><input type="checkbox" data-k="deps"> Lock files committed; an update bot is on; known-vulnerable dependencies fail CI</label>
+      <label><input type="checkbox" data-k="hdr"> HSTS, nosniff, frame-ancestors and Referrer-Policy are set; CORS never reflects origins with credentials</label>
+      <label><input type="checkbox" data-k="secret"> No secrets in bundles, repos or logs; secret scanning runs on every push</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what your current project does, and treat each unticked box as a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box covers the bug most likely to be in your app today?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a pattern in your own code you're unsure about. (Keep real customer data and secrets out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://cheatsheetseries.owasp.org/" target="_blank" rel="noopener">OWASP Cheat Sheet Series</a><span>Short, practical defences for every topic today.</span></li>
+        <li><a href="https://portswigger.net/web-security" target="_blank" rel="noopener">PortSwigger Web Security Academy</a><span>Free, legal labs to see each bug class from the other side.</span></li>
+        <li><a href="https://web.dev/articles/strict-csp" target="_blank" rel="noopener">Strict CSP</a><span>Step-by-step guide to a nonce-based policy.</span></li>
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>The talk for OWASP's cryptographic failures.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no database, no server, no real requests, and nothing you type is sent anywhere. Facts checked 9 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe an endpoint from their own app (with names removed) and run the checklist on it together.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
