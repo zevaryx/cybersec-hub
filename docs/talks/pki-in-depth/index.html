@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Public Key Infrastructure in Depth</title>
+<meta name="description" content="Public Key Infrastructure in Depth: who gets to vouch for websites, how Certificate Transparency catches mistakes, why certificates are getting shorter, and how to run certificates without outages. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/pki-in-depth/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Public Key Infrastructure in Depth">
+<meta property="og:description" content="Who gets to vouch for websites, how the system catches them when they get it wrong, and how to run certificates without outages. With live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/pki-in-depth/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/pki-in-depth/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Public Key Infrastructure in Depth in neon, beside a terminal that counts how many certificate renewals a year a lifetime needs.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M16 5v7M16 12l-8 8M16 12l8 8' fill='none' stroke='%2300f0ff' stroke-width='2.2'/%3E%3Crect x='13' y='3' width='6' height='5' fill='%23ff2e88'/%3E%3Crect x='4' y='19' width='8' height='7' fill='%2300f0ff'/%3E%3Crect x='20' y='19' width='8' height='7' fill='%2300f0ff'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "pki-in-depth", "title": "Public Key Infrastructure in Depth", "footer": "PKI", "subtitle": "SECURITY TRACK · 03",
+  "parts": [{ "name": "The trust model", "minutes": 25 }, { "name": "When CAs get it wrong", "minutes": 25 },
+            { "name": "Revocation and lifetimes", "minutes": 20 }, { "name": "Running your own", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">P<span>KI</span></a>
+  <div class="scroll-parts">
+    <a href="#trust-store" data-part="1"><b>01</b>Trust</a>
+    <a href="#ct" data-part="2"><b>02</b>Wrong</a>
+    <a href="#revocation" data-part="3"><b>03</b>Lifetimes</a>
+    <a href="#internal-ca" data-part="4"><b>04</b>Running</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 03 · FOR IT, OPS AND DEVELOPERS</p>
+      <h1><span class="pre">Public Key</span> <span class="glitch" data-text="Infrastructure">Infrastructure</span> <span class="pre">in Depth</span></h1>
+      <p class="lede">Who gets to vouch for websites, how the system catches them when they get it wrong, and how to run certificates without outages.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/pki-in-depth/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ renewals --certs 100 --lifetime-days <input id="hero-in" value="398" spellcheck="false" autocomplete="off" inputmode="numeric"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes, four parts, three checkpoints, for anyone who runs, reviews or builds on certificates. We'll cover who decides what to trust, how mistakes get caught, why certificates keep getting shorter, and how to run it all without outages. It follows How HTTPS Really Works: there we used certificates, here we look at the system behind them.</span></li><li><b class="show">Show</b><span>The terminal: how many renewals a year 100 certificates need at a given lifetime. Try 398, then 47. Keep that number in mind for part 3.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try lifetimes of 0, 1, 6, 47, 200, 398 or 825 days; in the trust-store slide, remove every root; in the chain builder, make the site name localhost; in the Certificate Transparency log, tamper with an entry or add thirty; in the distrust slide, set the cutoff to today; in the lifetime calculator, switch to automation; in the ACME demo, ask for a wildcard over HTTP-01; in the expiry radar, set the alert to zero days; tick every box in the internal CA checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#trust-store"><small>PART 1 · 25 MIN</small><b>The trust model</b></a><span>Roots and trust stores</span><span>Chains and cross-signing</span><span>DV, OV and EV</span><span>The CA/Browser Forum</span></li>
+      <li><a href="#ct"><small>PART 2 · 25 MIN</small><b>When CAs get it wrong</b></a><span>Certificate Transparency</span><span>DigiNotar (2011)</span><span>eMudhra (2026)</span><span>How a CA is distrusted</span></li>
+      <li><a href="#revocation"><small>PART 3 · 20 MIN</small><b>Revocation and lifetimes</b></a><span>Why revocation struggled</span><span>Shorter certificates</span><span>ACME automation</span></li>
+      <li><a href="#internal-ca"><small>PART 4 · 15 MIN</small><b>Running your own</b></a><span>Internal CAs</span><span>Inventory and expiry alerts</span><span>Habits that keep it boring</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is the trust model: who is allowed to vouch for a site, and how that trust is built from roots down. Part 2 is what happens when a CA fails, with two real cases fifteen years apart. Part 3 is why revocation never worked well and what replaces it. Part 4 is practical: running your own CA and keeping a certificate inventory.</span></li><li><b class="next">Next</b><span>"Why does this deserve 90 minutes?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Everything on the web leans on a few hundred promises</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">A browser trusts a site because a certificate authority said so, and it trusts that authority because its own makers said so. Two kinds of failure follow: the wrong party is trusted, or the right one is forgotten.</p>
+      <ul class="rules">
+        <li>Any trusted CA <b>can vouch for any name</b>. One failure can touch every site.</li>
+        <li>The system is built to <b>notice and recover</b>: public logs, blocklists, removal from trust stores.</li>
+        <li>Most outages aren't attacks. They're a certificate nobody remembered to renew.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>DigiNotar, 2011</b><span>A Dutch CA was breached. Its rogue certificates included one for *.google.com, used against roughly 300,000 users, almost all in Iran. Browsers removed it.</span></div>
+      <div class="card"><b>eMudhra, October 2026</b><span>Keys for eight intermediate CA certificates were generated with insufficient randomness. Chrome and Firefox blocked them within hours of a researcher's report.</span></div>
+      <div class="card"><b>Equifax, 2017</b><span>An expired certificate on a traffic-inspection device left it blind for 19 months, according to the House Oversight report. Renewing it exposed the breach.</span></div>
+      <p class="src">Sources: <a href="https://zoek.officielebekendmakingen.nl/blg-191225.pdf" target="_blank" rel="noopener">Fox-IT report</a> · <a href="https://blog.google/security/protecting-chrome-and-android-users-from-compromised-emudhra-intermediate-ca-certificates/" target="_blank" rel="noopener">Google</a> · <a href="https://oversight.house.gov/wp-content/uploads/2018/12/Equifax-Report.pdf" target="_blank" rel="noopener">House Oversight</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three very different failures: a CA that was hacked, a CA that made weak keys, and a company that forgot a renewal. The first two are about who we trust; the third is about running what we have. We'll look at all of them.</span></li><li><b class="tip">Tip</b><span>The title says "a few hundred promises" as a figure of speech about the number of roots in trust stores, not a measured count. Don't quote it as a statistic.</span></li><li><b class="next">Next</b><span>"Start with the question underneath it all: who decides?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="trust-store" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE TRUST MODEL 01</p><h2>Trust stores: who decides which CAs you trust</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Device" id="ts-pick">
+        <button type="button" data-p="phone">Old phone</button>
+        <button type="button" data-p="laptop" aria-pressed="true">Up-to-date laptop</button>
+        <button type="button" data-p="work">Work laptop</button>
+      </div>
+      <div class="ts-roots" id="ts-roots" role="group" aria-label="Roots this device trusts"></div>
+      <div class="ts-sites" id="ts-sites"></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Your device ships with a <b>trust store</b>: a list of root certificates it will accept as the end of a chain.</li>
+        <li>Browsers and operating systems each run a <b>root program</b>. Mozilla, Chrome, Apple and Microsoft decide who gets in, and who is removed.</li>
+        <li>Chrome now keeps its own root store on most platforms, rather than using the operating system's.</li>
+        <li>Employers can <b>add their own root</b>. That root can vouch for any site on that device: scope it carefully.</li>
+      </ul>
+      <p class="comment" id="ts-note"></p>
+      <p class="src">Sources: <a href="https://www.chromium.org/Home/chromium-security/root-ca-policy/" target="_blank" rel="noopener">Chrome Root Program policy</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start on "Up-to-date laptop": every site checks out. Switch to "Old phone": it doesn't have Borealis, but news.example still works because Borealis's certificate was also signed by Atlas (a cross-sign: the next slide). Switch to "Work laptop": the company root is trusted, so the intranet works. Then click a root off and watch the sites it vouched for fail.</span></li><li><b class="say">Say</b><span>The sites and CAs here are invented. The point: trust isn't global, it's whatever list this particular device carries. Old devices fall behind on that list, which is why cross-signing exists.</span></li><li><b class="tip">Tip</b><span>Check: "most platforms" is from search coverage of Chrome's move to its own root store (it began platform by platform in 2022). Confirm the current list on the Chrome Root Program page before naming platforms.</span></li><li><b class="next">Next</b><span>"Why aren't leaf certificates signed by the root directly?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="chains" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE TRUST MODEL 02</p><h2>Why chains exist: keep the root offline</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="chain-diag">
+        <div class="cd root"><b>Root CA</b><span>Key kept offline. Signs only a handful of certificates, rarely.</span></div>
+        <i>signs ↓</i>
+        <div class="cd inter"><b>Intermediate CA</b><span>Online, issues certificates every day. If it's compromised, replace it. The root stays safe.</span></div>
+        <i>signs ↓</i>
+        <div class="cd leaf"><b>Your site's certificate</b><span>Short-lived, one name, sent by your server with the intermediate.</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A <b>root's key is valuable</b> because every device trusts it for years. So it signs intermediates, then goes into a safe.</li>
+        <li>Your server sends the <b>leaf and its intermediates</b>, not the root. The device already has the root.</li>
+        <li>A missing intermediate is a common misconfiguration. Some clients fetch or cache it for you; others fail. <b>Always serve the full chain.</b></li>
+        <li><b>Cross-signing</b>: the same CA key certified by a second, older root, so devices that don't yet trust the new root still find a path.</li>
+      </ul>
+      <div class="card"><b>Let's Encrypt, 2021</b><span>Its ISRG Root X1 was cross-signed by IdenTrust's DST Root CA X3. When that older root expired on 30 September 2021, devices that lacked ISRG Root X1 (an iPhone 4 was the example) began showing warnings.</span></div>
+      <p class="src">Source: <a href="https://letsencrypt.org/docs/dst-root-ca-x3-expiration-september-2021/" target="_blank" rel="noopener">Let's Encrypt: DST Root CA X3 expiration</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three levels so that the most precious key almost never touches a network. If an intermediate is stolen you revoke or replace it and issue a new one; if a root is stolen, every device on earth has to change. Cross-signing is a bridge: the same key, vouched for by two different parents, so old and new devices can both find a way up.</span></li><li><b class="ask">Ask</b><span>Why is it a problem if the root is online and signs leaf certificates directly? <em>Answer: any breach of that server loses the key every device trusts, with no way to replace it quickly.</em></span></li><li><b class="tip">Tip</b><span>Let's Encrypt's page says older Android devices kept working past the expiry because Android doesn't enforce the expiry of a trust anchor. Don't over-explain it; the lesson is that old devices fall behind on their trust stores.</span></li><li><b class="next">Next</b><span>"Let's make a chain, with real signatures, and then break it."</span></li></ul></div>
+</section>
+
+<section class="slide" id="build-chain" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// THE TRUST MODEL 03</p><h2>Build a chain, then try to break it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Site name <input id="bc-name" value="shop.example" spellcheck="false" autocomplete="off"></label>
+        <label>What arrives
+          <select id="bc-scn">
+            <option value="normal">The real certificate</option>
+            <option value="stolen">Forged for bank.example with the stolen intermediate key</option>
+            <option value="fake">Forged for bank.example with the attacker's own key</option>
+            <option value="edit">The real certificate, edited after signing</option>
+          </select>
+        </label>
+      </div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="bc-nc"> Intermediate is name-constrained to the site's domain</label>
+        <label class="check"><input type="checkbox" id="bc-root" checked> The root is in my trust store</label>
+        <button type="button" class="btn btn-ghost btn-sm" id="bc-new">New keys</button>
+      </div>
+      <div class="chainvis" id="bc-chain"></div>
+    </div>
+    <div class="stack">
+      <pre class="term" id="bc-checks"></pre>
+      <div class="verdict" id="bc-verdict"></div>
+      <p class="comment" id="bc-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Real certificate: every check passes. Edited after signing: the signature fails, because the hash no longer matches. Forged with the attacker's own key: the intermediate's signature doesn't verify against the real intermediate. Forged with the <b>stolen</b> intermediate key: every signature verifies, and the browser accepts it. Now tick "name-constrained": the same stolen key can only vouch for names under the site's domain, so bank.example is refused.</span></li><li><b class="say">Say</b><span>These are real ECDSA P-256 signatures made in your browser; the certificate format is simplified. The lesson is the stolen-key case: a signature proves the key said yes, not that the CA meant it. What saves you is what happens next: revocation, Certificate Transparency, name constraints.</span></li><li><b class="tip">Tip</b><span>Defender framing: this shows why CA keys live in hardened, offline hardware and why constrained intermediates are good practice for internal CAs. It does not generate real certificates.</span></li><li><b class="next">Next</b><span>"What does the CA actually check before signing?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="validation" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// THE TRUST MODEL 04</p><h2>DV, OV and EV: what the CA checked, and what you see</h2></header>
+  <div class="slide-body stack">
+    <div class="levels">
+      <div class="lvl"><b>DV · Domain Validated</b><span class="what">The CA checked that the requester controls the name, usually by an automated challenge.</span><span class="shows">Most certificates today. Free and automated with ACME.</span></div>
+      <div class="lvl"><b>OV · Organization Validated</b><span class="what">The CA also checked that the organisation exists and is who it says.</span><span class="shows">The details are inside the certificate, but browsers don't show them in the address bar.</span></div>
+      <div class="lvl"><b>EV · Extended Validation</b><span class="what">Stricter, standardised legal and identity checks on the organisation.</span><span class="shows">Chrome 77 and Firefox 70 (2019) moved the company name out of the address bar into a click-through panel.</span></div>
+    </div>
+    <p class="callout"><b>WHAT THE PADLOCK SAYS</b> The connection is private, and the other end holds a certificate for this name. It does not say the business is honest: criminals get padlocks too. (See the phishing talk.)</p>
+    <p class="src">Sources: <a href="https://duo.com/decipher/chrome-and-firefox-removing-ev-certificate-indicators" target="_blank" rel="noopener">Decipher (Duo) on the EV changes</a> · <a href="../phishing-and-scams/">Phishing and Scams</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Validation level changes what the CA checked, not what your browser shows. For years a green company name was the sign of trust; browsers dropped it after research and their own studies found few people noticed or relied on it. Today the practical difference is mostly for audits and for tools that read the certificate.</span></li><li><b class="tip">Tip</b><span>Check: the EV claims rest on press coverage of the 2019 browser announcements (Chrome 77 around 10 September 2019, Firefox 70 around 22 October 2019); Safari and Edge also stopped showing company names. Look at the browsers' own announcements before quoting dates.</span></li><li><b class="next">Next</b><span>"Who writes the rules the CAs follow?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="cabf" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// THE TRUST MODEL 05</p><h2>The CA/Browser Forum and the root programs</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="loop">
+        <li><b>A CA applies</b><span>to a root program, through the shared Common CA Database (CCADB).</span></li>
+        <li><b>It's audited</b><span>against the Baseline Requirements and the program's own policy.</span></li>
+        <li><b>It's included</b><span>and browsers and operating systems ship its roots.</span></li>
+        <li><b>It's watched</b><span>incident reports, CT logs, and researchers keep checking.</span></li>
+        <li><b>It can be removed</b><span>if it breaks the rules or the risk outweighs the value.</span></li>
+      </ol>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The <b>CA/Browser Forum</b> brings CAs and browser makers together to write the <b>Baseline Requirements</b>: the minimum rules for publicly trusted TLS certificates.</li>
+        <li>Each <b>root program</b> adds its own policy on top, and can be stricter.</li>
+        <li>Rules change by <b>ballot</b>, voted on by CAs and by browsers. Example: <b>SC-081v3</b>, which sets today's shrinking certificate lifetimes. Apple proposed it; Sectigo, Google and Mozilla endorsed it; it passed in April 2025 (CAs 25 yes, 0 no, 5 abstain; browsers 4 yes).</li>
+        <li>The Baseline Requirements are versioned documents. The copy on GitHub is version 2.3.1, effective 4 October 2026.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://cabforum.org/2025/04/11/ballot-sc081v3-introduce-schedule-of-reducing-validity-and-data-reuse-periods/" target="_blank" rel="noopener">Ballot SC-081v3</a> · <a href="https://github.com/cabforum/servercert/blob/main/docs/BR.md" target="_blank" rel="noopener">Baseline Requirements</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>There's no government in charge of web trust. It's a loop: browsers and OS vendors decide who to include, CAs agree to rules with the browsers, and everyone watches each other. When the rules need to change, like shortening lifetimes, it happens by a ballot in the Forum.</span></li><li><b class="tip">Tip</b><span>Check before presenting: how many issuer and consumer votes the ballot needed is in the Forum's bylaws, which we haven't quoted here. Only the SC-081v3 vote counts and the BR version number are read from the sources.</span></li><li><b class="next">Next</b><span>"Checkpoint one."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why can a single misbehaving CA affect every website?</p><details><summary>Hint</summary><p>Which names is a trusted CA allowed to vouch for?</p></details><details class="answer"><summary>Answer</summary><p>Any CA in the trust store can issue a certificate for any name, and devices accept it. So one CA's mistake or breach puts every site at risk, unless the CA's certificate is limited by name constraints.</p></details></li>
+      <li><p>What do intermediate CAs buy us?</p><details><summary>Hint</summary><p>Think about which key is hardest to replace.</p></details><details class="answer"><summary>Answer</summary><p>The root key can stay offline. The intermediates do the daily signing, so if one is compromised it can be revoked or replaced without every device having to change its trust store.</p></details></li>
+      <li><p>A site works in one browser but fails in a command-line tool. It sends only its own certificate. What's wrong, and what's the fix?</p><details><summary>Hint</summary><p>What does the server normally send besides the leaf?</p></details><details class="answer"><summary>Answer</summary><p>The intermediate is missing. Some clients fetch or cache missing intermediates; others don't. Configure the server to send the full chain.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="ct" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// WHEN CAS GET IT WRONG 01</p><h2>Certificate Transparency: make mistakes visible</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="loop">
+        <li><b>The CA logs it</b><span>The certificate goes into public, append-only logs.</span></li>
+        <li><b>The log promises</b><span>It returns a signed receipt, an SCT, that goes inside the certificate.</span></li>
+        <li><b>The browser checks</b><span>No receipts from enough different logs, no connection.</span></li>
+        <li><b>Monitors watch</b><span>Domain owners read the logs for certificates they never asked for.</span></li>
+      </ol>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>CT doesn't <b>prevent</b> a bad certificate. It makes sure a bad certificate can't be <b>secret</b>.</li>
+        <li>Each log is a <b>Merkle tree</b>: add an entry and the root hash changes; edit an old one and every hash above it changes. Logs publish signed tree heads, so anyone can compare.</li>
+        <li>Chrome's policy needs 2 receipts for certificates of up to 180 days (3 for longer), from different logs, with at least two different log operators.</li>
+        <li>CT is specified in RFC 6962 (2013, by Google engineers) and RFC 9162 (version 2.0).</li>
+      </ul>
+      <p class="src">Sources: <a href="https://googlechrome.github.io/CertificateTransparency/ct_policy.html" target="_blank" rel="noopener">Chrome CT policy</a> · <a href="https://www.rfc-editor.org/rfc/rfc6962" target="_blank" rel="noopener">RFC 6962</a> · <a href="https://www.rfc-editor.org/rfc/rfc9162" target="_blank" rel="noopener">RFC 9162</a> · <a href="https://certificate.transparency.dev" target="_blank" rel="noopener">certificate.transparency.dev</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Before CT, a CA could issue a certificate for your domain and nobody would know until someone got attacked with it. Now every publicly trusted certificate a browser accepts has to be in the open. It doesn't stop the mistake; it makes sure the person who can fix it hears about it.</span></li><li><b class="ask">Ask</b><span>If the log is public, who actually reads it? <em>Answer: monitors run by domain owners, security companies and researchers, who watch for names they care about.</em></span></li><li><b class="tip">Tip</b><span>Check: the CT policy page doesn't say when Chrome began enforcing CT (secondary sources say April 2018), so don't give a date from this slide. It also doesn't say RFC 6962 was written because of DigiNotar; DigiNotar is the case that shows why it matters, but the RFC doesn't cite it.</span></li><li><b class="next">Next</b><span>"Let's build a log and try to cheat it."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ct-demo" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// WHEN CAS GET IT WRONG 02</p><h2>A mini CT log: proofs, monitors and tampering</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Add a certificate for <input id="ct-name" value="blog.example" spellcheck="false" autocomplete="off"></label>
+        <button type="button" class="btn btn-sm" id="ct-add">Add</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ct-rogue">A CA mis-issues for bank.example</button>
+      </div>
+      <ol class="ctlog" id="ct-log"></ol>
+      <div class="controls">
+        <label>Entry # <select id="ct-pick"></select></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="ct-proof">Show its inclusion proof</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ct-tamper">Quietly edit it</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ct-reset">Reset</button>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="monitor" id="ct-monitor"></div>
+      <pre class="term" id="ct-out"></pre>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Add a couple of certificates and watch the tree root change. Click "A CA mis-issues for bank.example": the bank's monitor lights up, because the entry is public. Pick an entry and show its inclusion proof: a few hashes that rebuild the root, checked against a signed tree head. Then "Quietly edit it": the root no longer matches the tree head the log already published, and the audit catches it.</span></li><li><b class="say">Say</b><span>This is the real RFC 6962 construction: leaf hashes with a 0x00 prefix, inner nodes with 0x01, and ECDSA-signed tree heads. A real log produces compact proofs that an old tree is a prefix of a new one. We just recompute, which is slower but shows the idea.</span></li><li><b class="tip">Tip</b><span>The names and the log are invented; it runs in the page. CT also doesn't say a certificate is bad: the monitor is how the owner decides.</span></li><li><b class="next">Next</b><span>"Two real cases of a CA getting it wrong: fifteen years apart."</span></li></ul></div>
+</section>
+
+<section class="slide" id="diginotar" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// WHEN CAS GET IT WRONG 03</p><h2>Case study: DigiNotar, 2011</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="tl-v">
+        <li><b>17 Jun</b><span>First breach of DigiNotar's outer network</span></li>
+        <li><b>1 Jul</b><span>Intruder reaches the CA servers</span></li>
+        <li><b>10 Jul</b><span>First rogue certificate issued</span></li>
+        <li><b>19 Jul</b><span>A routine check finds rogue certificates; some are revoked</span></li>
+        <li><b>28 Aug</b><span>A rogue *.google.com certificate, never revoked, is posted publicly</span></li>
+      </ol>
+      <div class="stats stats-4">
+        <div class="stat"><b>531</b><span>rogue certificates found</span></div>
+        <div class="stat"><b>~300,000</b><span>users hit (298,140 IP addresses)</span></div>
+        <div class="stat"><b>95%</b><span>of those from Iran</span></div>
+        <div class="stat"><b>8 of 8</b><span>CA servers compromised</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The investigators (Fox-IT, hired by DigiNotar on 30 August) found the <b>CA servers' logs had been tampered with</b>, so a clean log proved nothing.</li>
+        <li>A rogue <b>wildcard certificate for *.google.com</b> was used for a man-in-the-middle attack, almost entirely against users in Iran.</li>
+        <li>Browsers <b>removed DigiNotar</b> from their trust stores.</li>
+      </ul>
+      <h3>Everyday lessons</h3>
+      <ul class="rules">
+        <li><b>Ship logs off the machine</b>. Logs kept where an intruder can edit them aren't evidence.</li>
+        <li><b>Segment and watch</b> the most valuable systems. The intruder got in through a vulnerable web server.</li>
+        <li>Revoking some rogue certificates isn't enough when you don't know how many exist.</li>
+      </ul>
+      <p class="src">Source: <a href="https://zoek.officielebekendmakingen.nl/blg-191225.pdf" target="_blank" rel="noopener">Fox-IT, Black Tulip report, 13 August 2012</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Every figure here comes from the Fox-IT investigation commissioned after the breach. The sobering parts: the intruder was inside for weeks, the logs were on the servers they controlled, and one rogue certificate surfaced only when its contents were posted publicly. Compare how long that took with the next case.</span></li><li><b class="tip">Tip</b><span>Check: the report calls ~300,000 an approximation from OCSP requests (one user can have several IP addresses, and some old browsers don't send OCSP). The report doesn't give the dates browsers removed trust, and it says the traces "point to" a perpetrator in Iran: avoid attributing it to a government. The wildcard certificate was the one used in the attack; 531 is the count found, not necessarily all.</span></li><li><b class="next">Next</b><span>"Fifteen years later: October 2026."</span></li></ul></div>
+</section>
+
+<section class="slide" id="emudhra" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// WHEN CAS GET IT WRONG 04</p><h2>Case study: eMudhra, October 2026</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="tl-v">
+        <li><b>Sat 17 Oct 18:05 UTC</b><span>Chrome's root program receives a report from a researcher</span></li>
+        <li><b>19:45</b><span>Chrome ships a CRLSet blocking the affected intermediates</span></li>
+        <li><b>20:06 → 22:59</b><span>Firefox gets the report, then the OneCRL block, under three hours later</span></li>
+        <li><b>20 Oct</b><span>Firefox point releases for people whose settings had blocked the update</span></li>
+      </ol>
+      <div class="card"><b>What was wrong</b><span>Google: private keys for eight eMudhra subordinate CA certificates "were generated with insufficient randomness", letting attackers forge trusted certificates for any website against clients that still trusted them.</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Browsers <b>blocked the intermediates without an update</b>, then removed the root that signed them (emSign ECC Root CA - G3).</li>
+        <li>Google says <b>no certificate</b> chaining to those intermediates had been <b>logged to CT</b> before the block, so none could have worked on clients that enforce CT.</li>
+        <li>Sites on that hierarchy had to <b>get a certificate from another PKI hierarchy</b>. Google reviews whether other eMudhra certificates stay trusted; a 4 November update sets a cutoff for emSign Root CA - G1 (next slide).</li>
+      </ul>
+      <h3>Then and now</h3>
+      <ul class="rules">
+        <li>2011: found after weeks of abuse. 2026: reported by a researcher and blocked in hours.</li>
+        <li>What changed: public logs, pushed blocklists, published policies. What didn't: a badly made key is a key anyone can guess.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://blog.google/security/protecting-chrome-and-android-users-from-compromised-emudhra-intermediate-ca-certificates/" target="_blank" rel="noopener">Google</a> · <a href="https://blog.mozilla.org/security/2026/10/20/protecting-firefox-users-following-the-compromise-of-emudhra-intermediate-certificates/" target="_blank" rel="noopener">Mozilla</a> · <a href="../../news/2026-10-black-october/">Black October</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Same kind of failure, very different outcome. The report came on a Saturday evening; Chrome had a block out in under two hours and Firefox in under three, with no browser update needed because both ship blocklists for exactly this. The weak randomness is the Crypto 101 lesson: a key is only as good as the randomness that made it.</span></li><li><b class="tip">Tip</b><span>Check: Google's post says "eight" CAs, then once "six"; Mozilla and Cloudflare say eight. Neither post says how many bits of randomness, who reported it, or whether anyone abused the keys, so don't say any of those. Google says Chrome is still reviewing eMudhra's other certificates.</span></li><li><b class="tip">Tip</b><span>Be fair: eMudhra's customers did nothing wrong. The vendor failed, and the remedy is a new certificate. Don't joke about the company or its staff.</span></li><li><b class="next">Next</b><span>"How does a CA actually get removed without breaking every site at once?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="distrust" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// WHEN CAS GET IT WRONG 05</p><h2>Distrust: a cutoff date, not a cliff</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Distrust certificates first logged after <input type="date" id="ds-cut"></label>
+        <label>Today is <span class="ds-today" id="ds-today-l"></span><input type="range" id="ds-today" min="0" max="400" value="0"></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="ds-now">Cutoff = today</button>
+      </div>
+      <div class="ds-table" id="ds-table"></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="ds-sum"></p>
+      <ul class="rules">
+        <li>Browsers often distrust by <b>the date a certificate first appeared in CT logs</b> (its earliest SCT). Older ones work until they expire; newer ones are refused.</li>
+        <li>Log timestamps are signed by independent logs, so a CA can't simply backdate a certificate.</li>
+        <li>Chrome did this for Entrust in 2024 and for emSign Root CA - G1 in 2026: first logged after 16 November 2026 means not trusted by default from Chrome 153.</li>
+      </ul>
+      <p class="comment" id="ds-note"></p>
+      <p class="src">Sources: <a href="https://blog.google/security/protecting-chrome-and-android-users-from-compromised-emudhra-intermediate-ca-certificates/" target="_blank" rel="noopener">Google, eMudhra (4 Nov update)</a> · <a href="https://security.googleblog.com/2024/06/sustaining-digital-certificate-security.html" target="_blank" rel="noopener">Google, Entrust (2024)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>The default cutoff is 16 November 2026. Drag "today" forward: certificates logged before the cutoff keep working until they expire, then you can't renew from that CA. Move the cutoff earlier and more certificates stop working. Click "Cutoff = today" to see that nothing breaks today, but every renewal after it will.</span></li><li><b class="say">Say</b><span>The practical message for a site owner: when your CA is distrusted, the pain arrives at your next renewal, not today. The fix is being able to get a certificate from a different CA quickly: that's an automation and inventory problem, not a PKI one.</span></li><li><b class="tip">Tip</b><span>Check: the Entrust details (announced 27 June 2024, certificates first logged after 31 October 2024) are from search coverage of Google's post; the page itself loaded without its body when we read it. The eMudhra G1 cutoff is quoted from Google's 4 November update. Sample certificates here are invented.</span></li><li><b class="next">Next</b><span>"Checkpoint two."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Certificate Transparency doesn't prevent bad certificates. What does it do instead?</p><details><summary>Hint</summary><p>Think about who finds out, and when.</p></details><details class="answer"><summary>Answer</summary><p>It makes every certificate public and tamper-evident, so domain owners and browsers can detect a bad one quickly. Browsers also refuse certificates that lack proof of logging.</p></details></li>
+      <li><p>Why can't a log quietly delete or edit an old entry?</p><details><summary>Hint</summary><p>What happens to the root hash if one leaf changes?</p></details><details class="answer"><summary>Answer</summary><p>Every hash above that entry changes, so the root no longer matches the signed tree heads the log already published. Anyone who kept an old tree head can spot it.</p></details></li>
+      <li><p>In both DigiNotar and eMudhra, what did browsers do to protect users before every site had a new certificate?</p><details><summary>Hint</summary><p>It doesn't need a browser update.</p></details><details class="answer"><summary>Answer</summary><p>They pushed a blocklist that names the CA's intermediates (and removed the root soon after). For a wider distrust they use a cutoff date, so existing certificates keep working until they expire.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>For the third question, DigiNotar's removal from browsers is not detailed in the Fox-IT report: say browsers "removed it from their trust stores" without dates.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="revocation" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// REVOCATION AND LIFETIMES 01</p><h2>Revocation: a good idea that never worked well</h2></header>
+  <div class="slide-body stack">
+    <div class="rev-table">
+      <div class="rv"><b>CRL</b><span>A signed list of revoked serial numbers. Complete, but large, and browsers rarely fetch it live.</span></div>
+      <div class="rv"><b>OCSP</b><span>Ask the CA about one certificate. Tells the CA which site you're visiting, and Mozilla measured about 100 ms median added to the handshake.</span></div>
+      <div class="rv"><b>Stapling</b><span>The server attaches a fresh OCSP answer. Private and fast, but only works if the server does it. "Must-Staple" made it mandatory, and browser support never spread.</span></div>
+      <div class="rv"><b>Pushed lists</b><span>Browsers ship their own: Chrome's CRLSets, Firefox's OneCRL for intermediates, and CRLite (a compact filter of all revoked certificates, on by default for Firefox desktop since version 137, refreshed every 12 hours).</span></div>
+      <div class="rv new"><b>Short lifetimes</b><span>If a certificate expires in days, you need to revoke far less. The current direction.</span></div>
+    </div>
+    <p class="callout"><b>LET'S ENCRYPT</b> turned off OCSP: Must-Staple requests began failing on 30 January 2025, OCSP URLs left certificates on 7 May 2025, and the responders shut down on 6 August 2025. Its reasons: privacy, and the cost of running it. CRLs replaced it.</p>
+    <p class="src">Sources: <a href="https://letsencrypt.org/2024/12/05/ending-ocsp" target="_blank" rel="noopener">Let's Encrypt: ending OCSP</a> · <a href="https://hacks.mozilla.org/2025/08/crlite-fast-private-and-comprehensive-certificate-revocation-checking-in-firefox/" target="_blank" rel="noopener">Mozilla: CRLite</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Revocation has to work for everyone, quickly, privately, and even when the CA's server is down. Real revocation checks struggled on all of those. Where a check can't complete, browsers have usually let the connection continue, which means an attacker who can block the check wins. So the industry is turning to two answers: browsers pushing their own lists, and certificates that die young.</span></li><li><b class="tip">Tip</b><span>Check: the "browsers let the connection continue when a check fails" point (soft-fail) is widely documented but not in the sources linked here, so say it as background, not as a quoted fact. Mozilla's post says it planned to disable OCSP for domain-validated certificates in Firefox 142; confirm the current state in Firefox's release notes before saying it has happened. The 100 ms figure is Mozilla's median.</span></li><li><b class="next">Next</b><span>"Shorter certificates, and the schedule."</span></li></ul></div>
+</section>
+
+<section class="slide" id="lifetimes" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// REVOCATION AND LIFETIMES 02</p><h2>Shorter certificates: the schedule, and why</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="sched" id="sched"></div>
+      <div class="controls">
+        <label>If a key is stolen from a certificate lasting <select id="lt-pick"></select></label>
+      </div>
+      <div class="lt-bars" id="lt-bars"></div>
+      <p class="comment" id="lt-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The CA/Browser Forum's schedule applies to certificates issued on or after each date: <b>200 days</b> from 15 March 2026, <b>100</b> from 15 March 2027, <b>47</b> from 15 March 2029. Domain validation can be reused for 200, 100, then 10 days.</li>
+        <li>Before that: <b>398 days</b> (Apple's rule from 1 September 2020, then everyone's) and 825 days before it.</li>
+        <li>Let's Encrypt: 90-day certificates today, <b>64 days</b> by default from 10 February 2027 and <b>45 days</b> from 16 February 2028. A <b>6-day</b> (160-hour) profile is available now, if you opt in.</li>
+        <li>The bars show the <b>worst case if no one checks revocation</b>: how long a stolen key stays useful. Shorter lifetimes shrink it with no one needing to do anything.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://github.com/cabforum/servercert/blob/main/docs/BR.md" target="_blank" rel="noopener">Baseline Requirements §1.2.2</a> · <a href="https://letsencrypt.org/2025/12/02/from-90-to-45" target="_blank" rel="noopener">Let's Encrypt: 90 to 45</a> · <a href="https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability" target="_blank" rel="noopener">6-day certificates</a> · <a href="https://support.apple.com/en-us/102028" target="_blank" rel="noopener">Apple</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Today's maximum is 200 days, and it keeps falling until March 2029. Each step cuts the time a stolen or mis-issued certificate stays useful and cuts how long old domain checks can be reused. The price: you can't renew by hand once a year. The next two slides are about paying that price.</span></li><li><b class="show">Show</b><span>Pick different lifetimes: the bars compare the worst case. This is simple arithmetic: if revocation doesn't reach the victim, an attacker can use the certificate for its remaining life.</span></li><li><b class="tip">Tip</b><span>Check before presenting: the dates are from the Baseline Requirements' "Relevant Dates" table (version 2.3.1) and Let's Encrypt's December 2025 timeline. Check both for changes. Apple's page gives 398 days from 1 September 2020; the 825-day figure's source here is press coverage, so treat it as background.</span></li><li><b class="next">Next</b><span>"What does that do to your calendar?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="calc" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// REVOCATION AND LIFETIMES 03</p><h2>Lifetime calculator: the case for automation</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <label>Certificates <input type="number" id="lc-n" value="150" min="1" max="100000" class="short"></label>
+        <label>Lifetime <select id="lc-life"></select></label>
+        <label>Minutes per manual renewal <input type="number" id="lc-min" value="30" min="1" max="600" class="short"></label>
+      </div>
+      <div class="controls">
+        <label>Chance a manual renewal is missed or wrong (%) <input type="number" id="lc-p" value="2" min="0" max="100" step="0.5" class="short"></label>
+        <label>…when automated and monitored (%) <input type="number" id="lc-pa" value="0.1" min="0" max="100" step="0.1" class="short"></label>
+        <label class="check"><input type="checkbox" id="lc-auto"> Automate with ACME</label>
+      </div>
+      <p class="comment">The percentages are your assumptions: change them to match your team.</p>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3" id="lc-out"></div>
+      <p class="verdict" id="lc-verdict"></p>
+      <p class="comment" id="lc-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>150 certificates at 398 days: about 138 renewals a year, a few hours of work, and a modest chance of one slip. Switch the lifetime to 47 days: more than 1,100 renewals a year. Tick "Automate with ACME" and the hours drop to zero and the risk to whatever the automation and its monitoring leave.</span></li><li><b class="say">Say</b><span>The point isn't that machines never fail. They fail differently: a broken renewal job produces an alert if you monitor it, whereas a forgotten manual renewal produces an outage. Automation also makes switching CAs routine, which is what you need on distrust day.</span></li><li><b class="tip">Tip</b><span>The default error rates are illustrative; the chance of at least one miss in a year is 1 − (1 − p)^renewals. Ask the audience to put in their own numbers.</span></li><li><b class="next">Next</b><span>"How the automation works."</span></li></ul></div>
+</section>
+
+<section class="slide" id="acme" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// REVOCATION AND LIFETIMES 04</p><h2>ACME: proving you control a name</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Name <input id="ac-name" value="shop.example" spellcheck="false" autocomplete="off"></label>
+        <label>Challenge
+          <select id="ac-type"><option value="http">HTTP-01: a file on the website</option><option value="dns">DNS-01: a TXT record</option></select>
+        </label>
+        <button type="button" class="btn btn-sm" id="ac-new">Start an order</button>
+      </div>
+      <pre class="term" id="ac-pub"></pre>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="ac-ok">Publish it correctly</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ac-other">Publish another account's answer</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ac-none">Publish nothing</button>
+        <button type="button" class="btn btn-sm" id="ac-check">Ask the CA to validate</button>
+      </div>
+    </div>
+    <div class="stack">
+      <pre class="term" id="ac-out"></pre>
+      <ul class="rules">
+        <li><b>Account key</b>: your client makes a key pair that identifies it to the CA.</li>
+        <li>The CA sends a random <b>token</b>. You answer with token + "." + your key's thumbprint.</li>
+        <li>That binds the token to <b>your account</b>: someone who sees the token can't answer for you.</li>
+        <li>Renew when the CA's <b>renewal information</b> (ARI) says, or about two-thirds of the way through the lifetime.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc8555" target="_blank" rel="noopener">RFC 8555</a> (March 2019) · <a href="https://www.rfc-editor.org/rfc/rfc9773" target="_blank" rel="noopener">RFC 9773</a> (ARI, June 2025)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start an order: the page makes a real P-256 account key, a random token, and the real key authorization (token, a dot, and the base64url SHA-256 of the key's JWK). Publish it correctly and validate: the CA's check passes. Publish another account's answer or nothing: it fails. Choose a wildcard name like *.shop.example with HTTP-01: that can't work, because a file on one web server can't prove control of a whole zone, so wildcards need DNS-01.</span></li><li><b class="say">Say</b><span>ACME, RFC 8555, is what lets a machine do the proof-of-control that a person used to do by email. For DNS-01 the TXT value is the SHA-256 of the key authorization, so the secret itself never appears in DNS. The CA, the client and the challenge are simulated here; no request goes out.</span></li><li><b class="tip">Tip</b><span>Check: the key-authorization and DNS-01 construction follows RFC 8555 §8; the RFC's text was not read in full here. The "two-thirds of the lifetime" rule is Let's Encrypt's advice for clients without ARI.</span></li><li><b class="next">Next</b><span>"Checkpoint three."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why are shorter certificate lifetimes considered safer than better revocation?</p><details><summary>Hint</summary><p>What does revocation depend on, and what does expiry depend on?</p></details><details class="answer"><summary>Answer</summary><p>Revocation needs a check that reaches every client, quickly and privately, and clients have often let connections continue when it fails. Expiry works by itself: a short lifetime caps the damage with no one needing to check anything.</p></details></li>
+      <li><p>Why does ACME make you answer with the token plus a hash of your account key, not just the token?</p><details><summary>Hint</summary><p>Who else can see the token?</p></details><details class="answer"><summary>Answer</summary><p>A token alone could be copied by anyone who sees it. Combined with your account key's thumbprint, only the account that asked can produce the right answer.</p></details></li>
+      <li><p>You hand-renew 200 certificates a year and the limit is about to halve. What's your first step?</p><details><summary>Hint</summary><p>You can't automate what you can't list.</p></details><details class="answer"><summary>Answer</summary><p>Make an inventory: every certificate, its owner and expiry. Then automate the easy ones with ACME, and put alerts on the rest.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="internal-ca" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// RUNNING YOUR OWN 01</p><h2>Internal CAs: when, and how to keep one safe</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Do you need your own CA?</h3>
+      <ul class="rules">
+        <li><b>Probably yes</b> for devices and services only you reach: private names, service-to-service (mutual TLS) and device identity.</li>
+        <li><b>Probably no</b> for anything the public visits. Use a public CA and ACME. Even internal hostnames you own can use public certificates with DNS-01.</li>
+        <li>Either way, a root you add to devices <b>can vouch for any site on them</b>. Treat its key like the keys to the building.</li>
+      </ul>
+      <p class="comment" id="ic-note"></p>
+    </div>
+    <div class="stack">
+      <div class="plan" id="ic-plan">
+        <label><input type="checkbox" data-k="offline"> Root key offline, in hardware, with two people needed to use it</label>
+        <label><input type="checkbox" data-k="inter"> Separate online intermediates for each environment</label>
+        <label><input type="checkbox" data-k="nc"> Name constraints limit each intermediate to your domains</label>
+        <label><input type="checkbox" data-k="short"> Short lifetimes, issued by automation (ACME or similar)</label>
+        <label><input type="checkbox" data-k="deploy"> Root distributed by device management, and removable the same way</label>
+        <label><input type="checkbox" data-k="log"> Every issuance logged off the CA server</label>
+        <label><input type="checkbox" data-k="drill"> A written, rehearsed plan for replacing an intermediate</label>
+        <label><input type="checkbox" data-k="inv"> An inventory of every certificate it issued, with owners</label>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>An internal CA is the same machine you've seen all talk, with you in every role. So all the lessons apply to you: keep the root offline, use intermediates, ship logs elsewhere, constrain by name if your clients honour it, and practise replacing an intermediate before you have to. The DigiNotar report's lessons are your checklist too.</span></li><li><b class="show">Show</b><span>Tick what your organisation already does. The boxes are saved in this browser only.</span></li><li><b class="tip">Tip</b><span>Check: name-constraint support varies by client and platform; test your own clients before relying on it. Tools people use include Active Directory Certificate Services, Vault's PKI engine, step-ca and EJBCA, but pick on your needs: none is endorsed here.</span></li><li><b class="next">Next</b><span>"And the other half: knowing what you have."</span></li></ul></div>
+</section>
+
+<section class="slide" id="inventory" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// RUNNING YOUR OWN 02</p><h2>Inventory and expiry alerts: boring on purpose</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Alert this many days before expiry <span class="ds-today" id="ex-th-l"></span><input type="range" id="ex-th" min="0" max="90" value="30"></label>
+      </div>
+      <div class="ex-table" id="ex-table"></div>
+      <p class="comment" id="ex-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Equifax, 2017</b><span>A traffic-inspection device's certificate expired on 31 January 2016, so it inspected nothing for 19 months (the GAO counted ten). Renewing it on 29 July 2017 revealed the attack.</span></div>
+      <div class="card"><b>O2 and Ericsson, 2018</b><span>On 6 December 2018 an expired certificate in Ericsson's core-network software knocked out O2's data service and networks that rely on it. Press estimates: about 32 million people; Ericsson said "a limited number".</span></div>
+      <ul class="rules">
+        <li>List <b>every</b> certificate with an <b>owner</b>, appliances and vendor software too. Find strays by watching CT and scanning your network.</li>
+        <li>Alert early, <b>to a group</b>, and <b>test the alert</b>.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://oversight.house.gov/wp-content/uploads/2018/12/Equifax-Report.pdf" target="_blank" rel="noopener">House Oversight, Equifax report</a> · <a href="https://www.theregister.com/2018/12/06/ericsson_o2_telefonica_uk_outage/" target="_blank" rel="noopener">The Register (Ericsson's statement)</a> · <a href="https://crt.sh/" target="_blank" rel="noopener">crt.sh</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>The table is a made-up inventory with dates relative to today. Move the slider: more certificates light up as "soon", but notice the two with no owner: nobody will act on an alert about them. Then slide to zero: an alert on the day it expires is just the outage report.</span></li><li><b class="say">Say</b><span>Both stories are ordinary: a certificate on something nobody thought of as a certificate holder. In Equifax's case the House report says renewing it let the monitoring see the attack, which had been running for weeks. An inventory finds those before they find you.</span></li><li><b class="tip">Tip</b><span>Check: the GAO counted ten months and the House report 19 (the House report says its documents show 31 January 2016). The O2 figure of 32 million is a press estimate (The Register states it without a source; Ericsson called it "a limited number of customers"); say "millions", not a precise number.</span></li><li><b class="next">Next</b><span>"Six habits to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// RUNNING YOUR OWN 03</p><h2>Habits that keep PKI boring</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid">
+      <div class="habit"><b>1 · Inventory</b><span>Every certificate, its owner, its expiry, and where it lives.</span></div>
+      <div class="habit"><b>2 · Automate</b><span>Issue and renew with ACME. Monitor the automation too.</span></div>
+      <div class="habit"><b>3 · Alert early</b><span>To a team, not a person. Test the alert at least once.</span></div>
+      <div class="habit"><b>4 · Watch CT</b><span>Know every certificate issued for your names, including ones you didn't ask for.</span></div>
+      <div class="habit"><b>5 · Drill the swap</b><span>Be able to get certificates from a different CA in a day. Distrust won't wait for your roadmap.</span></div>
+      <div class="habit"><b>6 · Guard roots</b><span>Offline roots, constrained intermediates, logs kept elsewhere.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>None of these are clever. They're what turns a CA incident into an inconvenience instead of an emergency: you know what you have, you can replace it, and you hear about problems early.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or about your own certificates. (Please keep real hostnames and internal details out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://crt.sh/" target="_blank" rel="noopener">crt.sh</a><span>Search the Certificate Transparency logs for any domain.</span></li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8555" target="_blank" rel="noopener">RFC 8555: ACME</a><span>The protocol behind automated certificates.</span></li>
+        <li><a href="../how-https-works/">How HTTPS Really Works</a><span>The handshake, certificates and what the padlock proves.</span></li>
+        <li><a href="../../news/2026-10-black-october/">Black October</a><span>The eMudhra story in the news.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The trust stores, certificates, CT log, ACME server and inventory are simulations in your browser: the signatures are real maths, but nothing issues or tests a real certificate and nothing you type is sent anywhere. Dates and schedules checked 8 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

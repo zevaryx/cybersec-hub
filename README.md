@@ -21,7 +21,9 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | Developer 1 | **Security Habits for New Developers** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-habits/) |
 | Security 1 | **Identity and Access Management** | Intermediate | about 80 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/identity-and-access/) |
 | Developer 2 | **Git and GitHub Security** | Beginner to intermediate | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/git-github-security/) |
+| Developer 3 | **Using Crypto Correctly in Code** | Intermediate | about 110 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/crypto-in-code/) |
 | Security 2 | **Cloud Security Fundamentals** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/cloud-security/) |
+| Security 3 | **Public Key Infrastructure in Depth** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/pki-in-depth/) |
 
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
@@ -51,6 +53,28 @@ Four parts, with checkpoints after parts 1 and 3:
 4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
 
 Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
+
+### Public Key Infrastructure in Depth
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **The trust model** (25 min): trust stores and cross-signing, a chain builder with real ECDSA signatures (normal, forged with a stolen intermediate key, edited after signing, name-constrained)
+2. **When CAs get it wrong** (25 min): DigiNotar and the 2026 eMudhra distrust, a mini Certificate Transparency log with real RFC 6962 hashing and inclusion proofs, a distrust-by-date timeline
+3. **Revocation and lifetimes** (20 min): why OCSP faded and what replaced it, attacker-window bars, the move to 47-day certificates, a lifetime calculator, an ACME walk-through (HTTP-01 and DNS-01)
+4. **Running your own** (15 min): an internal-CA checklist that remembers your ticks, an expiry radar
+
+Dates and standards (Baseline Requirements v2.3.1 and ballot SC-081v3, Let's Encrypt's OCSP and lifetime changes, RFCs 6962, 9162, 8555 and 9773) were checked against primary sources on 8 November 2026; the unconfirmed items are listed in the slides' speaker notes.
+
+### Using Crypto Correctly in Code
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Choosing tools** (20 min): a want-X-use-Y picker, the layers of a crypto library, a use-or-avoid sorter of invented packages
+2. **Encryption without footguns** (35 min): authenticated encryption (stream mode versus an AES-GCM tag), a birthday simulation of nonce collisions, nonce reuse, associated data, HKDF labels, KEK/DEK envelopes, versioned formats
+3. **Everything else that goes wrong** (32 min): password hash parameters, constant-time comparison, randomness, JWT verification, TLS settings across four tools, logs and errors
+4. **Review practice** (18 min): a five-snippet bug hunt with 15 bugs, a twelve-box review checklist that remembers your ticks
+
+The demos use real AES-GCM, HKDF and HMAC from the shared crypto code: teaching code, never for real data. Parameters follow NIST SP 800-38D and the OWASP cheat sheets, checked 8 November 2026.
 
 ### Phishing and Scams in the Age of AI
 
@@ -203,7 +227,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos
