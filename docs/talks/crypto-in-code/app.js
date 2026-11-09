@@ -60,7 +60,7 @@
     kx: { use: "X25519 (or ECDH P-256), then HKDF to turn the shared secret into keys. Better: a ready-made protocol such as TLS, Noise or HPKE", why: "Two parties end up with the same secret without sending it. It does not tell you who you're talking to: authenticate the other side too.",
       never: "Using the raw shared secret as a key. An exchange nobody authenticates (anyone can sit in the middle).",
       web: "crypto.subtle.deriveBits with ECDH (X25519 in newer browsers) · then HKDF", py: "X25519PrivateKey.exchange(peer_public) · HKDF(...)", other: "libsodium crypto_kx_* / crypto_box · Tink hybrid encryption" },
-    hash: { use: "SHA-256 (SHA-2), or SHA-3 / BLAKE2 / BLAKE3 when you need speed", why: "A fingerprint of data. If someone could swap the file and the hash together, the hash proves nothing: sign it, or fetch it from somewhere they can't change.",
+    hash: { use: "SHA-256 (SHA-2) or SHA-3, or BLAKE2 / BLAKE3 when you need speed", why: "A fingerprint of data. If someone could swap the file and the hash together, the hash proves nothing: sign it, or fetch it from somewhere they can't change.",
       never: "MD5 or SHA-1 for anything security-related. A hash stored right beside the file as 'proof'.",
       web: 'crypto.subtle.digest("SHA-256", data)', py: "hashlib.sha256(data).hexdigest()", other: "Node createHash(\"sha256\") · libsodium crypto_generichash (BLAKE2b)" },
     mac: { use: "HMAC-SHA256, a constant-time compare, and a timestamp inside what you sign", why: "Proves a message came from someone who holds the shared secret. The timestamp stops a captured request being replayed.",

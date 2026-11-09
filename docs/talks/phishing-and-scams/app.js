@@ -38,7 +38,7 @@
     const warns = [];
     if (u.username || u.password) warns.push(["bad", "Everything before the @ is only a username. The site you'd reach is " + host + "."]);
     if (isIp) warns.push(["bad", "A raw number instead of a name. Real services almost never ask you to sign in at one."]);
-    if (/[^\x00-\x7f]/.test(raw) || host.includes("xn--")) warns.push(["bad", "Look-alike letters: the name uses characters from another alphabet. Browsers show them as xn-- in the real address."]);
+    if (host.includes("xn--")) warns.push(["bad", "Look-alike letters? The name uses characters outside plain a-z, which the real address spells as xn--. Some letters from other alphabets look identical to ours, and browsers don't always show the xn-- form."]);
     if (u.protocol === "http:") warns.push(["y", "Plain http: no encryption. (A padlock on its own doesn't prove a site is honest, though.)"]);
     if (SHORTENERS.has(host)) warns.push(["y", "A short link hides where it goes. Don't tap it: ask for the full address, or go to the site yourself."]);
     const flat = host.replace(/rn/g, "m").replace(/vv/g, "w").replace(/0/g, "o").replace(/1/g, "l");
@@ -78,11 +78,11 @@
     if (!r || r.bad) { out.innerHTML = sp("bad", "can't read that as a link"); $("hero-note").textContent = "# try something like accounts.example.org/login"; return; }
     out.innerHTML = `${sp("k", "real site:")} ${sp("lr-site", r.site)}<br>${sp("k", "warnings:")} ${r.warns.length ? sp("bad", String(r.warns.length)) : sp("ok", "none")}`;
     const t = v.toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
-    let note = r.warns.length ? "# the first part says one thing; the part before the first slash says another."
+    let note = r.warns.length ? (r.sub || r.u.username ? "# the first part says one thing; the part before the first slash says another." : "# something in the address itself is a warning sign.")
       : "# nothing odd in the address. Still: did you expect this link?";
-    if (t === "example.com" || t === "www.example.com") note = "# example.com is reserved for documentation, so it's the one domain nobody can own. Safe to type in any talk.";
+    if (t === "example.com" || t === "www.example.com") note = "# example.com is reserved for documentation, so nobody can register it. Safe to type in any talk.";
     else if (t === "127.0.0.1" || t === "localhost") note = "# home sweet home: this address always points at your own computer.";
-    else if (/^(www\.)?youtu\.be\/dqw4w9wgxcq/.test(t) || /^(www\.)?youtube\.com\/watch\?v=dqw4w9wgxcq/.test(t)) note = "# not phishing: a different, much older, prank. Never gonna warn you about this one.";
+    else if (/^(www\.)?youtu\.be\/dqw4w9wgxcq/.test(t) || /^(www\.)?youtube\.com\/watch\?v=dqw4w9wgxcq/.test(t)) note = "# not phishing: a different, much gentler, prank. Never gonna warn you about this one.";
     else if (/^(www\.)?(google|github|apple|amazon|microsoft)\.com$/.test(t)) note = "# the real one. Even so, a bookmark beats a link in a message.";
     $("hero-note").textContent = note;
   }
@@ -156,7 +156,7 @@
     };
   }
 
-  // --------------------------------------------------------------------------- the pressure-trick highlighter (a toy: ~60 phrases)
+  // --------------------------------------------------------------------------- the pressure-trick highlighter (a toy: ~100 phrases)
   const TRICKS = {
     urg: { name: "Urgency", re: /\b(urgent(ly)?|immediately|right (now|away)|asap|within \d+ (minutes?|hours?|days?)|expires?|expiring|last chance|final notice|act now|today only|before it'?s too late|deadline|quickly|hurry)\b/gi },
     auth: { name: "Authority", re: /\b(your bank|the bank|police|tax office|irs|government|security team|it department|help ?desk|ceo|cfo|your (boss|manager)|support team|official|court|officer|microsoft|amazon|apple)\b/gi },
@@ -191,7 +191,7 @@
     const kinds = Object.keys(counts).filter((k) => k !== "ask").length;
     let note;
     if (!text.trim()) note = "# paste a message, or pick a sample. (Invented examples only.)";
-    else if (!kept.length) note = sampleKey === "boring" ? "# no tricks found. Boring is good: an ordinary message asks for nothing and rushes no one." : "# no known phrases found. That doesn't make it safe: this toy only knows about sixty. Check what's being asked.";
+    else if (!kept.length) note = sampleKey === "boring" ? "# no tricks found. Boring is good: an ordinary message asks for nothing and rushes no one." : "# no known phrases found. That doesn't make it safe: this toy only knows about a hundred. Check what's being asked.";
     else if (kinds >= 3) note = `# ${kinds} different pressure tricks in one message. Scammers stack them, because each one makes the others harder to resist.`;
     else if (counts.ask && !kinds) note = "# no pressure, but there's an ask. Still worth checking who is asking, and how.";
     else note = "# that's the pattern: a feeling first, then a request.";
