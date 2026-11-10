@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy Tools Explained</title>
+<meta name="description" content="Privacy Tools Explained: VPNs, Tor, encrypted messages and encrypted backups all protect your privacy. From whom, exactly, and who are you trusting instead? Live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/privacy-tools/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Privacy Tools Explained">
+<meta property="og:description" content="VPNs, Tor, encrypted messages and encrypted backups all protect your privacy. From whom, exactly, and who are you trusting instead?">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/privacy-tools/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/privacy-tools/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Privacy Tools Explained in neon, beside a terminal that answers, for one privacy tool, who it hides your activity from and who you now have to trust.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M16 4l10 4v8c0 6-4 10-10 12C10 26 6 22 6 16V8z' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M12 16l3 3 6-6' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "privacy-tools", "title": "Privacy Tools Explained", "footer": "PRIVACY", "subtitle": "GENERAL TRACK · 07",
+  "parts": [{ "name": "A way to think about privacy", "minutes": 15 }, { "name": "Hiding where you go", "minutes": 25 },
+            { "name": "Hiding what you say and store", "minutes": 25 }, { "name": "Wrap-up", "minutes": 10 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">PRIV<span>ACY</span></a>
+  <div class="scroll-parts">
+    <a href="#threat-models" data-part="1"><b>01</b>Thinking</a>
+    <a href="#path" data-part="2"><b>02</b>Where you go</a>
+    <a href="#e2ee" data-part="3"><b>03</b>What you say</a>
+    <a href="#chooser" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 07 · FOR EVERYONE, NO TECHNICAL BACKGROUND NEEDED</p>
+      <h1><span class="pre">Privacy Tools</span> <span class="glitch" data-text="Explained">Explained</span></h1>
+      <p class="lede">VPNs, Tor, encrypted messages and encrypted backups all "protect your privacy". From whom, exactly, and who are you trusting instead?</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/privacy-tools/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ hidden-from-whom&nbsp;<input id="hero-in" value="vpn" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About eighty minutes, four parts, two checkpoints, no technical background needed. Every privacy tool answers the same two questions: who can no longer see my activity, and who do I now have to trust instead? That's the whole talk. Nothing here touches the real network: every demo is a simulation in your browser, and nothing you type is sent anywhere.</span></li><li><b class="show">Show</b><span>The terminal: type the name of a tool (https, dns, vpn, tor, incognito, signal, backup, disk) and it answers: hides it from whom, who you now trust, and what it still can't hide. The answer to "who do I trust now?" is the part adverts leave out.</span></li><li><b class="tip">Eggs</b><span>Terminal: nothing or an empty box, <em>curtains</em>, <em>envelope</em>, <em>tinfoil hat</em>, <em>onion</em>, and any tool it doesn't know. Who sees what: every route and site combination has its own line. Claim checkers: all right or none right. Onion layers: a message with shrek, ogre or layers in it, an empty message, a wrong key, and finishing with HTTPS on or off. DNS and ECH: all four combinations. Who holds the key: forgetting your password without saving the recovery key. Envelope: sealed sender. Backups: the end-to-end option. Chooser: files from advertisers. Checklist: tick all twelve. And the browser console.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#threat-models"><small>PART 1 · 15 MIN</small><b>A way to think about privacy</b></a><span>Who might be watching</span><span>The question for every tool</span></li>
+      <li><a href="#path"><small>PART 2 · 25 MIN</small><b>Hiding where you go</b></a><span>Who sees what on the way</span><span>VPNs, honestly</span><span>Tor and its layers</span><span>Private DNS and ECH</span><span>Private windows and trackers</span></li>
+      <li><a href="#e2ee"><small>PART 3 · 25 MIN</small><b>Hiding what you say and store</b></a><span>Encrypted vs end-to-end</span><span>Messaging apps and metadata</span><span>The backup gap</span><span>Disk encryption</span></li>
+      <li><a href="#chooser"><small>PART 4 · 10 MIN</small><b>Wrap-up</b></a><span>Pick a tool for a worry</span><span>A privacy checklist</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 2 and 3: 5 minutes to discuss with a neighbour. Everything runs in your browser: no real traffic, nothing sent, so any made-up names and messages will do.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First a way of thinking, so you can judge any tool, including ones that don't exist yet. Then where you go online: who can see it and what VPNs, Tor and private DNS change. Then what you say and store: messages, backups, laptops. Last, a chart that matches a worry to a tool and a checklist to take home.</span></li><li><b class="next">Next</b><span>"Three true stories first, one idea each."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Privacy depends on who holds what</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">"Encrypted" and "private" are adverts as much as facts. The useful question is always the same: who can see it, and who holds the key?</p>
+      <ul class="rules">
+        <li>What a company can hand over depends on what it keeps.</li>
+        <li>A tool that hides you from one watcher usually hands your view to another one.</li>
+        <li>You don't need to be a target to use this: the same questions apply to a café, a phone backup and a laptop.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://signal.org/bigbrother/" target="_blank" rel="noopener">Signal: government requests</a> · <a href="https://www.cisa.gov/resources-tools/resources/mobile-communications-best-practice-guidance" target="_blank" rel="noopener">CISA: mobile communications guidance, Dec 2024</a> · <a href="https://techcrunch.com/2026/01/23/microsoft-gave-fbi-a-set-of-bitlocker-encryption-keys-to-unlock-suspects-laptops-reports" target="_blank" rel="noopener">TechCrunch, 23 Jan 2026</a> · <a href="https://support.microsoft.com/en-us/windows/finding-your-bitlocker-recovery-key-in-windows-6b71ad27-0b89-ea08-f143-056f5ab347d6" target="_blank" rel="noopener">Microsoft: finding your BitLocker recovery key</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>A messenger that holds almost nothing, 2016</b><span>A US grand jury subpoena asked Signal for information about two users. Signal could provide only when each account was created and when it last connected.</span></div>
+      <div class="card"><b>When the network itself was the target, 2024</b><span>After hackers affiliated with the Chinese government targeted phone carriers' networks, CISA told highly targeted people to use only end-to-end encrypted messaging ("such as Signal or similar apps"), and not text-message codes to sign in. It says it applies to all audiences.</span></div>
+      <div class="card"><b>A key the company held, reported January 2026</b><span>Reports said that, under a search warrant, Microsoft gave the FBI BitLocker recovery keys for three laptops in a Guam fraud investigation, because the keys had been saved to a Microsoft account. Microsoft's help page says where the key goes depends on how encryption was turned on.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three stories, one idea each, and none of them is about a clever attack. The first is a company that kept so little there was little to hand over. The second is about a network that attackers got into: end-to-end encryption still protected what people wrote. The third is the opposite: a company that held a key, and so could be asked for it. Keep the tone even: none of this is a story about someone doing something wrong. It's about what each design makes possible.</span></li><li><b class="tip">Tip</b><span>Signal: its government-requests page lists the 2016 grand jury subpoena (Eastern District of Virginia) and says the only information it could produce was the date and time a user registered and the last date of a user's connectivity. CISA: guidance of 18 December 2024, written for "highly targeted" people in senior government or political roles after PRC-affiliated actors targeted commercial telecom networks; it says it is "applicable to all audiences" and recommends "Signal or similar apps". Microsoft: the Guam case was widely reported on 23 January 2026 (TechCrunch, and others). <em>Check: TechCrunch and Forbes block automated reading, so I confirmed the three laptops, the warrant and the cloud-stored keys from a second outlet (Gigazine), not from the court record; Microsoft's own statement is paraphrased, not quoted. Keep the wording as "reports said".</em></span></li><li><b class="next">Next</b><span>"So how do you think about it before you pick a tool?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="threat-models" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// A WAY TO THINK 01</p><h2>Start with the worry, not the tool</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Six questions, from the EFF</h3>
+      <ol class="rules">
+        <li>What do I want to protect?</li>
+        <li><b>Who do I want to protect it from?</b></li>
+        <li>How bad are the consequences if I fail?</li>
+        <li>How likely is it that I will need to protect it?</li>
+        <li>How much trouble am I willing to go through?</li>
+        <li>Who are my allies?</li>
+      </ol>
+      <p class="callout"><b>SAY IT AS A SENTENCE</b> "I don't want <i>someone</i> to see <i>something</i>." That sentence picks your tool. The EFF's own words: "There is no perfect option for security."</p>
+    </div>
+    <div class="stack">
+      <h3>Who might be watching</h3>
+      <div class="watchers">
+        <div><b>The café or hotel Wi-Fi</b><span>Whoever runs the network you join.</span></div>
+        <div><b>Your internet provider</b><span>Carries everything you send from home. A 2021 FTC study found many providers collect and use more data than people expect.</span></div>
+        <div><b>The website or app</b><span>Knows what you ask it for, and who you sign in as.</span></div>
+        <div><b>Advertisers and data brokers</b><span>Follow you across sites with cookies and fingerprints.</span></div>
+        <div><b>The service's company</b><span>Holds your messages, files or backups, and answers legal orders.</span></div>
+        <div><b>Someone with your device</b><span>A thief, or someone you share a computer with.</span></div>
+        <div><b>A government or court</b><span>Can order companies to hand over what they hold.</span></div>
+      </div>
+      <p class="src">Sources: <a href="https://ssd.eff.org/module/your-security-plan" target="_blank" rel="noopener">EFF Surveillance Self-Defense: your security plan</a> · <a href="https://www.ftc.gov/news-events/news/press-releases/2021/10/ftc-staff-report-finds-many-internet-service-providers-collect-troves-personal-data-users-have-few" target="_blank" rel="noopener">FTC staff report on ISPs, Oct 2021</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Tools are answers; you need the question first. The EFF's Surveillance Self-Defense guide asks six questions, and the second one, who you want to protect it from, does most of the work. Most people's real answer is a short list: the network I'm on, the companies I use, and the person who finds my phone. Nobody needs to defend against everything, and "how much trouble am I willing to go through" is a fair question to ask yourself.</span></li><li><b class="ask">Ask</b><span>Finish the sentence for yourself: "I don't want ___ to see ___." Share one with a neighbour. <em>Typical answers: my employer, my provider, advertisers, an ex, a thief; and my messages, my browsing, my photos, my location.</em></span></li><li><b class="tip">Tip</b><span>EFF: the page lists six questions today (older write-ups list five; the sixth is "Who are my allies?"). Its quoted lines: "Security is a process", "There is no perfect option for security", "Not everyone has the same priorities, concerns, or access to resources". FTC: the staff report was published 21 October 2021 on six large US providers and found that many collect, combine and use personal data more than consumers expect, with opt-outs that are hard to use. The watchers' list is mine, not the EFF's.</span></li><li><b class="next">Next</b><span>"One question to ask about every tool."</span></li></ul></div>
+</section>
+
+<section class="slide" id="trust-question" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// A WAY TO THINK 02</p><h2>The question for every tool</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" id="tp-tools" role="group" aria-label="Choose a tool"></div>
+      <p class="tp-name" id="tp-name"></p>
+      <div class="tp-out">
+        <div class="tp-box"><small>Hides it from</small><p id="tp-hide"></p></div>
+        <div class="tp-box trust"><small>Now you trust</small><p id="tp-trust"></p></div>
+        <div class="tp-box still"><small>Still visible to</small><p id="tp-still"></p></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Hidden from whom, and who do I trust instead?</b> Ask it of every tool, including the ones in adverts.</li>
+        <li><b>Privacy tools move trust; they rarely delete it.</b> A VPN moves it from your provider to a VPN company. An encrypted backup moves it to yourself.</li>
+        <li><b>"Encrypted" is not an answer.</b> Ask who holds the key.</li>
+        <li><b>Match the answer to your worry.</b> A tool that hides what you don't mind showing isn't helping.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://support.torproject.org/about-tor/introduction/protections/" target="_blank" rel="noopener">Tor Project: what protections does Tor provide?</a> · <a href="https://ssd.eff.org/module/choosing-vpn-thats-right-you" target="_blank" rel="noopener">EFF: choosing a VPN</a> · <a href="https://support.mozilla.org/en-US/kb/common-myths-about-private-browsing" target="_blank" rel="noopener">Mozilla: private browsing myths</a> · <a href="https://support.apple.com/en-us/102651" target="_blank" rel="noopener">Apple: iCloud data security</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="show">Show</b><span>Click through the nine tools. For each, read the three boxes: what it hides, who you now trust, and what it still can't hide. Pause on the VPN (trust moves to the VPN company), the private window (it hides things from people who use your computer, not from the network) and the end-to-end backup (trust moves to you, and so does the risk of losing the key).</span></li><li><b class="say">Say</b><span>This is the slide to remember. If someone sells you a privacy tool, ask these two questions. A good answer is specific: "it hides your site names from your café's Wi-Fi, and you now trust us not to keep them." A vague answer ("military-grade privacy") is a warning sign.</span></li><li><b class="ask">Ask</b><span>Which of these boxes would you most want to be blank for your own worry? <em>Usually "still visible to": it's the part that tells you what the tool is not for.</em></span></li><li><b class="tip">Tip</b><span>The boxes summarise the sources on the slide and the slides that follow, each with its own sources. Where the wording is mine (for example "trusts the browser to forget") it describes the design, not a vendor's promise.</span></li><li><b class="next">Next</b><span>"Let's follow one web request and see who sees what."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="path" data-part="2" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHERE YOU GO 01</p><h2>Who sees what on the way</h2></header>
+  <div class="slide-body stack">
+    <div class="pm-controls">
+      <div class="seg-pick" role="group" aria-label="The website" id="pm-conn"><span>The site</span><button type="button" data-v="http" aria-pressed="false">Plain HTTP</button><button type="button" data-v="https" aria-pressed="true">HTTPS</button></div>
+      <div class="seg-pick" role="group" aria-label="The route" id="pm-route"><span>Your route</span><button type="button" data-v="direct" aria-pressed="true">Direct</button><button type="button" data-v="vpn" aria-pressed="false">Through a VPN</button><button type="button" data-v="tor" aria-pressed="false">Through Tor</button></div>
+    </div>
+    <div class="pm" id="pm"></div>
+    <p class="comment" id="pm-note"></p>
+    <p class="src">Sources: <a href="https://www.eff.org/pages/tor-and-https" target="_blank" rel="noopener">EFF: how HTTPS and Tor work together</a> · <a href="https://support.torproject.org/about-tor/introduction/protections/" target="_blank" rel="noopener">Tor Project: protections</a> · <a href="https://ssd.eff.org/module/choosing-vpn-thats-right-you" target="_blank" rel="noopener">EFF: choosing a VPN</a> · <a href="https://blog.google/security/https-by-defau/" target="_blank" rel="noopener">Google: HTTPS by default</a></p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start on HTTPS and Direct: the café and your provider see which site you went to and how much data moved, not the pages. Switch to Plain HTTP: they see everything. Back to HTTPS and switch the route to a VPN: the café and your provider now see one encrypted tunnel, and the VPN company sees what they used to. Then Tor: no single relay sees both ends, and the exit sees the site (and, on plain HTTP, the page). Last, look at the trackers box: it never changes, because cookies and logins aren't about the route.</span></li><li><b class="say">Say</b><span>Nothing here is a verdict. Every route is a trade: someone stops seeing something, and someone else starts. HTTPS is the big one, and it's already done for most sites: Google reports Chrome page loads have sat in the 95 to 99 percent HTTPS range since about 2020. The next three tools only differ in who ends up in the middle.</span></li><li><b class="ask">Ask</b><span>With HTTPS and a VPN, who can see which sites you visit? <em>The VPN company, and the sites themselves. Your café and your provider can't.</em></span></li><li><b class="tip">Tip</b><span>The boxes follow Tor's and the EFF's descriptions (the EFF has an interactive version of the HTTPS and Tor picture). Two simplifications to mention if asked: DNS lookups are covered on slide 9 (here I count the site name as visible on a direct HTTPS connection), and an address is often shared by many sites, so the network sees the address, not always a unique site. The 95 to 99 percent range is from Google's October 2025 post, which also says progress has plateaued; Chrome 154 was planned to turn on "Always Use Secure Connections" by default for public sites in October 2026. <em>Check: I did not confirm that Chrome 154 shipped it.</em></span></li><li><b class="next">Next</b><span>"The VPN box is where most people's money goes, so let's check the adverts."</span></li></ul></div>
+</section>
+
+<section class="slide" id="vpn" data-part="2" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHERE YOU GO 02</p><h2>VPNs: a tunnel to one company</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="cc" id="vc">
+        <p class="mq-count" id="vc-count"></p>
+        <p class="mq-claim" id="vc-claim"></p>
+        <div class="controls" id="vc-btns"><button type="button" class="btn" data-a="true">True</button><button type="button" class="btn" data-a="partly">Partly</button><button type="button" class="btn" data-a="no">Misleading</button><button type="button" class="btn btn-ghost" id="vc-next" hidden>Next ›</button></div>
+        <p class="verdict" id="vc-verdict" hidden></p>
+        <p class="mq-why" id="vc-why"></p>
+        <p class="comment" id="vc-score"></p>
+      </div>
+      <div class="chain-box"><small>What a VPN does: your provider sees only the tunnel; the VPN company sees what your provider used to</small>
+        <div class="chain chain-sm"><span>You</span><i></i><span class="hot c">Encrypted tunnel</span><i></i><span class="hot y">VPN company</span><i></i><span>Website</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Good uses:</b> hiding which sites you visit from the network you're on; getting around blocking on a network that filters sites; reaching your own home or work network while away.</li>
+        <li><b>Not for:</b> anonymity, stopping trackers, or protecting you from malware and phishing.</li>
+        <li><b>Do not use a VPN you don't trust.</b> A good-looking privacy policy proves little.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://ssd.eff.org/module/choosing-vpn-thats-right-you" target="_blank" rel="noopener">EFF: choosing a VPN</a> · <a href="https://www.ftc.gov/news-events/news/press-releases/2018/02/ftc-provides-tips-using-vpn-apps" target="_blank" rel="noopener">FTC: tips on VPN apps, 2018</a> · <a href="https://mullvad.net/en/blog/2023/4/20/mullvad-vpn-was-subject-to-a-search-warrant-customer-data-not-compromised/" target="_blank" rel="noopener">Mullvad: search warrant, April 2023</a> · <a href="https://blog.google/security/https-by-defau/" target="_blank" rel="noopener">Google: HTTPS by default</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Read each claim aloud and let the room vote with a show of hands (true, partly, misleading) before pressing a button, then read the explanation. Six claims, about forty seconds each.</span></li><li><b class="say">Say</b><span>A VPN is a tunnel to one company. It really does hide your sites from the network you're on, and it really does give that view to the VPN company. That can be a good trade on a hotel network or a provider you don't trust, and a poor one if the company is careless with it. The adverts promise far more than that: anonymity, protection from hackers, and "no logs" with nothing to back it up. I'm naming no products here, and I'm not recommending any.</span></li><li><b class="ask">Ask</b><span>Why might "we keep no logs" be true and still not be enough? <em>It's a promise; you can't check it yourself. Look for independent audits and for what the company actually did when it was asked for data.</em></span></li><li><b class="tip">Tip</b><span>EFF (its VPN guide): "while a VPN hides your browsing data from the ISP, it's all visible to the VPN provider"; VPNs are "best suited for one thing: routing your network connection through a different network"; two real uses (getting round censorship on a network that blocks sites, and connecting to a corporate or home network while away); "a claim is not a guarantee" about no-logs claims; "A VPN is not a tool for anonymity" (companies can still track you with cookies, tracking pixels or fingerprinting); "If you are interested in increased anonymity, Tor is a better solution than a VPN." FTC (22 February 2018): VPN apps can help shield information on public Wi-Fi, but check that the app encrypts and what it shares. Mullvad, in its own post of 20 April 2023, says police with a search warrant visited its office in Gothenburg and left without taking anything or any customer data, because it keeps none; a follow-up of 2 May says the warrant came from a German investigation that was not aimed at the service. That is the company's account. <em>Check: "military-grade encryption" is called partly true from general knowledge (the tunnel uses ordinary strong encryption like HTTPS does), not from a source.</em></span></li><li><b class="next">Next</b><span>"If you want no single company to know both who you are and where you're going, that's Tor."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tor" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHERE YOU GO 03</p><h2>Tor: three relays, three layers</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="on-controls">
+        <label class="grow">What I send<input id="on-msg" class="mono" maxlength="40" value="Meet at the library at six" spellcheck="false" autocomplete="off"></label>
+        <label class="site">The website<input id="on-site" class="mono" maxlength="24" value="news.example" spellcheck="false" autocomplete="off"></label>
+        <label class="check"><input type="checkbox" id="on-https"> The website uses HTTPS</label>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn" id="on-next">1 · Wrap in three layers</button>
+        <button type="button" class="btn btn-ghost" id="on-wrong" disabled>Try the wrong key</button>
+        <button type="button" class="btn btn-ghost" id="on-reset">Start over</button>
+      </div>
+      <div class="table-wrap"><table class="grid-table on-table"><thead><tr><th>Who</th><th>Receives</th><th>Opens it with its own key and learns</th></tr></thead><tbody id="on-rows"></tbody></table></div>
+      <p class="on-keys" id="on-keys"></p>
+      <p class="comment" id="on-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Three relays by default:</b> a guard, a middle and an exit, from volunteer-run servers.</li>
+        <li><b>No single relay knows both who you are and what you're doing.</b> The guard knows your address, the exit knows the site, the middle knows neither.</li>
+        <li><b>Where it stops:</b> an observer who can see both you and the destination (or your exit) can match timings. Tor says it does not defend against that.</li>
+        <li><b>The exit can read plain HTTP,</b> so use HTTPS. Your provider can still see that you use Tor.</li>
+        <li><b>Signing in gives you away,</b> however you got there.</li>
+      </ul>
+      <p class="callout"><b>A TOY</b> Real AES-GCM from this deck's teaching code. Real Tor negotiates a key with each relay as it builds the circuit; the layering idea is the same.</p>
+      <p class="src">Sources: <a href="https://support.torproject.org/tor-browser/getting-started/about-tor-browser/" target="_blank" rel="noopener">Tor Project: about Tor Browser</a> · <a href="https://support.torproject.org/about-tor/introduction/protections/" target="_blank" rel="noopener">protections</a> · <a href="https://support.torproject.org/about-tor/security/attacks-on-onion-routing/" target="_blank" rel="noopener">remaining attacks</a> · <a href="https://support.torproject.org/about-tor/how-tor-works/entry-guards/" target="_blank" rel="noopener">entry guards</a> · <a href="https://support.torproject.org/about-tor/using-and-sharing/circuit-length/" target="_blank" rel="noopener">circuit length</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press the button to wrap the message: the sender puts three layers on it, innermost for the exit. Keep pressing: each relay opens only its own layer, learns only the next hop, and passes the rest along. At the end the exit sees the site and, if you left HTTPS off, your message. Tick HTTPS and start over: the exit now sees only a scrambled request. Press "Try the wrong key" to see that a layer made for another relay just fails to open.</span></li><li><b class="say">Say</b><span>Each relay holds a different key and peels one layer. The guard knows who you are but not where you're going; the exit knows where you're going but not who you are; the middle knows neither. That is why it is hard for any one relay to tell, and why Tor is slow: three hops, each run by someone else.</span></li><li><b class="ask">Ask</b><span>Why can't the middle relay tell who you are or where you're going? <em>It only ever sees the relay before it and the relay after it, and the contents are still wrapped in the layer meant for the exit.</em></span></li><li><b class="tip">Tip</b><span>Tor Project pages: "Tor works by sending your traffic through three random servers (also known as relays)"; circuits "normally use three relays by design" (more for onion services); "all your local ISP can observe now is that you are communicating with Tor nodes"; Tor "aims to improve your privacy by sending your traffic through a series of proxies"; and, on remaining attacks, "It is possible for an observer who can view both you and either the destination website or your Tor exit node to correlate timings of your traffic as it enters the Tor network and also as it exits. Tor does not defend against such a threat model." Entry guards exist so that a client keeps a small set of first relays rather than picking new ones each time. <em>Check: torproject.org blocked my tools, so I read these pages through the Internet Archive's copies dated 2025; and the "ntor handshake", "fixed-size cells" and "different ciphers" in the toy note are general knowledge about the design, not quoted from a page.</em></span></li><li><b class="next">Next</b><span>"Even with all that, the website name can leak at two earlier points: the lookup and the handshake."</span></li></ul></div>
+</section>
+
+<section class="slide" id="dns-ech" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHERE YOU GO 04</p><h2>Private DNS and Encrypted ClientHello</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <div class="seg-pick" role="group" aria-label="DNS" id="dn-dns"><span>DNS</span><button type="button" data-v="plain" aria-pressed="true">Plain</button><button type="button" data-v="enc" aria-pressed="false">Encrypted</button></div>
+        <div class="seg-pick" role="group" aria-label="ECH" id="dn-ech"><span>ECH</span><button type="button" data-v="off" aria-pressed="true">Off</button><button type="button" data-v="on" aria-pressed="false">On</button></div>
+      </div>
+      <div class="table-wrap"><table class="grid-table dn-table"><thead><tr><th>Step</th><th>What a watcher on your network sees</th></tr></thead><tbody id="dn-rows"></tbody></table></div>
+      <p class="comment" id="dn-note"></p>
+      <p class="callout"><b>AT HOME</b> The <a href="../home-network/">Home Network</a> talk shows where to switch on private DNS on your router and phone.</p>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc9849.html" target="_blank" rel="noopener">RFC 9849: Encrypted ClientHello</a> · <a href="https://support.mozilla.org/kb/faq-encrypted-client-hello" target="_blank" rel="noopener">Mozilla: ECH FAQ</a> · <a href="https://developers.cloudflare.com/ssl/edge-certificates/ech" target="_blank" rel="noopener">Cloudflare: ECH</a></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Even with HTTPS, the site name leaks twice:</b> in the DNS lookup, and in the first message of the handshake.</li>
+        <li><b>Encrypted DNS</b> hides the lookup from the network between you and the resolver you chose. That resolver still sees every lookup.</li>
+        <li><b>Encrypted ClientHello (ECH)</b> encrypts the site name in the handshake. The standard was published in March 2026.</li>
+        <li><b>They work best together,</b> and ECH only helps when the site or its host supports it.</li>
+        <li><b>The address is still visible,</b> though a big host serves many sites from one.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Start with both off: the name shows up twice. Turn on encrypted DNS: only the handshake still announces it. Turn on ECH too: a watcher sees an address and a volume, not the name. Then turn encrypted DNS off again with ECH on, to show why they belong together.</span></li><li><b class="say">Say</b><span>This is the quiet fix for "my provider can still see which sites I visit, even with HTTPS". It needs your browser, the resolver and the site to cooperate. It moves trust once more: to the resolver you picked.</span></li><li><b class="tip">Tip</b><span>RFC 9849 (March 2026) says ECH "protects the SNI and other potentially sensitive fields"; section 10.2 warns that "SNI encryption is less useful without encryption of DNS queries in transit"; the ECH configuration is normally published in DNS, though "other delivery mechanisms are also possible". Mozilla's FAQ: ECH is enabled in Firefox by default since version 119, has "the most privacy benefit if used in conjunction with DNS over HTTPS", and "won't be used if family safety software is used or Firefox has been configured as part of an enterprise". Cloudflare's docs: ECH is enabled by default on Free zones and masks the real name behind a shared name, so a watcher can see that a Cloudflare site is being used but not which one. <em>Check: browser version numbers for Chrome were reported inconsistently (117 or 118), so the slide says only that ECH is supported; and whether a particular site supports ECH is a per-site question.</em></span></li><li><b class="next">Next</b><span>"Your browser has settings of its own. What does a private window really do?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="browser" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHERE YOU GO 05</p><h2>Private windows and trackers</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="cc" id="bc">
+        <p class="mq-count" id="bc-count"></p>
+        <p class="mq-claim" id="bc-claim"></p>
+        <div class="controls" id="bc-btns"><button type="button" class="btn" data-a="true">True</button><button type="button" class="btn" data-a="partly">Partly</button><button type="button" class="btn" data-a="no">Misleading</button><button type="button" class="btn btn-ghost" id="bc-next" hidden>Next ›</button></div>
+        <p class="verdict" id="bc-verdict" hidden></p>
+        <p class="mq-why" id="bc-why"></p>
+        <p class="comment" id="bc-score"></p>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>A private window forgets on your device.</b> It hides things from the next person who uses it, not from the network or the sites.</li>
+        <li><b>Trackers follow cookies and fingerprints, not routes.</b> Choose a browser, and settings, that block them.</li>
+        <li><b>Firefox and Safari block cross-site cookies by default.</b> Chrome has kept third-party cookies, and left the choice to you.</li>
+        <li><b>Global Privacy Control</b> is a setting that tells sites not to sell or share your data.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://support.mozilla.org/en-US/kb/common-myths-about-private-browsing" target="_blank" rel="noopener">Mozilla: private browsing myths</a> · <a href="https://support.google.com/chrome/answer/95464" target="_blank" rel="noopener">Google: Incognito</a> · <a href="https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/" target="_blank" rel="noopener">WebKit: full third-party cookie blocking</a> · <a href="https://blog.mozilla.org/en/products/firefox/firefox-rolls-out-total-cookie-protection-by-default-to-all-users-worldwide/" target="_blank" rel="noopener">Mozilla: Total Cookie Protection</a> · <a href="https://privacysandbox.com/news/privacy-sandbox-next-steps/" target="_blank" rel="noopener">Google: Chrome's cookie approach</a> · <a href="https://privacy.ca.gov/2026/01/californias-opt-me-out-act-your-privacy-just-got-easier/" target="_blank" rel="noopener">California: opt-out preference signals</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Same format as the VPN slide: read each claim, vote by hand, then press and read the explanation.</span></li><li><b class="say">Say</b><span>"Private" on a browser window means private on this computer. Everything on the network, and every website, sees the same as in a normal window. What does the work against tracking is the browser's tracker blocking, and a setting called Global Privacy Control, not the window.</span></li><li><b class="tip">Tip</b><span>Mozilla's private browsing page: it "doesn't make you anonymous to websites, your internet provider, your employer, or search engines"; in its table, private browsing does not "Hide your activity from your internet service provider", "Mask your IP address or location" or "Stop websites from identifying or tracking you", and it does delete cookies and site data when you close the window. Downloads and bookmarks you save stay. Google's Incognito page says that after a session "Chrome doesn't retain site data or a record of the sites you visited", while websites, "organizations that manage your network", and your employer, school or provider may still observe your activity. WebKit (24 March 2020): "Cookies for cross-site resources are now blocked by default across the board" in Safari. Mozilla (June 2022, updated 2024): Total Cookie Protection by default confines cookies to the site where they were created. Google (April 2025): Chrome keeps its current approach and leaves third-party cookie choice to users, with Incognito blocking them by default; and on 17 October 2025 it said it had decided to retire a list of Privacy Sandbox technologies, including Topics and Protected Audience, with a phase-out to follow. Global Privacy Control: California says businesses are required to honour opt-out preference signals, and that by 1 January 2027 all browsers must include one. <em>Check: which browsers send it today, and which US states honour it, vary; I confirmed California only.</em></span></li><li><b class="next">Next</b><span>"Checkpoint. Then we move from where you go to what you say and store."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>You use a VPN on café Wi-Fi, on a site that uses HTTPS. Who can now see which sites you visit?</p><details><summary>Hint</summary><p>Who is at the other end of the tunnel?</p></details><details class="answer"><summary>Answer</summary><p>The VPN company, and the websites themselves. The café and your provider see only one encrypted tunnel. You've moved trust from them to the VPN company.</p></details></li>
+      <li><p>Why can't the middle Tor relay tell who you are or where you're going?</p><details><summary>Hint</summary><p>What does each relay get to open?</p></details><details class="answer"><summary>Answer</summary><p>It only sees the relay before it and the relay after it. The guard knows your address, the exit knows the destination, and the middle's layer wraps contents it can't read.</p></details></li>
+      <li><p>You browse in a private window at work. Who can still see what you visited?</p><details><summary>Hint</summary><p>What does a private window forget, and where?</p></details><details class="answer"><summary>Answer</summary><p>Your employer, your internet provider, and the websites themselves, as both Mozilla and Google say. A private window only forgets history and cookies on that device.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="e2ee" data-part="3" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHAT YOU SAY 01</p><h2>"Encrypted" versus "end-to-end encrypted"</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Who holds the key" id="kl-mode"><span>Key</span><button type="button" data-m="provider" aria-pressed="true">The provider holds it</button><button type="button" data-m="me" aria-pressed="false">I hold it</button></div>
+      <div class="controls"><label class="grow">The note<input id="kl-note" class="mono" maxlength="44" value="Doctor moved to Thursday at 3" spellcheck="false" autocomplete="off"></label><label class="check"><input type="checkbox" id="kl-saved"> I saved my recovery key</label></div>
+      <div class="kl-keys" id="kl-keys"></div>
+      <div class="kl-btns" id="kl-btns"><button type="button" class="btn btn-sm" data-s="disk">A thief steals a server's disk</button><button type="button" class="btn btn-sm" data-s="order">A legal order reaches the provider</button><button type="button" class="btn btn-sm" data-s="inside">Someone gets into the provider's key system</button><button type="button" class="btn btn-sm" data-s="forgot">I forget my password</button><button type="button" class="btn btn-sm btn-ghost" data-s="new">New note, new keys</button></div>
+      <pre class="term kl-out" id="kl-out"></pre>
+      <p class="comment" id="kl-comment"></p>
+    </div>
+    <div class="stack">
+      <div class="tiers">
+        <div><b>Encrypted in transit</b><span>Scrambled on the wire (HTTPS). The company at the other end gets it in the clear.</span></div>
+        <div><b>Encrypted at rest</b><span>Scrambled on the company's disks. The company holds the key, so it, or anyone who can make it, can open the data.</span></div>
+        <div><b>End-to-end encrypted</b><span>Only the people at the ends hold the keys. The company stores scrambled data it can't open.</span></div>
+      </div>
+      <p class="callout"><b>THREE QUESTIONS TO ASK A SERVICE</b> Who holds the key? What can you recover if I forget my password? What do you still know about me besides the content?</p>
+      <p class="src">Sources: <a href="https://support.apple.com/en-us/102651" target="_blank" rel="noopener">Apple: iCloud data security overview</a> (standard protection and Advanced Data Protection side by side). The demo is a toy: AES-128-GCM from this deck's teaching code.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with "The provider holds it". Press each scenario: a stolen disk can't be read (encryption at rest does its job); a legal order or someone inside the key system can read it, because the key is there; forgetting your password is fixed by the provider. Switch to "I hold it": the same four scenarios now fail for everyone but you, and forgetting your password is only fixed if you ticked "I saved my recovery key". Untick it and press the last scenario to feel the price.</span></li><li><b class="say">Say</b><span>"Encrypted" tells you the data is scrambled somewhere. It doesn't tell you who can unscramble it. At rest, the provider holds the key; end-to-end, you do. Neither is wrong: a provider-held key is how you get a password reset, search inside your files and a working account after you lose your phone. End-to-end is how you get a company that can't be made to hand your data over, because it can't read it. The cost is that you carry the risk.</span></li><li><b class="ask">Ask</b><span>A service says your files are "encrypted". What question should you ask next? <em>Who holds the key?</em></span></li><li><b class="tip">Tip</b><span>Apple's iCloud data security page puts the two designs side by side: under standard data protection, many categories are encrypted in transit and on the server, with the keys held by Apple, and Advanced Data Protection "is an optional setting" that makes most of them end-to-end; with it on, "Apple will not have the encryption keys to help you recover it". Even with Advanced Data Protection, iCloud Mail, Contacts and Calendars stay under standard protection, because mail has to interoperate with the global email system. The demo is not a security product: a real service uses careful key management. Don't attribute the scenario outcomes to any one company.</span></li><li><b class="next">Next</b><span>"Messaging apps are where this matters most, and where the word 'encrypted' is most often vague."</span></li></ul></div>
+</section>
+
+<section class="slide" id="messaging" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHAT YOU SAY 02</p><h2>Messaging apps: what's hidden, what's known</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table mt"><thead><tr><th>Examples</th><th>End-to-end encrypted?</th><th>Chat backups</th></tr></thead><tbody>
+        <tr><th>Signal</th><td>Always: messages and calls</td><td>Secure Backups are opt-in, with a 64-character key you keep</td></tr>
+        <tr><th>WhatsApp</th><td>By default: chats and calls</td><td>End-to-end encrypted backup is optional (password, passkey or 64-digit key)</td></tr>
+        <tr><th>iMessage</th><td>Between Apple devices</td><td>iCloud Backup keeps a key copy; Advanced Data Protection changes that</td></tr>
+        <tr><th>Messenger</th><td>Personal chats and calls, since Dec 2023</td><td>You set a recovery method, such as a PIN</td></tr>
+        <tr><th>Telegram</th><td>Only "secret chats". Ordinary chats are encrypted between you and its servers</td><td>Ordinary chats live on its servers</td></tr>
+        <tr><th>SMS / RCS</th><td>SMS: no. RCS: between Google Messages users, and iPhone to Android in beta since May 2026</td><td>Through your phone's backup</td></tr>
+      </tbody></table></div>
+      <p class="src">Examples, not recommendations. Sources: <a href="https://signal.org/" target="_blank" rel="noopener">Signal</a> · <a href="https://blog.whatsapp.com/end-to-end-encrypted-backups-on-whatsapp" target="_blank" rel="noopener">WhatsApp: encrypted backups</a> · <a href="https://support.apple.com/en-us/102651" target="_blank" rel="noopener">Apple</a> · <a href="https://about.fb.com/news/2023/12/default-end-to-end-encryption-on-messenger/" target="_blank" rel="noopener">Meta: Messenger</a> · <a href="https://telegram.org/faq" target="_blank" rel="noopener">Telegram FAQ</a> · <a href="https://blog.google/products-and-platforms/platforms/android/android-ios-end-to-end-encrypted-rcs-messaging" target="_blank" rel="noopener">Google: RCS</a> · <a href="https://www.cisa.gov/sites/default/files/2024-12/guidance-mobile-communications-best-practices.pdf" target="_blank" rel="noopener">CISA</a></p>
+    </div>
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="What the company sees" id="env-mode"><span>Message</span><button type="button" data-m="plain" aria-pressed="true">Plain</button><button type="button" data-m="e2ee" aria-pressed="false">End-to-end</button><button type="button" data-m="sealed" aria-pressed="false">+ sealed sender</button></div>
+      <div class="table-wrap"><table class="grid-table env-table"><thead><tr><th>The service sees</th><th>Seen?</th></tr></thead><tbody id="env-rows"></tbody></table></div>
+      <p class="comment" id="env-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Right side first: "Plain" is an ordinary text message, where the company sees the lot. "End-to-end" hides the contents and nothing else. Then "sealed sender", a design from Signal that also takes the sender off the outside of the envelope. Then the table on the left, row by row: what's end-to-end by default, and what's the state of the backup.</span></li><li><b class="say">Say</b><span>Content and metadata are different things. An end-to-end app hides what you wrote, but the company still has to know where to deliver each message, and often when and how big it was. Apps differ a lot in how much of that they keep. And the table has a second column because the backup is where end-to-end can quietly stop: next slide. I'm listing examples that are widely used, not recommending any of them.</span></li><li><b class="ask">Ask</b><span>Which of these would you check first on your own phone? <em>The backup setting of whichever app has your most private chats.</em></span></li><li><b class="tip">Tip</b><span>Signal's home page: "Privacy isn't an optional mode" and "We can't read your messages or listen to your calls, and no one else can either." Its 2018 sealed-sender post: the service "can't see into" the encrypted package, but uses the outside of it to deliver; "While the service always needs to know where a message should be delivered, ideally it shouldn't need to know who the sender is." WhatsApp: its blog describes encrypted backups as "an extra, optional layer", with "a password of your choice or a 64-digit encryption key that only you know", and says "Neither WhatsApp nor your backup service provider will be able to read your backups"; the passkey option was announced 30 October 2025. Apple (iCloud data security): "Messages in iCloud is end-to-end encrypted when iCloud Backup is disabled", and under standard protection a backup "includes a copy of the Messages in iCloud encryption key"; with Advanced Data Protection it is always end-to-end. Meta (6 December 2023): end-to-end encryption rolling out for "all personal chats and calls on Messenger and Facebook", taking months. Telegram's FAQ: only secret chats are end-to-end; cloud chats use "server-client encryption". CISA: "SMS messages are not encrypted"; Google (11 May 2026): end-to-end encrypted RCS between Android and iPhone began rolling out in beta on iOS 26.5, on supported carriers, on by default and shown with a lock icon. <em>Check: I could not read WhatsApp's own help centre, so "by default since 2016" rests on its blog's mention of end-to-end encryption by default and common reporting; each app's defaults change, so check them the week you present.</em></span></li><li><b class="next">Next</b><span>"The backup is the gap."</span></li></ul></div>
+</section>
+
+<section class="slide" id="backups" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHAT YOU SAY 03</p><h2>The backup gap</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Cloud backup of a chat app" id="bk-mode"><span>Cloud backup</span><button type="button" data-m="off" aria-pressed="false">Off</button><button type="button" data-m="company" aria-pressed="true">On, company holds the key</button><button type="button" data-m="mine" aria-pressed="false">On, end-to-end</button></div>
+      <div class="table-wrap"><table class="grid-table bk-table"><thead><tr><th>The question</th><th>The answer</th></tr></thead><tbody id="bk-rows"></tbody></table></div>
+      <p class="comment" id="bk-note"></p>
+    </div>
+    <div class="stack">
+      <div class="plats">
+        <div><b>iPhone and iCloud</b><span>Standard protection: backup keys are in Apple's data centres. Advanced Data Protection (optional) makes the backup end-to-end, and then Apple can't help you recover it. Apple stopped offering it to new UK users in 2025.</span></div>
+        <div><b>Android and Google</b><span>Some backed-up data is end-to-end encrypted with your screen lock. Google says MMS media and Google Photos are not covered by that.</span></div>
+        <div><b>WhatsApp</b><span>Optional end-to-end encrypted backup: password, passkey or 64-digit key. Neither WhatsApp nor the cloud provider can read it.</span></div>
+        <div><b>Signal</b><span>Secure Backups are opt-in. A 64-character key is made on your device. Lose it and Signal can't recover the backup.</span></div>
+      </div>
+      <p class="callout"><b>ALSO</b> A backup of an iPhone to a computer is not encrypted by default. Apple's setting is "Encrypt local backup".</p>
+      <p class="src">Sources: <a href="https://support.apple.com/en-us/102651" target="_blank" rel="noopener">Apple: iCloud data security</a> · <a href="https://support.apple.com/en-gb/122234" target="_blank" rel="noopener">Apple: Advanced Data Protection in the UK</a> · <a href="https://support.google.com/android/answer/2819582" target="_blank" rel="noopener">Google: Android backup</a> · <a href="https://blog.whatsapp.com/end-to-end-encrypted-backups-on-whatsapp" target="_blank" rel="noopener">WhatsApp</a> · <a href="https://blog.whatsapp.com/encrypting-your-whatsapp-chat-backup-just-got-easier" target="_blank" rel="noopener">WhatsApp passkeys</a> · <a href="https://signal.org/blog/introducing-secure-backups/" target="_blank" rel="noopener">Signal</a> · <a href="https://support.apple.com/en-us/108353" target="_blank" rel="noopener">Apple: encrypted local backups</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Pretend the chat app is end-to-end encrypted, and pick the three cases. "Off": only you and the people in the chat can read it, and a lost phone loses the history. "Company holds the key": a lost phone is fixed with a password reset, and the company, or anyone it's compelled to help, can open the backup. "End-to-end": only you, and only your key restores it. Then the four cards on the right: where each platform stands.</span></li><li><b class="say">Say</b><span>End-to-end encryption can stop at your backup. The chat was unreadable in transit, and then a copy went to a cloud where the company can open it. It isn't a scandal, it's a convenience: a key held by the company is how you recover after losing a phone. But you should choose it on purpose. And if you choose the end-to-end option, write the key down somewhere other than the phone.</span></li><li><b class="ask">Ask</b><span>If you turn on an end-to-end backup, where would you keep the key? <em>Somewhere that survives losing the phone: a password manager that you can still open from another device, or a paper copy in a safe place.</em></span></li><li><b class="tip">Tip</b><span>Apple's iCloud data security page: under standard protection the keys to iCloud Backup "are secured in Apple data centers"; with Advanced Data Protection "iCloud Backup and everything inside it is end-to-end encrypted"; "Apple will not have the encryption keys to help you recover it". Apple's UK page: users who had not already enabled Advanced Data Protection "will no longer have the option to do so"; Apple also says iMessage and FaceTime stay end-to-end encrypted in the UK. <em>Check: Apple's page is dated to the February 2025 change; press reports in 2026 say it is still not offered to new UK users and that Apple's legal challenge is ongoing, but the UK order has never been officially confirmed. Look at Apple's page the week you present.</em> Google's backup page: "Some of your data is end to end encrypted with your device's screen lock PIN, pattern, or password", and MMS media and Google Photos are excluded. WhatsApp (2021): end-to-end encrypted backups are optional; (30 October 2025): passkeys can replace the password or 64-digit key. Signal (2025): "Signal's secure backups are opt-in", the key is 64 characters, "never shared with Signal's servers", and "Losing it means losing access to your backup permanently, and Signal cannot help you recover it." Apple (encrypted backups): "Your backup isn't encrypted by default" for a backup made to a computer.</span></li><li><b class="next">Next</b><span>"One more place where a copy of the key can hide: your laptop."</span></li></ul></div>
+</section>
+
+<section class="slide" id="disk" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// HIDING WHAT YOU SAY 04</p><h2>Disk encryption: lost-laptop insurance</h2></header>
+  <div class="slide-body stack">
+    <div class="dk">
+      <div><b>It protects you when</b><ul><li>a laptop is lost or stolen while it's off or locked</li><li>the drive is taken out and read somewhere else</li><li>nobody has the key, or the lock</li></ul></div>
+      <div><b>It doesn't protect you when</b><ul><li>you're signed in and the screen is unlocked</li><li>malware is running as you</li><li>someone has the recovery key, or can make the company that holds it hand it over</li><li>the recovery key sits next to the laptop</li></ul></div>
+      <div><b>The key question: where's the recovery key?</b><ul><li><b>Windows (BitLocker):</b> where it was saved depends on how encryption was turned on: your Microsoft account, a work or school account, a printout or a file.</li><li><b>Mac (FileVault):</b> you choose to unlock with your iCloud account or with a recovery key you keep, ideally not on the encrypted disk.</li><li><b>Phones:</b> see the <a href="../mobile-safety/">Your Phone, Safely</a> talk.</li></ul></div>
+    </div>
+    <p class="callout"><b>A COPY WITH A COMPANY IS A COPY THEY CAN BE ASKED FOR.</b> That's not a reason to avoid it: for most people the best recovery option is the one they'll actually be able to use. It's a reason to choose it on purpose, and to know which you picked.</p>
+    <p class="src">Sources: <a href="https://support.microsoft.com/en-us/windows/finding-your-bitlocker-recovery-key-in-windows-6b71ad27-0b89-ea08-f143-056f5ab347d6" target="_blank" rel="noopener">Microsoft: finding your BitLocker recovery key</a> · <a href="https://support.apple.com/guide/mac-help/protect-data-on-your-mac-with-filevault-mh11785/mac" target="_blank" rel="noopener">Apple: protect data on your Mac with FileVault</a> · <a href="https://techcrunch.com/2026/01/23/microsoft-gave-fbi-a-set-of-bitlocker-encryption-keys-to-unlock-suspects-laptops-reports" target="_blank" rel="noopener">TechCrunch, 23 Jan 2026</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Disk encryption turns a lost laptop into a locked box. It's the most useful of all the tools in this talk for the commonest bad day: leaving a laptop on a train. The one question to ask is the same as before: who holds a copy of the key to unlock it? Often it's you, sometimes a company, and the right answer depends on how you'd recover after a disaster. Know which you've chosen.</span></li><li><b class="ask">Ask</b><span>Do you know where the recovery key for your laptop is? <em>Most people don't. It takes two minutes to find out, and it's on the checklist at the end.</em></span></li><li><b class="tip">Tip</b><span>Microsoft's help page: the key "might be" in your Microsoft account, in a work or school account, on a printout or on a USB flash drive, "depending on the choice that was made when activating BitLocker"; I could not find a sentence saying device encryption always backs it up on sign-in, so the slide doesn't say that. Apple's FileVault guide: choose "Allow my iCloud account to unlock my disk" or a recovery key, and "keep a copy of the key somewhere other than your encrypted startup disk"; if you lose both the password and the key "your files and settings will be lost forever". The Guam reports (23 January 2026): see slide 3's check note; the keys had been stored in a Microsoft account. Phone encryption is covered in General 4, so it isn't repeated.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A service says your files are "encrypted". What question should you ask next?</p><details><summary>Hint</summary><p>Encrypted by whom, and who can unlock it?</p></details><details class="answer"><summary>Answer</summary><p>Who holds the key? If the provider does, it (or anyone it's made to help) can open the data and can help you recover it. If you do, nobody else can, and nobody can help you if you lose the key.</p></details></li>
+      <li><p>Your chat app is end-to-end encrypted, and your phone backs it up to the cloud. Can the backup undo that?</p><details><summary>Hint</summary><p>Who holds the backup's key?</p></details><details class="answer"><summary>Answer</summary><p>Yes, if the backup isn't end-to-end encrypted: the company can open it. Check the backup setting, and if you turn on the end-to-end option, keep the key safe.</p></details></li>
+      <li><p>An app can't read your messages. What might it still know about you?</p><details><summary>Hint</summary><p>Think of an envelope.</p></details><details class="answer"><summary>Answer</summary><p>Metadata: who you talk to, when, how often, how big the messages are, and your network address. Apps keep very different amounts of it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="chooser" data-part="4" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>"I want to hide X from Y, so I use Z"</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="ch-pick">
+        <label>I want to hide <select id="ch-what" aria-label="What I want to hide"></select></label>
+        <label>from <select id="ch-whom" aria-label="Who I want to hide it from"></select></label>
+      </div>
+      <div class="ch-out">
+        <p class="use" id="ch-use"></p>
+        <p class="trust" id="ch-trust"></p>
+        <p class="still" id="ch-still"></p>
+      </div>
+      <p class="comment" id="ch-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Say the worry as a sentence,</b> then look for where that thing actually travels or sits.</li>
+        <li><b>Often the best tool is boring:</b> HTTPS, a device lock, an end-to-end app, a backup you control.</li>
+        <li><b>Some cells say "no single tool".</b> That's the honest answer, not a gap in the chart.</li>
+        <li><b>This chart is a starting point,</b> not advice for a particular situation. If you're at real risk from a powerful adversary, get help from people who do this for a living, such as the EFF's guides or a digital-security helpline.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Pick a worry from your own list on slide 4 and run it through the chart, then take two or three from the room. Notice the "still visible" line: it's where each tool stops.</span></li><li><b class="say">Say</b><span>You don't need to remember the tools. You need the question: hide what, from whom? The answers are mostly the boring ones. And some worries don't have a tool: if a website knows you because you signed in, no network tool changes that.</span></li><li><b class="tip">Tip</b><span>The chart's content comes from the sources on the earlier slides; where it says what a tool "can't" do, that is the sources' wording or a plain reading of the design. It is a teaching aid, not a threat assessment. It avoids advice about hiding from law enforcement; if asked, point people to the EFF's Surveillance Self-Defense guides and to a local digital-security helpline.</span></li><li><b class="next">Next</b><span>"Then a checklist to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>Your privacy settings checklist</h2></header>
+  <div class="slide-body stack">
+    <div class="plan" id="pt-plan">
+      <div><b>1 · What I send</b>
+        <label><input type="checkbox" data-k="https"> My browser warns me before it opens a site without HTTPS, and I notice when it does</label>
+        <label><input type="checkbox" data-k="e2ee"> I use an end-to-end encrypted messenger for private chats, and I know which of my chats aren't</label>
+        <label><input type="checkbox" data-k="dns"> I know whether I use encrypted DNS in my browser, my phone or my router</label>
+        <label><input type="checkbox" data-k="vpn"> If I use a VPN, I know who runs it, what it keeps and what I use it for</label>
+      </div>
+      <div><b>2 · What I store</b>
+        <label><input type="checkbox" data-k="disk"> My laptop is encrypted, and I know where its recovery key is</label>
+        <label><input type="checkbox" data-k="bk"> I know whether my phone and chat backups are end-to-end encrypted</label>
+        <label><input type="checkbox" data-k="cloud"> I know which of my cloud files are end-to-end encrypted, and which are only encrypted on the company's disks</label>
+        <label><input type="checkbox" data-k="keys"> Any recovery key I made is stored away from the device it unlocks</label>
+      </div>
+      <div><b>3 · What follows me</b>
+        <label><input type="checkbox" data-k="track"> My browser blocks cross-site trackers, and I've looked at its privacy settings</label>
+        <label><input type="checkbox" data-k="gpc"> Global Privacy Control is on, where my browser offers it</label>
+        <label><input type="checkbox" data-k="pw"> I know a private window only forgets things on this device</label>
+        <label><input type="checkbox" data-k="apps"> I've checked the permissions and privacy details of the apps I use most</label>
+      </div>
+    </div>
+    <p class="comment" id="pt-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Give people a few minutes to tick what they already know to be true. Ticks are saved in this browser only. Suggest they photograph the unticked ones, or start with group 2: the recovery keys.</span></li><li><b class="say">Say</b><span>Not one of these boxes is "buy a privacy product". They are all about knowing where things are, and who holds the key. Most people find three or four gaps, and finding them is the point.</span></li><li><b class="tip">Tip</b><span>The checklist is stored in localStorage under "privacy-tools-checklist". It never leaves the browser.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Every tool in this talk answers "hidden from whom, and who do I trust instead?" What would you ask the next one?</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>Every demo keeps working, and the checklist remembers your ticks.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../how-https-works/">How HTTPS Really Works</a><span>The padlock, the handshake and what still leaks: the base for part 2.</span></li>
+        <li><a href="../home-network/">Securing Your Home Network</a><span>Where to turn on private DNS, and what your provider sees.</span></li>
+        <li><a href="../mobile-safety/">Your Phone, Safely</a><span>Phone encryption, backups and what to do if it's lost.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>Keys, signatures and the maths behind the tools.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no real network traffic, and nothing you type is sent anywhere. Tools and products are named as examples, not recommendations. This is general information, not advice for a particular situation. Facts checked 9 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. If you have a minute left, ask each person for the one setting from the checklist they'll look at first. Thank them for the careful questions: privacy is a topic where "it depends" is usually the true answer.</span></li><li><b class="tip">Tip</b><span>Likely questions: "Is Tor legal?" (In most places, yes: it's used by journalists, researchers and ordinary people; don't give legal advice.) "Which VPN should I use?" (Say you're not recommending products; give the three questions: who runs it, what does it keep, what's it for.) "Is Signal safe?" (It's end-to-end by default and keeps little; no app protects you from someone who has your unlocked phone.)</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
