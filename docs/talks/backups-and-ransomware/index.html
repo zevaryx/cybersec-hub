@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Backups and Ransomware</title>
+<meta name="description" content="Backups and Ransomware: the one defence that works against ransomware, dead disks and accidental deletes alike is a backup you've actually tested. Live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/backups-and-ransomware/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Backups and Ransomware">
+<meta property="og:description" content="The one defence that works against ransomware, dead disks and accidental deletes alike: backups you've actually tested.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/backups-and-ransomware/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/backups-and-ransomware/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Backups and Ransomware in neon, beside a terminal that counts the copies of your files and checks whether any are out of ransomware's reach.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Crect x='5' y='9' width='22' height='14' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M9 16h8' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='22' cy='16' r='2' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "backups-and-ransomware", "title": "Backups and Ransomware", "footer": "BACKUP", "subtitle": "GENERAL TRACK · 06",
+  "parts": [{ "name": "How ransomware works", "minutes": 16 }, { "name": "Backups that survive", "minutes": 22 }, { "name": "The bad day", "minutes": 13 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">BACK<span>UP</span></a>
+  <div class="scroll-parts">
+    <a href="#ways-in" data-part="1"><b>01</b>Ransomware</a>
+    <a href="#sync-vs-backup" data-part="2"><b>02</b>Backups</a>
+    <a href="#bad-day" data-part="3"><b>03</b>Bad day</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 06 · FOR EVERYONE, NO TECHNICAL BACKGROUND NEEDED</p>
+      <h1><span class="pre">Backups and</span> <span class="glitch" data-text="Ransomware">Ransomware</span></h1>
+      <p class="lede">The one defence that works against ransomware, dead disks and accidental deletes alike: backups you've actually tested.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/backups-and-ransomware/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ survives --files-live-in&nbsp;<input id="hero-in" value="laptop, a sync folder" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About fifty-five minutes, three parts, two checkpoints, no technical background needed. The talk is about one boring habit that beats ransomware, dead disks and clumsy fingers alike. Nothing here encrypts or deletes anything real: every demo is a pretend folder, and please use made-up file names and passwords.</span></li><li><b class="show">Show</b><span>The terminal: list the places a file lives, separated by commas. "laptop, a sync folder" is two copies, and a sync folder follows the laptop, so it isn't the safety net it looks like. Try adding a drive in a drawer or a cloud backup and watch the verdict change.</span></li><li><b class="tip">Eggs</b><span>On the title slide, list places like: nothing (or leave it empty), my head, the cloud, a drive in a drawer, paper or printed, a floppy disk, tape, a RAID or mirror, or a full plan with a cloud backup, an unplugged drive and a copy somewhere else. In the sync demo, press "Ransomware locks the laptop", then "Try to restore" with the slider at the far end (120 days). In the 3-2-1 builder, try only the laptop, everything at once with the restore box ticked, or the textbook plan with all five chips green. In "how far back", slide past a year. In the key sorter, get all six right, or none. In the restore calculator, try 4 TB over the 20 Mbit/s line, or 50 GB over USB. Tick all six boxes of the restore test. In the ransomware-morning demo, try "only the laptop", or the unplugged copy at 45 days. In the tabletop, draw the same scenario twice in a row, or all six. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#ways-in"><small>PART 1 · 16 MIN</small><b>How ransomware works</b></a><span>How it gets in</span><span>What it does next</span><span>Why you can't crack it</span><span>Why paying is a gamble</span></li>
+      <li><a href="#sync-vs-backup"><small>PART 2 · 22 MIN</small><b>Backups that survive</b></a><span>Sync is not backup</span><span>3-2-1, plus one you can't reach</span><span>How far back you can go</span><span>Keys, and a restore you've tried</span></li>
+      <li><a href="#bad-day"><small>PART 3 · 13 MIN</small><b>The bad day</b></a><span>A ransomware morning, simulated</span><span>The first hour</span><span>For small teams</span><span>Six habits</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour. Everything runs in your browser: nothing real is locked, deleted or sent, so any made-up names will do.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First the enemy, briefly: how ransomware gets in, what it does, and why you can't talk your way out of it. Then the heart of the talk, backups that actually survive a bad day. Last, what to do on the day itself, and how a small team can practise.</span></li><li><b class="next">Next</b><span>"Why a whole talk on backups?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Backups are the quiet hero</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Ransomware locks your files and asks for money. Dead disks, spilled coffee and accidental deletes do the same damage for free. One habit covers all of them: a backup you've actually tested.</p>
+      <ul class="rules">
+        <li>The big cases you read about happen to companies, but the doors and the fixes are the same at home or in a small team.</li>
+        <li>Backups fix <b>locked</b> files. They can't fix <b>stolen</b> ones, which is why the doors matter too.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>One old login, 2021</b><span>Colonial Pipeline's chief executive told the US Senate the attacker used a legacy VPN profile that wasn't meant to be in use. He also called paying the ransom one of the toughest decisions of his life.</span></div>
+      <div class="card"><b>A portal without a second step, 2024</b><span>UnitedHealth's chief executive told Congress criminals used compromised credentials on a Change Healthcare remote-access portal with no multi-factor authentication. Ransomware followed nine days later.</span></div>
+      <div class="card"><b>Backups nobody tested, 2017</b><span>GitLab deleted production data by mistake, then found its nightly backup had failed silently ("The S3 bucket was empty"). It restored from a six-hour-old snapshot. Not ransomware, same lesson.</span></div>
+      <p class="src">Sources: <a href="https://www.hsgac.senate.gov/wp-content/uploads/imo/media/doc/Testimony-Blount-2021-06-08.pdf" target="_blank" rel="noopener">Blount testimony, June 2021</a> · <a href="https://docs.house.gov/meetings/IF/IF02/20240501/117242/HHRG-118-IF02-Wstate-WittyS-20240501-U5.pdf" target="_blank" rel="noopener">Witty testimony, May 2024</a> · <a href="https://about.gitlab.com/blog/postmortem-of-database-outage-of-january-31/" target="_blank" rel="noopener">GitLab postmortem, Feb 2017</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three short stories, one idea each. A single old login. A remote door with no second step. And a company that did have backups, on paper. None of them needed a genius, and none was about the fancy part of ransomware. The encryption is the last step, and the one backups answer.</span></li><li><b class="tip">Tip</b><span>Colonial: Joseph Blount's written statement to the Senate Homeland Security committee (8 June 2021) says "we believe the attacker exploited a legacy virtual private network (VPN) profile that was not intended to be in use" and that the company was still working out how the credentials were obtained; on payment he wrote "It was one of the toughest decisions I have had to make in my life." The "single-factor authentication" detail comes from the hearing's question-and-answer, which I read only through the committee's summary and press reports, so it isn't on the slide. Change Healthcare: Andrew Witty's written testimony (1 May 2024) says that on 12 February criminals "used compromised credentials to remotely access a Change Healthcare Citrix portal... The portal did not have multi-factor authentication", and "Ransomware was deployed nine days later"; he also wrote "the decision to pay a ransom was mine. This was one of the hardest decisions I've ever had to make." The dollar figure reported in the press isn't in his written statement, so it's left out. GitLab: the postmortem of 31 January 2017 (published 10 February) says the nightly dump "failed silently" because it used PostgreSQL 9.2 tools on a 9.6 database, "The S3 bucket was empty, and there was no recent backup to be found anywhere", and the team restored a staging snapshot from about six hours before; it estimated losing "at least 5000 projects, 5000 comments, and roughly 700 users".</span></li><li><b class="next">Next</b><span>"First, how does ransomware get in?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="ways-in" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// HOW RANSOMWARE WORKS 01</p><h2>Four ways in, and all of them are ordinary</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid habits-2">
+      <div class="habit"><b>1 · A convincing message</b><span>A link, an attachment or a fake call that gets someone to run something or hand over a login. The Phishing talk is the defence.</span></div>
+      <div class="habit"><b>2 · Remote access left open</b><span>Remote desktop, a VPN or a web portal with a password and no second step. The first two stories on the last slide started here.</span></div>
+      <div class="habit"><b>3 · Software nobody updated</b><span>Across all the breaches Verizon studied (November 2024 to October 2025), 31% began with an exploited software flaw, now the most common way in, ahead of stolen passwords.</span></div>
+      <div class="habit"><b>4 · Passwords and other people's mistakes</b><span>A password reused from an old breach, or a supplier or IT provider that gets hit first. CISA's guide lists both.</span></div>
+    </div>
+    <p class="callout"><b>AT HOME</b> the same doors look like a fake delivery text, a camera or storage box reachable from the internet, a router or NAS that never got updates, and a password used twice. In 2022 QNAP warned that DeadBolt was encrypting NAS drives directly connected to the internet, and told owners to turn off UPnP and port forwarding. See the <a href="../phishing-and-scams/">Phishing</a>, <a href="../passwords-and-accounts/">Passwords</a> and <a href="../home-network/">Home Network</a> talks.</p>
+    <p class="src">Sources: <a href="https://www.cisa.gov/stopransomware/ransomware-guide" target="_blank" rel="noopener">CISA #StopRansomware Guide</a> · <a href="https://www.verizon.com/business/resources/reports/dbir/" target="_blank" rel="noopener">Verizon DBIR 2026</a> · <a href="https://www.qnap.com/en/security-news/2022/qnaps-response-action-and-statement-to-recent-deadbolt-attacks" target="_blank" rel="noopener">QNAP: DeadBolt statement, Sept 2022</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is not a list of exotic tricks. Every door here is a normal part of life: email, remote access, software, passwords. If you've seen the Phishing, Passwords and Home Network talks, this is the same advice with a bigger reason to care.</span></li><li><b class="ask">Ask</b><span>Which of the four could happen in your home or office this month? <em>Usually all of them; the one people forget is the exposed remote access, such as a camera, NAS or remote desktop reachable from the internet.</em></span></li><li><b class="tip">Tip</b><span>CISA's #StopRansomware Guide (September 2023) groups its prevention advice under: internet-facing vulnerabilities and misconfigurations, compromised credentials, phishing, precursor malware infection, advanced social engineering, and third parties and managed service providers. It doesn't rank them. Verizon's 2026 Data Breach Investigations Report (incidents from 1 November 2024 to 31 October 2025) says 31% of breaches began with an exploited vulnerability, beating stolen credentials as the top way in, and that ransomware was involved in 48% of breaches; both numbers are for all breaches in the study, not only ransomware. I couldn't read the report's exact percentages for credential abuse or phishing, so they're not quoted. QNAP's statement of 12 September 2022 says DeadBolt "exploited a vulnerability within Photo Station to encrypt QNAP NAS that are directly connected to the Internet", that a patched version came "within 12 hours", and tells owners to disable UPnP (on the router and in myQNAPcloud) and port forwarding unless they need outside access, and to take regular snapshots.</span></li><li><b class="next">Next</b><span>"What does it do once it's in?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="what-happens" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// HOW RANSOMWARE WORKS 02</p><h2>What it does once it's in</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="chain-box"><small>A typical attack, in order</small>
+        <div class="chain"><span>Gets in</span><i></i><span>Looks around</span><i></i><span class="hot y">Steals a copy<em>to threaten you with</em></span><i></i><span class="hot">Deletes backups it can reach</span><i></i><span class="hot c">Locks your files<em>then asks for money</em></span></div>
+      </div>
+      <ul class="rules">
+        <li><b>Locking is ordinary encryption.</b> The same maths that protects your bank, used against you, with the key kept by the criminals. The <a href="../crypto-101/#sym-asym">Crypto 101 talk</a> explains the two kinds of keys.</li>
+        <li><b>Stealing first is common now.</b> In Coveware's second-quarter 2026 cases, 76% involved data being taken. A backup can't un-steal it.</li>
+        <li><b>Backups are a target.</b> Attackers delete or lock "online" backups they can reach: a drive left plugged in, a network folder, a synced cloud folder.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="props props-2">
+        <div><b>Locked files</b><span>A tested, separate backup fixes this. It's what the rest of the talk is about.</span></div>
+        <div><b>Stolen data</b><span>A backup doesn't help. Strong sign-ins, updates, and a plan for telling the people affected do.</span></div>
+      </div>
+      <p class="note">Coveware notes that groups have pivoted from encrypting in place, which is processor-intensive and "can trigger alerts", and that "companies with a backup program can simply restore".</p>
+      <p class="src">Sources: <a href="https://attack.mitre.org/techniques/T1490/" target="_blank" rel="noopener">MITRE ATT&amp;CK T1490</a> · <a href="https://attack.mitre.org/techniques/T1486/" target="_blank" rel="noopener">MITRE T1486</a> · <a href="https://www.nomoreransom.org/en/ransomware-qa.html" target="_blank" rel="noopener">No More Ransom Q&amp;A</a> · <a href="https://www.veeam.com/whitepapers/cyber-extortion-report-q2-2026_wp.pdf" target="_blank" rel="noopener">Coveware Q2 2026</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>It's patient. The lock-up at the end is the loud part; before it, attackers usually look around, copy what they can, and go hunting for backups so you can't simply restore. That's why a backup needs to be somewhere an intruder on your network can't reach.</span></li><li><b class="tip">Tip</b><span>MITRE ATT&amp;CK T1490 (version 1.6, 4 November 2026): adversaries "may delete or remove built-in data and turn off services designed to aid in the recovery" and may "delete 'online' backups that are connected to their network"; it names volume shadow copy deletion as a common method. T1486 describes "encrypting files or data on local and remote drives and withholding access to a decryption key". No More Ransom's Q&amp;A says later families "use two separate keys... a public one to encrypt files, and a private one, which is needed for decryption", held by the criminals. Coveware's Q2 2026 report (published through Veeam): data exfiltration in 76% of cases; mid-market companies were 75% of cases; the quote about backups is from the report's own text. These are Coveware's incident-response cases, mostly organisations, so treat the numbers as a picture of reported cases and not of everyone.</span></li><li><b class="next">Next</b><span>"Why not just crack the key?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="hopeless" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// HOW RANSOMWARE WORKS 03</p><h2>Why "just crack it" doesn't work</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Key size" id="hl-bits"><span>Key size</span>
+        <button type="button" data-v="56" aria-pressed="false">56 bits (old DES)</button>
+        <button type="button" data-v="128" aria-pressed="true">128 bits</button>
+        <button type="button" data-v="256" aria-pressed="false">256 bits</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Guessing speed" id="hl-rate"><span>Guessing</span>
+        <button type="button" data-v="12" aria-pressed="false">1 powerful computer</button>
+        <button type="button" data-v="18" aria-pressed="true">a million of them</button>
+        <button type="button" data-v="21" aria-pressed="false">a billion of them</button>
+      </div>
+      <div class="stats pc-stats" id="hl-out"></div>
+      <p class="comment" id="hl-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The key is the only way in.</b> Modern keys have 128 to 256 bits. Trying them all is not slow, it's out of the question.</li>
+        <li><b>Decryptors exist, but not from cracking.</b> They come from mistakes: a flaw in the ransomware, a seized server, leaked keys.</li>
+        <li><b>Check before you do anything else:</b> <a href="https://www.nomoreransom.org/" target="_blank" rel="noopener">nomoreransom.org</a> lists free decryptors, and says "not every type of ransomware has a solution".</li>
+        <li><b>Plan as if none exists.</b> A backup is the plan that doesn't depend on luck.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.nomoreransom.org/en/index.html" target="_blank" rel="noopener">No More Ransom</a> · <a href="../crypto-101/#aes">Crypto 101: AES</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Start on 128 bits with a million computers: hundreds of times the age of the universe. Switch to a billion computers, an absurd rate: still about ten billion years to try every key. Click 56 bits, the old DES size: seconds or hours. That's the point of key length. Then 256 bits: the number has no meaning in human terms.</span></li><li><b class="say">Say</b><span>People imagine a clever expert breaking the lock. Real attacks on ransomware happen at the edges: the criminals made a mistake, or police seized their servers and got the keys. That's real and worth a free check, but it's luck, not a plan.</span></li><li><b class="tip">Tip</b><span>The demo tries every key, which takes about twice as long as the average search, so a real attacker would on average need half as long: still not feasible. The rates are illustrative and absurdly generous: 10<sup>12</sup> keys a second for one powerful computer, a million or a billion of them together. The age of the universe is about 13.8 billion years. Ransomware families differ: some use 128- or 256-bit symmetric ciphers for files with a public-key step protecting the file key; I describe that as "typically". No More Ransom's home page (checked 9 November 2026) lists decryptors for families including LockBit 3.0, Akira, Rhysida and Phobos / 8base, and says "At the moment, not every type of ransomware has a solution" and "The general advice is not to pay the ransom." Law enforcement has sometimes released keys: the FBI has said publicly that it holds many LockBit keys, but I could only read that second-hand, so it's not on the slide.</span></li><li><b class="next">Next</b><span>"Which brings us to paying."</span></li></ul></div>
+</section>
+
+<section class="slide" id="paying" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// HOW RANSOMWARE WORKS 04</p><h2>Paying is a gamble, and a hard call</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>What the authorities say</h3>
+      <ul class="rules">
+        <li><b>FBI:</b> "does not support paying a ransom". Payment doesn't ensure recovery and "encourages perpetrators to target more victims".</li>
+        <li><b>UK law enforcement (NCSC):</b> they "do not encourage, endorse, nor condone" payment. It gives no guarantee, funds crime and can make you a repeat target.</li>
+        <li><b>US Treasury (OFAC):</b> "strongly discourages" it, and says payments can risk breaking sanctions rules.</li>
+        <li><b>FTC, for small businesses:</b> it's "up to you to determine whether the risks and costs of paying are worth the possibility of getting your files back".</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Why it's still hard</h3>
+      <ul class="rules">
+        <li>Two chief executives told Congress that paying was one of the hardest decisions they'd ever made. Hospitals, pipelines and shops can't wait.</li>
+        <li>Paying may not even help: after LockBit's takedown, investigators found data "deleted" after payment hadn't been (Coveware).</li>
+      </ul>
+      <div class="stats pc-stats">
+        <div class="stat"><b>19%</b><span>of Coveware's Q2 2026 cases paid: a record low</span></div>
+        <div class="stat"><b>$820M+</b><span>paid on-chain in 2025 (Chainalysis; may be revised up)</span></div>
+        <div class="stat"><b>3,611</b><span>ransomware complaints to the FBI in 2025</span></div>
+      </div>
+      <p class="src">Sources: <a href="https://www.ic3.gov/Home/Ransomware" target="_blank" rel="noopener">FBI IC3</a> · <a href="https://www.ncsc.gov.uk/guidance/mitigating-malware-and-ransomware-attacks" target="_blank" rel="noopener">NCSC</a> · <a href="https://ofac.treasury.gov/media/912981/download?inline" target="_blank" rel="noopener">OFAC advisory, Sept 2021</a> · <a href="https://www.ftc.gov/business-guidance/small-businesses/cybersecurity" target="_blank" rel="noopener">FTC</a> · <a href="https://www.chainalysis.com/blog/crypto-ransomware-2026/" target="_blank" rel="noopener">Chainalysis</a> · <a href="https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf" target="_blank" rel="noopener">IC3 2025 report</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Be even-handed. The official advice is not to pay, and the reasons are real: no guarantee, it feeds the next attack, and stolen data may be used anyway. But nobody in the room has ever faced the choice with a hospital or a business on the line, and the people who did call it one of the hardest decisions of their lives. The way out of the dilemma is to not need to pay.</span></li><li><b class="tip">Tip</b><span>FBI IC3 ransomware page: "The FBI does not support paying a ransom in response to a ransomware attack", payment doesn't ensure data recovery, and it "encourages perpetrators to target more victims". NCSC's "Mitigating malware and ransomware attacks" (published 2020, reviewed 2021, version 3.0): law enforcement "do not encourage, endorse, nor condone the payment of ransom demands"; paying doesn't guarantee access, leaves the computer infected, funds criminal groups, and makes you more likely to be targeted again. OFAC's updated advisory (21 September 2021): "The U.S. government strongly discourages all private companies and citizens from paying ransom or extortion demands"; facilitating payments "may risk violating OFAC regulations", liability can be strict, and maintaining offline backups is named as a mitigating factor. FTC: "Law enforcement doesn't recommend paying ransom, but it's up to you to determine whether the risks and costs of paying are worth the possibility of getting your files back." Numbers: Coveware's Q2 2026 report charts a 19% payment rate for its cases, which it calls a record low in a series that starts in Q1 2024; Chainalysis's 2026 report (26 February 2026) says more than $820 million was paid on-chain in 2025, 8% below a revised $892 million for 2024, adds that the total may rise as more is attributed, and puts the share of victims paying at a possible record-low 28%; the FBI's 2025 Internet Crime Report lists 3,611 ransomware complaints (3,156 in 2024) with $32.3 million in reported losses, which it says is an undercount because many victims report no loss amount. The three sources count different populations, so don't compare them as if they were one series.</span></li><li><b class="next">Next</b><span>"Pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your files sync to the cloud. Ransomware locks your laptop. What happens to the cloud copy?</p><details><summary>Hint</summary><p>What does a sync service do when a file changes?</p></details><details class="answer"><summary>Answer</summary><p>It follows the laptop. The locked files usually upload as the newest versions, often within moments. The NCSC warns that cloud services "often automatically synchronise immediately after your files have been replaced with encrypted copies". Version history may let you roll back, but only for a limited time, and only if you notice and the account is intact. So don't count a sync folder as your backup.</p></details></li>
+      <li><p>Why can't an expert just crack the encryption and give your files back?</p><details><summary>Hint</summary><p>How many keys are there, and who has the right one?</p></details><details class="answer"><summary>Answer</summary><p>Modern keys have 128 to 256 bits: trying every one is out of the question. The criminals hold the key. Free decryptors exist for some families, but they come from mistakes and seized keys, not cracking. Check nomoreransom.org, and plan on having none.</p></details></li>
+      <li><p>A friend's small business is hit and they say "we'll just pay". What would you tell them?</p><details><summary>Hint</summary><p>Be kind: what could go wrong, and what can they do first?</p></details><details class="answer"><summary>Answer</summary><p>That it's their call and an awful position to be in, but authorities advise against it: no guarantee, it funds more attacks, stolen data may still leak. Before deciding, check for a free decryptor, report it, ask what a restore would take, and get help. Next time: tested backups, so there's no choice to make.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>If someone asks "what about ransomware insurance?": that's a business decision with its own rules, and insurers often have requirements (backups and MFA among them). Mention it, don't advise. Nothing on this slide is legal advice.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="sync-vs-backup" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 01</p><h2>Sync is not backup</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ss-del">Delete one file</button>
+        <button type="button" class="btn btn-sm" id="ss-lock">Ransomware locks the laptop</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ss-reset">Start again</button>
+      </div>
+      <div class="store-grid" id="ss-grid" role="group" aria-label="Four places your files live"></div>
+      <div class="controls">
+        <label class="grow">I notice after <output id="ss-days-out">3 days</output><input type="range" id="ss-days" min="1" max="120" value="3"></label>
+        <button type="button" class="btn btn-sm" id="ss-restore">Try to restore</button>
+      </div>
+      <p class="comment" id="ss-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Sync</b> keeps the same files on every device, right now. Delete or lock one and the others follow.</li>
+        <li><b>Backup</b> keeps older copies you can go back to. The best kind has at least one you can't reach from your laptop.</li>
+        <li>Sync services often keep a short history (this demo uses 30 days). That helps, and it ends.</li>
+        <li>An unplugged copy is only as new as the last time you plugged it in (here, two weeks).</li>
+      </ul>
+      <p class="note">The NCSC says cloud services "often automatically synchronise immediately after your files have been replaced with encrypted copies".</p>
+      <p class="src">Sources: <a href="https://www.ncsc.gov.uk/guidance/mitigating-malware-and-ransomware-attacks" target="_blank" rel="noopener">NCSC</a> · <a href="https://support.microsoft.com/en-us/windows/protect-your-pc-from-ransomware-08ed68a7-939f-726c-7e84-a72ba92c01c3" target="_blank" rel="noopener">Microsoft: protect your PC from ransomware</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Press "Delete one file": it vanishes from the laptop and from the sync folder at once, but the versioned backup and the unplugged copy still have it. Start again, then "Ransomware locks the laptop": the locked files sync, and the versioned backup now holds locked files as its latest versions, with older good ones behind them. The unplugged copy is untouched. Now slide the "I notice after" bar and press "Try to restore": at 3 days everything but the laptop can recover; at 45 days the sync history has expired; at 120 days only the unplugged copy still has anything.</span></li><li><b class="say">Say</b><span>Sync is brilliant for getting the same file on your phone and laptop. It's not a safety net, because it's designed to copy every change, including a bad one. A backup is the opposite: it holds on to the old state. The question is always how long until you notice.</span></li><li><b class="tip">Tip</b><span>All four stores are illustrations, not products. The 30-day sync window matches what the big services say about deleted files and older versions (next slides); the versioned backup's 90 days and the unplugged copy's two-week age are made-up values for the demo. The NCSC quote is from its "Mitigating malware and ransomware attacks" page, which also recommends protecting previous versions so you can restore them. Microsoft says OneDrive "includes built in ransomware detection and recovery as well as file versioning". Nothing is encrypted in this demo: files are simply marked as locked.</span></li><li><b class="next">Next</b><span>"So what does a good plan look like?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="rule-321" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 02</p><h2>3-2-1, and the extra 1</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="std-nums" aria-label="3, 2, 1, 1, 0">
+        <div><b>3</b><span>copies of what matters: the original and two backups</span></div>
+        <div><b>2</b><span>kinds of storage, so one failure doesn't take both</span></div>
+        <div><b>1</b><span>copy off-site, away from a fire or a burglary</span></div>
+        <div class="x"><b>1</b><span>copy offline or locked, so ransomware can't reach it</span></div>
+        <div class="x"><b>0</b><span>errors: you've restored from it and it worked</span></div>
+      </div>
+      <p class="note">The first three are the classic 3-2-1 rule. The last two are the modern extension (often written 3-2-1-1-0).</p>
+    </div>
+    <div class="stack">
+      <h3>What counts as offline or locked?</h3>
+      <div class="props props-2">
+        <div><b>Yes</b><span>A drive you unplug and keep somewhere else. Tape. Cloud storage with "locked" or immutable copies that nobody can change or delete, even with your login.</span></div>
+        <div><b>No</b><span>A drive that stays plugged in, a NAS that's always on, a sync folder, or a cloud account you're always signed in to. They can still help with old versions, but they aren't out of reach.</span></div>
+      </div>
+      <ul class="rules">
+        <li>The NCSC's warning: two copies on one removable drive, or several copies in one cloud service, still fail together.</li>
+        <li>The FBI's advice for organisations: backups that are off-site or offline, encrypted, and immutable ("cannot be altered or deleted").</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.cisa.gov/sites/default/files/publications/data_backup_options.pdf" target="_blank" rel="noopener">US-CERT: Data Backup Options (2012)</a> · <a href="https://bp.veeam.com/vbr/1_Assessment/A_Infra_Overview/infra_overview.html" target="_blank" rel="noopener">Veeam: 3-2-1-1-0</a> · <a href="https://www.ncsc.gov.uk/guidance/mitigating-malware-and-ransomware-attacks" target="_blank" rel="noopener">NCSC</a> · <a href="https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf" target="_blank" rel="noopener">FBI IC3 2025</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Three copies, two kinds, one away. Then two upgrades for the ransomware era: one copy that can't be reached from your computer, and a zero for "I've tested it". Each number answers a different disaster: a dead disk, a fire, a locked laptop, and a backup that never worked.</span></li><li><b class="tip">Tip</b><span>The 3-2-1 rule as US-CERT wrote it (Paul Ruggiero and Matthew Heckathorn, Carnegie Mellon, 2012): "3 – Keep 3 copies of any important file: 1 primary and 2 backups. 2 – Keep the files on 2 different media types to protect against different types of hazards. 1 – Store 1 copy offsite." It's often credited to the photographer Peter Krogh's writing on digital asset management; secondary sources disagree on the date, so I only cite the 2012 paper. The extra "1" and "0" are Veeam's 3-2-1-1-0 ("Make One Copy Offline, Air-gapped, or Immutable"; "zero errors" after recovery verification); it's a vendor-coined label, but CISA, the NCSC and the FBI all recommend offline or immutable copies. The NCSC says not to rely on "two copies on one removable drive or multiple copies in one cloud service", and not to keep backup devices permanently connected. FBI IC3 2025 report: "ensure all backup data is encrypted, immutable (i.e., cannot be altered or deleted)". The Yes/No box is my summary, not a quote.</span></li><li><b class="next">Next</b><span>"Build one and see what it survives."</span></li></ul></div>
+</section>
+
+<section class="slide" id="builder" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 03</p><h2>Build a plan, then test it against disasters</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Example plans" id="bd-presets"><span>Try</span>
+        <button type="button" data-p="laptop">Just the laptop</button>
+        <button type="button" data-p="sync">+ cloud sync</button>
+        <button type="button" data-p="plugged">+ plugged-in drive</button>
+        <button type="button" data-p="good">A good home plan</button>
+        <button type="button" data-p="team">A small-team plan</button>
+      </div>
+      <div class="bd-opts" id="bd-opts" role="group" aria-label="Where your copies live"></div>
+      <label class="check bd-test"><input type="checkbox" id="bd-tested"> I've restored a file from it in the last six months</label>
+    </div>
+    <div class="stack">
+      <div class="c321" id="bd-chips"></div>
+      <div class="table-wrap"><table class="grid-table bd-table"><thead><tr><th>If this happens</th><th>Result</th></tr></thead><tbody id="bd-rows"></tbody></table></div>
+      <p class="comment" id="bd-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start on "Just the laptop": everything fails. Press "+ cloud sync": most rows turn green, but ransomware and a two-month-old delete don't. Try "+ plugged-in drive": better history, still reachable by ransomware. "A good home plan" (a cloud backup with history, plus an unplugged drive): every row survives, and all five checks tick once you also tick "I've restored a file". Then let someone in the room name their own setup and tick it live.</span></li><li><b class="say">Say</b><span>Each disaster asks for a different property: a copy somewhere else, a copy with history, a copy the attacker can't reach. No single option has all three, which is why the rule asks for more than one kind. Your plan is saved in this browser only, so you can come back to it after the talk.</span></li><li><b class="tip">Tip</b><span>This is an illustration, not a product review. The model assumes: a sync folder keeps old versions for 30 days; a drive or NAS with history keeps 60 to 90 days; a cloud backup with history keeps 180 days; locked storage keeps a year. Real plans differ, so check your own. "Maybe" means it can work only if you notice in time and your login and the service are still intact. A laptop that's lost together with a locked cloud login needs a copy with no tie to that login, which is why a local or second-provider copy matters. The NAS row uses "snapshots", the term NAS makers use for point-in-time copies; they live on the same box, so a fire or theft still takes them.</span></li><li><b class="next">Next</b><span>"How far back can you go?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="versions" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 04</p><h2>Versioning: how far back can you go?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">I notice the problem after <output id="vr-out">3 days</output><input type="range" id="vr-days" min="1" max="400" value="3"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Examples" id="vr-presets"><span>Try</span>
+        <button type="button" data-d="1">Same day</button>
+        <button type="button" data-d="21">3 weeks</button>
+        <button type="button" data-d="60">2 months</button>
+        <button type="button" data-d="300">Tax time</button>
+      </div>
+      <div class="table-wrap"><table class="grid-table vr-table"><thead><tr><th>Where</th><th>Goes back</th><th>Can you get it?</th></tr></thead><tbody id="vr-rows"></tbody></table></div>
+      <p class="comment" id="vr-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Most free sync plans go back about 30 days.</b> Some paid and business plans go further.</li>
+        <li><b>People notice late.</b> A deleted folder of photos can go unmissed for months, and ransomware can sit quietly before it strikes.</li>
+        <li><b>Check your own plan.</b> Windows File History and Time Machine keep older versions of your files on a drive: find out how far back yours go.</li>
+        <li>These windows are the vendors' own figures as of 9 November 2026. Plans change.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://support.google.com/drive/answer/2409045" target="_blank" rel="noopener">Google Drive</a> · <a href="https://support.google.com/drive/answer/2375102" target="_blank" rel="noopener">Drive Trash</a> · <a href="https://support.microsoft.com/en-us/office/restore-your-onedrive-fa231298-759d-41cf-bcd0-25ac53eb8a15" target="_blank" rel="noopener">OneDrive restore</a> · <a href="https://support.microsoft.com/en-us/office/restore-deleted-files-or-folders-in-onedrive-949ada80-0026-4db3-a953-c99083e6a84f" target="_blank" rel="noopener">OneDrive recycle bin</a> · <a href="https://help.dropbox.com/delete-restore/version-history-overview" target="_blank" rel="noopener">Dropbox</a> · <a href="https://support.apple.com/guide/icloud/recover-deleted-files-mmae56ea1ca5/icloud" target="_blank" rel="noopener">iCloud</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Slide the bar. At 3 days nearly everything still works. Past 30 days most free plans are out of road; past 93 even a work account's recycle bin is gone. Only the last row, a copy you keep yourself, doesn't expire.</span></li><li><b class="say">Say</b><span>"How far back?" is a question to ask before the bad day, not on it. Look up your own provider's number, and if it's short, make sure another copy has a longer memory.</span></li><li><b class="tip">Tip</b><span>As read on 9 November 2026: Google Drive: a previous version "might be permanently deleted after 30 days or if there are 100 newer versions", and you can choose "Keep forever" for one version; files in Trash "are deleted forever after 30 days". OneDrive: "Restore your OneDrive" undoes actions from the last 30 days and needs Microsoft 365 for a personal account; the recycle bin keeps personal-account files 30 days and work or school files 93 days unless an administrator changes it. Dropbox version history: 30 days for Basic, Plus and Family; 180 days for Professional, Essentials, Business and Standard; 365 days for Business Plus, Advanced and Enterprise (add-ons can extend it). iCloud: Apple says you can recover files deleted from iCloud Drive and other apps "within the last 30 days" at iCloud.com. Windows File History saves copies to an external drive or network location and lets you "Restore previous versions" from File Explorer; it keeps no fixed number of days that I could confirm.</span></li><li><b class="next">Next</b><span>"What about encrypting the backup?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="keys" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 05</p><h2>Encrypt your backups, and know where the key lives</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="mq-count">Where would you keep the backup password?</p>
+      <ul class="sorter" id="ky-list"></ul>
+      <div class="controls">
+        <button type="button" class="btn" id="ky-check">Check my answers</button>
+        <button type="button" class="btn btn-ghost" id="ky-reset">Start again</button>
+      </div>
+      <p class="comment" id="ky-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules" id="ky-help">
+        <li><b>Why encrypt:</b> a lost or stolen backup drive is otherwise readable by anyone. CISA's advice is offline, <i>encrypted</i> backups.</li>
+        <li><b>The catch:</b> lose the password and the backup is gone. Apple says "You can't restore an encrypted backup without its password", and a new password doesn't open the old ones.</li>
+        <li><b>So the key needs its own backup,</b> in a different place from what it protects.</li>
+      </ul>
+      <ul class="pa-why" id="ky-why" hidden></ul>
+      <p class="src">Sources: <a href="https://www.cisa.gov/stopransomware/ransomware-guide" target="_blank" rel="noopener">CISA guide</a> · <a href="https://support.apple.com/en-us/108313" target="_blank" rel="noopener">Apple: forgotten encrypted-backup password</a> · <a href="https://support.apple.com/guide/mac-help/about-the-time-machine-backup-password-mh35720/mac" target="_blank" rel="noopener">Apple: Time Machine password</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Mark each place Good or Bad, then check. The rule of thumb: the key shouldn't depend on the thing it protects, and it shouldn't be where a thief of the backup would find it. Two safe places beat one.</span></li><li><b class="say">Say</b><span>Encrypting backups protects you from a stolen drive and costs you if you lose the password. So treat the password like the backup: store it in at least two places, away from the laptop.</span></li><li><b class="tip">Tip</b><span>CISA's guide: "Maintain offline, encrypted backups of critical data". Apple (page published 14 September 2026): "You can't restore an encrypted backup without its password"; on iOS 11 or later you can make a new encrypted backup by resetting the password, but "Creating a new password doesn't allow you to access previous encrypted backups". For Time Machine, Apple says "To restore files from encrypted Time Machine backups, you must provide your backup password" and advises choosing a hint that helps you remember it; I found no Apple statement on recovering a forgotten one. Password managers have their own recovery steps: set those up too.</span></li><li><b class="next">Next</b><span>"And the step everyone skips: testing."</span></li></ul></div>
+</section>
+
+<section class="slide" id="restore-test" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 06</p><h2>A backup you haven't restored is a hope</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="plan plan-1" id="rt-plan">
+        <div><b>A ten-minute restore test</b>
+          <label><input type="checkbox" data-k="pick"> Pick three files I'd hate to lose: a photo, a document, and one more</label>
+          <label><input type="checkbox" data-k="elsewhere"> Restore them to a <i>different</i> folder, not over the originals</label>
+          <label><input type="checkbox" data-k="open"> Open each one: does it open, and does it look right?</label>
+          <label><input type="checkbox" data-k="old"> Restore a file as it was a month ago</label>
+          <label><input type="checkbox" data-k="note"> Write down how long it took and where the backup password is</label>
+          <label><input type="checkbox" data-k="cal"> Put the next test in my calendar (twice a year is enough)</label>
+        </div>
+      </div>
+      <p class="comment" id="rt-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>GitLab, 2017</b><span>Its nightly backup had been failing silently. The postmortem: "The S3 bucket was empty, and there was no recent backup to be found anywhere." Nobody noticed until the day it mattered.</span></div>
+      <ul class="rules">
+        <li><b>Backups fail quietly:</b> a full disk, a changed password, a drive that stopped being plugged in. You find out when you need them, unless you test.</li>
+        <li><b>Windows:</b> right-click a folder and choose "Restore previous versions" to try File History.</li>
+        <li><b>Don't restore over what you have.</b> Restore elsewhere, then compare.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://about.gitlab.com/blog/postmortem-of-database-outage-of-january-31/" target="_blank" rel="noopener">GitLab postmortem</a> · <a href="https://support.microsoft.com/en-us/windows/experience/backup-recovery/backup-and-restore-with-file-history" target="_blank" rel="noopener">Microsoft: File History</a> · <a href="https://www.cisa.gov/stopransomware/ransomware-guide" target="_blank" rel="noopener">CISA guide</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Give people a minute to tick what they've done, usually nothing. Ticks are saved in this browser only. Suggest doing the first three this week, on a real backup, with real files.</span></li><li><b class="say">Say</b><span>The backup that fails is almost always the one nobody ever restored. A full disk, a stale password, a service that stopped quietly. A ten-minute test twice a year turns a hope into a plan. And note how long it took: that number matters on the bad day.</span></li><li><b class="tip">Tip</b><span>CISA's guide says to "regularly test the availability and integrity of backups in a disaster recovery scenario"; the NCSC says to check you know how to restore and "regularly test that it is working as expected". The GitLab postmortem (31 January 2017) says the nightly dump "failed silently" and that its notification emails were rejected, so nobody saw the failure. The File History instructions come from Microsoft's File History page. The six-month interval and the "twice a year" are my rule of thumb, not a standard.</span></li><li><b class="next">Next</b><span>"And how long will a restore take?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="restore-time" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// BACKUPS THAT SURVIVE 07</p><h2>How long will a restore take?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="How much data" id="rs-size"><span>Data</span>
+        <button type="button" data-v="50" aria-pressed="false">50 GB</button>
+        <button type="button" data-v="250" aria-pressed="false">250 GB</button>
+        <button type="button" data-v="1000" aria-pressed="true">1 TB</button>
+        <button type="button" data-v="4000" aria-pressed="false">4 TB</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Where it comes from" id="rs-link"><span>From</span>
+        <button type="button" data-v="100" data-n="a drive plugged in by USB" aria-pressed="true">USB drive</button>
+        <button type="button" data-v="400" data-n="a fast external SSD" aria-pressed="false">fast SSD</button>
+        <button type="button" data-v="12.5" data-n="home broadband at 100 Mbit/s" aria-pressed="false">cloud at 100 Mbit/s</button>
+        <button type="button" data-v="2.5" data-n="a slow line at 20 Mbit/s" aria-pressed="false">cloud at 20 Mbit/s</button>
+      </div>
+      <div class="stats pc-stats" id="rs-out"></div>
+      <p class="comment" id="rs-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>A local copy is for speed, an off-site copy is for disasters.</b> You want both.</li>
+        <li><b>Cloud restores are limited by your connection,</b> and by the service's own speed. Plan in days for big sets.</li>
+        <li><b>Restore the important things first:</b> documents and photos before the games and downloads.</li>
+        <li><b>Scan before you trust it.</b> The NCSC says to connect backups only to known-clean devices, and to scan them for malware before restoring.</li>
+      </ul>
+      <p class="note">These are best-case figures from the arithmetic. Real transfers are slower, especially for lots of small files.</p>
+      <p class="src">Sources: <a href="https://www.ncsc.gov.uk/guidance/mitigating-malware-and-ransomware-attacks" target="_blank" rel="noopener">NCSC</a> · arithmetic: size ÷ speed</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>1 TB over USB at about 100 MB/s is under three hours; the same terabyte over a 100 Mbit/s line is nearly a day; over 20 Mbit/s it's days. Pick 4 TB on a slow line: about eighteen days. Then ask how long the business can wait.</span></li><li><b class="say">Say</b><span>People plan the backup and forget the restore. Cloud backup is excellent for fires and thieves, and it's a slow way to get everything back. The practical answer is both: a local copy for speed and an off-site one for disasters.</span></li><li><b class="tip">Tip</b><span>The calculator is plain arithmetic: bytes ÷ bytes per second, with 1 TB as 1,000 GB, 100 MB/s for a USB hard drive, 400 MB/s for a fast SSD, and 100 and 20 Mbit/s as 12.5 and 2.5 MB/s. They are round, illustrative figures and not measurements. NCSC: "connect backups only to known clean devices before recovery" and scan backups for malware before restoring.</span></li><li><b class="next">Next</b><span>"Pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Which of your backups would survive a fire at home?</p><details><summary>Hint</summary><p>Where does each copy physically live, and does any of it live elsewhere?</p></details><details class="answer"><summary>Answer</summary><p>Only copies kept somewhere else: a cloud backup, a sync folder, or a drive stored off-site. A drive next to the laptop burns with it. If the honest answer is "none", the first fix is one off-site copy.</p></details></li>
+      <li><p>A backup drive stays plugged into your computer all the time. Is it an offline copy, and what would you change?</p><details><summary>Hint</summary><p>Could ransomware on your computer reach it?</p></details><details class="answer"><summary>Answer</summary><p>No: anything the computer can reach, ransomware can usually reach. Keep a second drive unplugged and plug it in only to update it, ideally stored away from the computer. The same goes for an always-on NAS.</p></details></li>
+      <li><p>Your backup is encrypted and you've forgotten the password. What now?</p><details><summary>Hint</summary><p>Does anyone hold a spare key?</p></details><details class="answer"><summary>Answer</summary><p>Usually nothing: Apple says an encrypted backup can't be restored without its password, and a new password doesn't open old backups. Check your password manager, a printed copy or a trusted person. Next time, store the key in two places before you rely on the backup.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>If someone asks about RAID or mirrored disks: they keep working when one disk dies, and they faithfully mirror a deleted or locked file. Useful, but not a backup.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="bad-day" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// THE BAD DAY 01</p><h2>A ransomware morning, simulated</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="What you have" id="bdy-setup"><span>You have</span>
+        <button type="button" data-v="0" aria-pressed="false">Only the laptop</button>
+        <button type="button" data-v="1" aria-pressed="true">+ cloud sync</button>
+        <button type="button" data-v="2" aria-pressed="false">+ a plugged-in drive</button>
+        <button type="button" data-v="3" aria-pressed="false">+ an unplugged copy</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="When you notice" id="bdy-when"><span>You notice</span>
+        <button type="button" data-v="1" aria-pressed="true">that morning</button>
+        <button type="button" data-v="10" aria-pressed="false">after 10 days</button>
+        <button type="button" data-v="45" aria-pressed="false">after 45 days</button>
+      </div>
+      <ol class="tl-list" id="bdy-tl"></ol>
+      <p class="comment" id="bdy-note"></p>
+    </div>
+    <div class="stack">
+      <div class="verdict" id="bdy-verdict"></div>
+      <ul class="rules">
+        <li><b>The copy that couldn't be reached is the one that saved the day.</b> Everything connected was fair game.</li>
+        <li><b>Restoring takes time even when it works,</b> and the unplugged copy is only as new as its last update.</li>
+        <li><b>Stolen data stays stolen.</b> Backups fix the locked half, not the leaked half.</li>
+      </ul>
+      <p class="note">An illustration with made-up numbers (30-day sync history, a two-week-old unplugged copy), not a prediction.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Start on "+ cloud sync", noticed that morning: the locked files uploaded, but the service's history probably still has the good versions. Move to "after 45 days": the history has expired. Then "+ an unplugged copy": whatever day you notice, there's a copy. Try "Only the laptop" to see the bad outcome.</span></li><li><b class="say">Say</b><span>This is the whole talk in one screen. Ransomware does the same thing in every row, and what changes is whether you have a copy it couldn't touch. The unplugged copy is old and awkward, and it works.</span></li><li><b class="tip">Tip</b><span>Everything here is a simplified illustration: nothing is encrypted, no real products are modelled, and the "sync history" window of 30 days follows the big services' published figures for older versions. Real outcomes depend on the strain, how long attackers were inside (they may have deleted backups first, see MITRE T1490), and whether the backup login was also stolen. The leaked-data point is from Coveware's Q2 2026 report.</span></li><li><b class="next">Next</b><span>"If it happens, what do you do first?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="first-steps" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// THE BAD DAY 02</p><h2>The first hour</h2></header>
+  <div class="slide-body">
+    <ol class="steps">
+      <li><b>1 · Disconnect</b><span>Unplug the network cable or turn off Wi-Fi on the affected devices. Don't power them off if you can avoid it: it can destroy evidence.</span></li>
+      <li><b>2 · Don't wipe, and don't pay yet</b><span>Keep the ransom note (photograph it with another device). Don't reinstall yet: evidence matters, and a decryptor may exist.</span></li>
+      <li><b>3 · Protect the backups</b><span>Unplug backup drives, and never plug them into an infected machine. Check other devices and accounts.</span></li>
+      <li><b>4 · Report it</b><span>In the US: the FBI's ic3.gov and CISA's cisa.gov/report. Elsewhere: your national cyber agency or police. You only need to report once.</span></li>
+      <li><b>5 · Look for a free decryptor</b><span>nomoreransom.org can identify the ransomware and may have a tool. Check it before deciding anything.</span></li>
+      <li><b>6 · Rebuild from clean</b><span>Restore from a known-good point onto a clean system, scan the backup first, and change passwords from a clean device.</span></li>
+    </ol>
+    <p class="note">Tell the people whose data may have been taken. For a business, that's customers and staff, and sometimes a regulator.</p>
+    <p class="src">Sources: <a href="https://www.ftc.gov/business-guidance/small-businesses/cybersecurity" target="_blank" rel="noopener">FTC</a> · <a href="https://www.cisa.gov/stopransomware/ransomware-guide" target="_blank" rel="noopener">CISA guide</a> · <a href="https://www.cisa.gov/stopransomware/report-ransomware-0" target="_blank" rel="noopener">CISA: report ransomware</a> · <a href="https://www.ic3.gov/Home/Ransomware" target="_blank" rel="noopener">FBI IC3</a> · <a href="https://www.ncsc.gov.uk/guidance/mitigating-malware-and-ransomware-attacks" target="_blank" rel="noopener">NCSC</a> · <a href="https://www.nomoreransom.org/" target="_blank" rel="noopener">No More Ransom</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>When it happens, you'll be stressed and everyone will have an opinion. Six steps, in this order. The first two are about not making it worse. The rest are about getting help and getting back.</span></li><li><b class="tip">Tip</b><span>FTC's small-business guidance: "Immediately disconnect infected devices from your network without powering them down"; "Certain information useful for investigation may be lost if you power down devices"; "Report the attack to your local FBI office". CISA's guide says to isolate affected systems, and treats powering down as a last resort "only if it is not possible to temporarily shut down the network or disconnect affected hosts"; it advises taking "a system image and memory capture of a sample of affected devices" and recommends coordinating out of band, "such as phone calls", because attackers may be reading your messages. CISA's page says one report is enough: "Victims only need to report once, because the agencies share the report with each other", through its reporting tool or the FBI's IC3. The NCSC says to scan backups for malware and connect them only to known clean devices before recovery, and mentions No More Ransom. "Don't wipe yet" is my summary of the evidence-preservation advice, not a quoted rule: CISA's guide has no explicit "do not wipe" line, and it does tell you to rebuild affected systems once they're isolated and evidence is captured. Elsewhere: the UK's NCSC pages say organisations hit by ransomware should report to Action Fraud (now called Report Fraud), the NCSC and, where personal data is involved, the ICO; other countries have equivalents; look up yours before you need it. I couldn't verify every country's current channel, so this slide names only the US ones.</span></li><li><b class="next">Next</b><span>"What changes for a small team?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="small-teams" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// THE BAD DAY 03</p><h2>For small teams: who to call, and practise once a year</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>A one-page contact sheet, printed</h3>
+      <ul class="rules">
+        <li>Your IT person or provider, with a phone number that isn't an email address.</li>
+        <li>Your insurer's incident line, if you have cyber cover.</li>
+        <li>A lawyer, the local FBI office or police, and your bank.</li>
+        <li>Where the offline backup lives, who can restore from it, and where the backup password is kept.</li>
+        <li>Keep a paper copy. During an incident the email and shared drive may be what's down, and attackers may be watching them.</li>
+      </ul>
+      <p class="note">The FTC's small-business advice: have a plan, "put this plan in writing and share it with everyone who needs to know".</p>
+    </div>
+    <div class="stack">
+      <h3>Practise it: one hour, once a year</h3>
+      <div class="controls"><button type="button" class="btn" id="tt-draw">Draw a scenario</button></div>
+      <div class="tt-out" id="tt-out" aria-live="polite"><p class="comment">Press the button for a made-up Monday.</p></div>
+      <p class="comment" id="tt-note"></p>
+      <p class="src">Sources: <a href="https://www.ftc.gov/business-guidance/small-businesses/cybersecurity" target="_blank" rel="noopener">FTC: small business cybersecurity</a> · <a href="https://www.cisa.gov/stopransomware/ransomware-guide" target="_blank" rel="noopener">CISA guide</a> (it also links a ransomware readiness self-assessment)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Press "Draw a scenario", then read the scenario and its three questions aloud. A real exercise takes an hour around a table: who does what, what you'd say to customers, and how you'd restore. The best result is usually discovering that the backup password is on the machine that's locked.</span></li><li><b class="say">Say</b><span>You can't think clearly during an incident, so decide the boring things beforehand. A contact sheet on paper, a restore that someone has done before, and one hour a year pretending. It's the cheapest insurance on this slide.</span></li><li><b class="tip">Tip</b><span>The six scenarios are made up for practice. The FTC's small-business factsheet says "Have a plan... Put this plan in writing and share it with everyone who needs to know." CISA's guide recommends out-of-band coordination such as phone calls during an incident, and CISA offers a Ransomware Readiness Self-Assessment (listed on its #StopRansomware page). This isn't legal or insurance advice: insurers and regulators have their own rules about notification.</span></li><li><b class="next">Next</b><span>"Six habits to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// THE BAD DAY 04</p><h2>Six habits to take home</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid habits-3">
+      <div class="habit"><b>1 · 3-2-1, plus one you can't reach</b><span>Three copies, two kinds, one off-site, and one offline or locked.</span></div>
+      <div class="habit"><b>2 · Know sync from backup</b><span>Sync copies mistakes. A backup remembers old versions.</span></div>
+      <div class="habit"><b>3 · Ask how far back</b><span>Look up your provider's history window, and cover the gap.</span></div>
+      <div class="habit"><b>4 · Encrypt, and keep the key twice</b><span>A manager and a paper copy, never next to the backup.</span></div>
+      <div class="habit"><b>5 · Restore a file, twice a year</b><span>A backup you haven't restored is a hope.</span></div>
+      <div class="habit"><b>6 · Close the doors</b><span>Updates on, a second step on every sign-in, no remote access left open.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Six habits. If you only do one tonight: pick three files and restore them somewhere else. It tells you whether everything else is working. Then buy or find a drive for the copy you can unplug.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a backup setup you'd like a second opinion on. (Please don't share passwords or recovery keys.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and checklists stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://www.cisa.gov/stopransomware/ransomware-guide" target="_blank" rel="noopener">CISA: #StopRansomware Guide</a><span>Prevention and a response checklist, for organisations.</span></li>
+        <li><a href="https://www.ncsc.gov.uk/guidance/mitigating-malware-and-ransomware-attacks" target="_blank" rel="noopener">NCSC: Mitigating malware and ransomware attacks</a><span>Backups, offline copies and what not to do.</span></li>
+        <li><a href="https://www.nomoreransom.org/" target="_blank" rel="noopener">No More Ransom</a><span>Free decryptors, and help working out which ransomware it is.</span></li>
+        <li><a href="https://www.ftc.gov/business-guidance/small-businesses/cybersecurity" target="_blank" rel="noopener">FTC: Cybersecurity for small business</a><span>Plain-language steps for small teams.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: nothing real is encrypted, locked, deleted or sent, and made-up names and passwords are all you need. Figures and policies change; backup windows and ransomware statistics were checked against their sources on 9 November 2026, and the unconfirmed items are listed in the speaker notes. Facts checked 9 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. Offer to look at someone's setup after the talk: bring a description, not a password.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
