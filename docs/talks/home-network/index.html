@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Securing Your Home Network</title>
+<meta name="description" content="Securing Your Home Network: your router, smart TV and doorbell camera are part of your security. An evening's checklist that closes the common gaps, with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/home-network/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Securing Your Home Network">
+<meta property="og:description" content="Your router, smart TV and doorbell camera are part of your security. An evening's checklist that closes the common gaps.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/home-network/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/home-network/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Securing Your Home Network in neon, beside a terminal that checks how guessable a Wi-Fi passphrase is.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M5 15 16 6l11 9' fill='none' stroke='%2300f0ff' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M9 14v12h14V14' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='21' r='2' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "home-network", "title": "Securing Your Home Network", "footer": "HOME", "subtitle": "GENERAL TRACK · 05",
+  "parts": [{ "name": "The router", "minutes": 25 }, { "name": "Everything else on the network", "minutes": 25 }, { "name": "Your checklist", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">HO<span>ME</span></a>
+  <div class="scroll-parts">
+    <a href="#router" data-part="1"><b>01</b>Router</a>
+    <a href="#devices" data-part="2"><b>02</b>Devices</a>
+    <a href="#checklist" data-part="3"><b>03</b>Checklist</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 05 · FOR EVERYONE, NO TECHNICAL BACKGROUND NEEDED</p>
+      <h1><span class="pre">Securing Your</span> <span class="glitch" data-text="Home Network">Home Network</span></h1>
+      <p class="lede">Your router, smart TV and doorbell camera are part of your security. An evening's checklist that closes the common gaps.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/home-network/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ wifi-check --passphrase&nbsp;<input id="hero-in" value="sunshine2020" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About seventy minutes, three parts, two checkpoints, no technical background needed. This is the talk with the longest homework: by the end you'll have a checklist for one evening. Please don't type your real Wi-Fi passphrase or router login into anything today, including this page: every box here wants a made-up one.</span></li><li><b class="show">Show</b><span>The terminal: "sunshine2020" is a word and a year, the favourite shape of a guessed password. Replace it with a few words from a random generator and watch the verdict change.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try password, 12345678, hunter2, admin, "wifi password", a 64-character hex string, or leave it empty; or type four or more words from the generator's list (they're recognised). In the Wi-Fi demo's network-name box, try FBI Surveillance Van, Pretty Fly for a Wi-Fi, a router brand, or a name with a street address. In the router fix-up, leave everything as it came, set Wi-Fi to Open, or fix the lot; in the network sorter, put every device in its place; try UPnP on, off and "you decide"; get every myth right, or none; tick all twelve boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#router"><small>PART 1 · 25 MIN</small><b>The router</b></a><span>The front door</span><span>Admin login, updates, remote access</span><span>Wi-Fi security and passphrases</span><span>UPnP, and fixing a router</span></li>
+      <li><a href="#devices"><small>PART 2 · 25 MIN</small><b>Everything else on the network</b></a><span>Smart devices and their accounts</span><span>A separate network</span><span>Updates and end of support</span><span>What your provider can see</span></li>
+      <li><a href="#checklist"><small>PART 3 · 15 MIN</small><b>Your checklist</b></a><span>A 30-minute evening plan</span><span>Myth or real?</span><span>Six habits</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour. Please use made-up passphrases and logins in every demo.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First the router, because everything else connects through it. Then the gadgets: what to do about them and how to keep them away from the things that matter. Last, one list you can do tonight.</span></li><li><b class="next">Next</b><span>"Why a whole talk on your router?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>One weak gadget can open the door for others</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Your router, your TV and your doorbell camera share a network with your laptop and your phone. A weak one can become a way to the others, or a tool in someone else's attack.</p>
+      <ul class="rules">
+        <li>Most trouble here is ordinary: a factory password nobody changed, a router that stopped getting updates, a gadget that's always online.</li>
+        <li>The fixes are settings you change once. An evening is enough.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Factory passwords, 2016</b><span>Mirai, a botnet of home routers, cameras and recorders, got in with 62 common factory logins. It powered huge attacks, including one on the DNS provider Dyn on 21 October 2016.</span></div>
+      <div class="card"><b>A router past its support date, 2025</b><span>The FBI warned that old routers without updates were being taken over to hide criminals' traffic, including ones with remote administration on.</span></div>
+      <div class="card"><b>A camera's account, 2023</b><span>The FTC said hackers took over about 55,000 US customers' Ring accounts with stolen or guessed passwords. Ring paid $5.8 million to settle and disagreed with the allegations.</span></div>
+      <p class="src">Sources: <a href="https://www.cisa.gov/news-events/alerts/2016/10/14/heightened-ddos-threat-posed-mirai-and-other-botnets" target="_blank" rel="noopener">CISA: Mirai</a> · <a href="https://www.ic3.gov/PSA/2025/PSA250507" target="_blank" rel="noopener">FBI PSA, May 2025</a> · <a href="https://www.ftc.gov/news-events/news/press-releases/2023/05/ftc-says-ring-employees-illegally-surveilled-customers-failed-stop-hackers-taking-control-users" target="_blank" rel="noopener">FTC: Ring, May 2023</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three short stories, one per habit in this talk: a password nobody changed, a router nobody updated, and a camera account protected only by a password. None needed a genius.</span></li><li><b class="tip">Tip</b><span>CISA's alert (14 October 2016, revised 2017) says Mirai targeted "primarily home routers, network-enabled cameras, and digital video recorders" with "a short list of 62 common default usernames and passwords". The Dyn attack was on Friday 21 October 2016; Dyn said a Mirai botnet was the primary source of the attack traffic (from its own 26 October analysis, which I could only read second-hand because its blog now redirects). The FBI's PSA is I-050725-PSA, 7 May 2025: "Routers dated 2010 or earlier likely no longer receive software updates issued by the manufacturer"; a new variant of the TheMoon malware had been found on end-of-life routers with remote administration on. The FTC's Ring release is dated 31 May 2023: it said Ring faced credential-stuffing attacks in 2017 and 2018 and added multi-factor authentication only in 2019; the order needed court approval, and Ring said it disagreed with the allegations. "About 55,000" is the FTC's figure for US customers.</span></li><li><b class="next">Next</b><span>"Start with the router."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="router" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE ROUTER 01</p><h2>The router is the front door</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="chain-box"><small>One home, one way out</small>
+        <div class="chain"><span>The internet</span><i></i><span>Modem</span><i></i><span class="hot c">Router<em>Wi-Fi · firewall · settings</em></span><i></i><span>Your devices</span></div>
+      </div>
+      <ul class="rules">
+        <li>Everything in your home reaches the internet through it, so it sees and carries all of it.</li>
+        <li>It runs the Wi-Fi, hands out addresses, and has a built-in <b>firewall</b> that should be on.</li>
+        <li>Whoever can sign in to its settings can change how everything in your home connects.</li>
+      </ul>
+      <p class="callout"><b>WHOSE IS IT?</b> A router from your internet provider may update itself: ask. One you bought is yours to update.</p>
+    </div>
+    <div class="stack">
+      <h3>Two different passwords</h3>
+      <div class="props props-2">
+        <div><b>Wi-Fi password</b><span>Lets devices join. You share it with family, and change it if it leaks.</span></div>
+        <div><b>Router admin password</b><span>Lets someone change the settings. Only you should have it, and it must differ from the Wi-Fi one.</span></div>
+      </div>
+      <p class="note">Most routers print the factory admin login and the settings address on a label. That's handy for you and for anyone who can pick the router up, which is why you change it.</p>
+      <p class="src">Source: <a href="https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network" target="_blank" rel="noopener">FTC: How to secure your home Wi-Fi network</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The router is the one device everything depends on, and the one most people set up once and never open again. It also has two passwords that people mix up: the Wi-Fi one that guests know, and an admin one that should be yours alone.</span></li><li><b class="ask">Ask</b><span>Who has opened their router's settings page in the last year? <em>Most hands stay down. That's normal: tonight's list fixes it.</em></span></li><li><b class="tip">Tip</b><span>The FTC's advice (December 2022): set two strong passwords, one for the Wi-Fi and one for the router's admin account; check the built-in firewall is on; log out of the admin account when you're done so no one can use an open session; and, if your internet provider supplied the router, ask whether it gets automatic updates. Many "router" boxes are really a modem and router in one; the advice is the same.</span></li><li><b class="next">Next</b><span>"Four settings that matter most."</span></li></ul></div>
+</section>
+
+<section class="slide" id="admin" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE ROUTER 02</p><h2>Four settings that matter most</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid habits-2">
+      <div class="habit"><b>1 · Change the admin login</b><span>Replace the factory username and password. Avoid your name, address or router brand. Long and unique: let your password manager make it.</span></div>
+      <div class="habit"><b>2 · Update the firmware</b><span>Check the maker's site or app, and turn on automatic updates if offered. If your provider supplied the router, ask whether it updates itself.</span></div>
+      <div class="habit"><b>3 · Turn off remote management</b><span>It makes the router's settings page reachable from the internet. Unless you truly need it, off. The FBI found an old-router botnet on routers with it on.</span></div>
+      <div class="habit"><b>4 · Turn off WPS</b><span>The 8-digit setup PIN can be guessed in about 11,000 tries, not 100 million, because the router confirms each half separately. Join devices with the Wi-Fi passphrase instead.</span></div>
+    </div>
+    <p class="src">Sources: <a href="https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network" target="_blank" rel="noopener">FTC</a> · <a href="https://www.ic3.gov/PSA/2025/PSA250507" target="_blank" rel="noopener">FBI PSA, May 2025</a> · <a href="https://www.kb.cert.org/vuls/id/723755" target="_blank" rel="noopener">CERT/CC: WPS PIN weakness</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>If you only do four things to your router, do these. Two are about the router itself (login and updates), two are about doors it ships with open (remote management and WPS).</span></li><li><b class="tip">Tip</b><span>Why WPS: CERT/CC's note (December 2011) explains the PIN design leaks whether each half is right, so the search shrinks from 10<sup>8</sup> to 10<sup>4</sup> + 10<sup>3</sup> = 11,000 attempts; the fix it recommends is to turn WPS off. The push-button method is a different mode, but the FTC still says to switch WPS off. Remote management: the FBI (May 2025) tells people to turn it off and reboot, apply patches, replace routers at end of life where possible, and use long unique passwords (it suggests 16 to 64 characters). The FBI's PSA doesn't name models; it uses age (2010 or earlier) as an example.</span></li><li><b class="show">Show</b><span>Don't dive into menus: each maker hides these in a different place. The next two slides and the "fix a router" demo practise the choices; at home, search "your router model + turn off WPS" or use the maker's support page.</span></li><li><b class="next">Next</b><span>"Then the Wi-Fi itself."</span></li></ul></div>
+</section>
+
+<section class="slide" id="wifi" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// THE ROUTER 03</p><h2>Wi-Fi security: the mode and the passphrase</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">A made-up Wi-Fi passphrase (never your real one)<input id="wf-in" class="mono" value="sunshine2020" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Examples" id="wf-presets">
+        <button type="button" data-v="sunshine2020">sunshine2020</button>
+        <button type="button" data-gen="w5">5 random words</button>
+        <button type="button" data-gen="w6">6 random words</button>
+        <button type="button" data-gen="c16">16 random characters</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Wi-Fi mode" id="wf-mode">
+        <button type="button" data-m="wpa2" aria-pressed="true">WPA2</button>
+        <button type="button" data-m="wpa3" aria-pressed="false">WPA3</button>
+      </div>
+      <div class="stats pc-stats" id="wf-stats"></div>
+      <p class="comment" id="wf-note"></p>
+      <div class="controls">
+        <label class="grow">Network name (made up)<input id="wf-ssid" class="mono" value="" placeholder="e.g. BlueHeron" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <p class="comment" id="wf-ssid-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>WPA3 if every device supports it</b>, otherwise WPA2 with AES. Never an open network, WEP, or old WPA/TKIP.</li>
+        <li><b>Long and random beats clever.</b> Six random words or 16 or more random characters. You type it once per device.</li>
+        <li><b>Hiding the network name and filtering by device address</b> don't protect you. Apple's router guidance says to leave both off.</li>
+        <li><b>A neutral network name:</b> no surname, address or router brand.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.wi-fi.org/system/files/WPA3_Deployment_Options_Highlights_202602.pdf" target="_blank" rel="noopener">Wi-Fi Alliance: WPA3, Feb 2026</a> · <a href="https://support.apple.com/en-us/102766" target="_blank" rel="noopener">Apple: recommended router settings</a> · <a href="https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network" target="_blank" rel="noopener">FTC</a> · <a href="https://www.eff.org/dice" target="_blank" rel="noopener">EFF word lists</a> · <a href="../crypto-101/#slow-hashing">Crypto 101 cracking estimator</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start on sunshine2020 under WPA2: a word and a year, flagged as popular. Click "5 random words": about 52 bits, roughly a year of non-stop guessing at the demo's generous rate, so the demo says to make it longer. "6 random words": over a thousand years. "16 random characters": far beyond that. Now flip to WPA3 and the third box changes: a recording is no use, every guess has to be a live attempt on your router. Last, try names in the network-name box.</span></li><li><b class="say">Say</b><span>Two separate protections. The mode (WPA2 or WPA3) decides how the passphrase is used. On WPA2, someone in range who records a device joining can take the recording home and try passphrases against it as fast as their hardware allows. WPA3 changes the handshake so that isn't possible. Either way, a long random passphrase costs you nothing and ends the argument.</span></li><li><b class="tip">Tip</b><span>The Wi-Fi Alliance (February 2026): WPA3 has been required in all new Wi-Fi CERTIFIED devices since 2020 and is mandatory in the 6 GHz band; WPA3-Personal's SAE is "resistant to offline dictionary attacks" and gives forward secrecy; and it strongly recommends WPA3 whenever possible. Transition mode lets WPA3 and WPA2 devices share a network, at the cost of the older mode's weakness for older devices. Apple recommends WPA3 Personal, or WPA2/WPA3 Transitional for older devices, and says to avoid WPA/WPA2 mixed modes, WEP, TKIP and open networks. WPA2-Personal turns the passphrase and network name into a key with PBKDF2 (4,096 rounds of HMAC-SHA1, per the 802.11i design; I confirmed it from secondary references); passphrases must be 8 to 63 characters (NETGEAR's documentation). Rate assumption: 100 million guesses a second is deliberately generous; community hashcat benchmarks show about 2.2 to 2.6 million a second for one top graphics card on WPA2, so 100 million is roughly forty of them. The word list is EFF's short list #1 (1,296 words, about 10.3 bits each, CC BY 3.0 US). Random characters come from 54 look-alike-free characters. Everything is made in this page with crypto.getRandomValues and is never sent or stored.</span></li><li><b class="tip">Tip</b><span>Hidden SSID and MAC filtering: Apple says hiding the name "doesn't conceal the network from detection or secure it against unauthorized access" and that you "shouldn't rely on" MAC filtering because addresses can be copied or changed. Older guides, including a now-archived CISA tip (2021), suggested both, so someone may ask. The FTC (and CISA's archive) say a default name can reveal your router brand; "FBI Surveillance Van" is the classic joke name.</span></li><li><b class="next">Next</b><span>"A convenience that opens doors: UPnP."</span></li></ul></div>
+</section>
+
+<section class="slide" id="upnp" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// THE ROUTER 04</p><h2>UPnP and port forwarding: doors that open themselves</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Router setting" id="up-mode">
+        <button type="button" data-m="on" aria-pressed="true">UPnP on</button>
+        <button type="button" data-m="off" aria-pressed="false">UPnP off</button>
+        <button type="button" data-m="hand" aria-pressed="false">Off, you decide</button>
+      </div>
+      <ul class="upnp-list" id="up-list"></ul>
+      <p class="up-count" id="up-count"></p>
+      <p class="comment" id="up-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>UPnP</b> lets a device on your network ask the router to open a door to the internet, automatically, without asking you.</li>
+        <li><b>Convenient for games and video calls.</b> But anything on your network, including a hacked gadget, can do the same, which is how malware can get around the router's firewall.</li>
+        <li><b>Turn it off.</b> If something stops working, turn it on for a while, or open one specific door by hand.</li>
+        <li><b>Port forwarding</b> is the same door, opened by you. Keep it to what you need, and don't forward cameras or the router's own settings page.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network" target="_blank" rel="noopener">FTC</a> · <a href="https://www.cisa.gov/news-events/news/home-network-security" target="_blank" rel="noopener">CISA: home network security (archived)</a> · <a href="https://www.cisa.gov/news-events/alerts/2016/10/14/heightened-ddos-threat-posed-mirai-and-other-botnets" target="_blank" rel="noopener">CISA: Mirai</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>With UPnP on, all four requests are granted and the "open doors" count shows four: one of them is a mystery device asking to open the telnet port. Switch it off: all refused. Then "Off, you decide": you choose which door, if any, to open.</span></li><li><b class="say">Say</b><span>A firewall's job is to stop connections from outside. UPnP lets things inside make exceptions on their own. That's fine when the thing inside is a game console you trust, and a problem when it's a camera with a flaw. If a game or app insists, open the one port it needs, by hand, for that one device.</span></li><li><b class="tip">Tip</b><span>The FTC lists UPnP with remote management and WPS as features to disable. CISA's archived page (2021) says to "disable Universal Plug and Play (UPnP) when not needed" because malware on the network can use it to bypass the router's firewall, and its Mirai alert says the same for routers unless essential. The requests here are made-up illustrations; the port numbers are examples. Telnet (port 23) is the remote-login service Mirai-style malware looks for: CISA's alert tells defenders to watch ports 23 and 2323.</span></li><li><b class="next">Next</b><span>"Time to fix a router."</span></li></ul></div>
+</section>
+
+<section class="slide" id="router-fix" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// THE ROUTER 05</p><h2>Fix this router</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="rtr">
+        <div class="rtr-head"><b>Router admin</b><span>192.168.1.1 · factory settings</span></div>
+        <ul class="perm-list" id="rf-list"></ul>
+        <div class="controls">
+          <button type="button" class="btn" id="rf-check">Check my router</button>
+          <button type="button" class="btn btn-ghost" id="rf-reset">Start again</button>
+        </div>
+      </div>
+      <p class="comment" id="rf-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="pa-why" id="rf-why" hidden></ul>
+      <ul class="rules" id="rf-help">
+        <li>This router is set up the way it came out of the box. Tap a setting to change it, then check.</li>
+        <li>Eight settings from this part of the talk. There's one best answer for each.</li>
+        <li>Real menus use different words and hide these in different places. Search "<i>your model</i> + the setting", or use the maker's support page.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Tap through the rows: each tap moves to the next choice; Wi-Fi security cycles through Open, WPA/TKIP, WPA2/AES and WPA3. Then "Check my router" for the verdict on each, with the reason. Ask the room to call out which to fix first, and compare with the checklist later.</span></li><li><b class="say">Say</b><span>None of these is exotic. Every one is a factory default or a setting nobody has opened. That's why an evening is enough: you're not buying anything, just flipping switches.</span></li><li><b class="tip">Tip</b><span>WPA2 with AES is fine if a device needs it; the demo marks it OK, with WPA3 best. Don't run it as a quiz that shames: most routers really do ship like this. The screen is a made-up admin page: nothing here is a real router, and the address 192.168.1.1 is only a common example (check your router's label).</span></li><li><b class="next">Next</b><span>"Pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is "remote administration" on a home router risky?</p><details><summary>Hint</summary><p>Who can reach the login page if it's reachable from the internet?</p></details><details class="answer"><summary>Answer</summary><p>It puts the router's settings page on the internet, so anyone can try to sign in, or use a flaw in it. The FBI found an old-router botnet spreading on routers with it switched on. Turn it off unless you truly need it, and keep the router updated.</p></details></li>
+      <li><p>Your Wi-Fi passphrase is "sunshine2020". What's wrong with it, and what would you change?</p><details><summary>Hint</summary><p>Would a guesser try a word plus a year early or late? And what does WPA3 change?</p></details><details class="answer"><summary>Answer</summary><p>It's a word and a year, near the top of guess lists. On WPA2, someone in range who records a device joining can try guesses at home, offline. WPA3 stops that. So: WPA3 if you can, and a long random passphrase, such as six random words.</p></details></li>
+      <li><p>Which one is real protection: hiding the Wi-Fi name, filtering by device address, or WPA3/WPA2 with a long passphrase?</p><details><summary>Hint</summary><p>Which one changes what a stranger needs in order to join and read your traffic?</p></details><details class="answer"><summary>Answer</summary><p>The encryption with a long passphrase. Hiding the name doesn't conceal the network from detection, and device addresses can be copied or changed (Apple's router guidance says to leave both off). They add steps for you, not for a determined stranger.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>If someone asks "should I switch my router off at night?": it's a harmless habit, but not a security measure worth the trouble; updates and passwords do far more.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="devices" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE 01</p><h2>Smart devices: the login, and the account behind it</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Change the default login</b> if it has one, and don't reuse a password from elsewhere. If a device gives you no way to set one, ask whether it needs to be online at all.</li>
+        <li><b>Cameras, doorbells and speakers have an account in the maker's cloud.</b> Treat it like your bank: a unique password and two-step sign-in.</li>
+        <li><b>Switch off what you won't use:</b> remote access, microphones, old devices you've stopped using.</li>
+        <li><b>Look at what it collects.</b> Smart TVs have tracking settings; voice assistants can listen all the time and send recordings to the maker (the FTC's words).</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>A TV that watched back, 2017</b><span>The FTC said Vizio's smart TVs captured second-by-second information about what was on screen, on about 11 million TVs, without viewers' informed consent. Vizio paid $2.2 million to settle.</span></div>
+      <div class="card"><b>A camera is a window</b><span>In the Ring case the FTC said the damage came through customer accounts, not the camera: stolen or guessed passwords and too few sign-in protections. Two-step sign-in on the app is the lock that matters.</span></div>
+      <div class="card"><b>Check who has access</b><span>Remove old shared users, and look at the access log for unfamiliar addresses or odd times, as the FTC suggests for IP cameras.</span></div>
+      <p class="src">Sources: <a href="https://consumer.ftc.gov/articles/securing-your-internet-connected-devices-home" target="_blank" rel="noopener">FTC: securing your connected devices</a> · <a href="https://www.ftc.gov/news-events/news/press-releases/2017/02/vizio-pay-22-million-ftc-state-new-jersey-settle-charges-it-collected-viewing-histories-11-million" target="_blank" rel="noopener">FTC: Vizio, Feb 2017</a> · <a href="https://www.ncsc.gov.uk/guidance/smart-devices-in-the-home" target="_blank" rel="noopener">NCSC: smart devices at home</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Smart devices have two weak points: a login on the device, and an account in the cloud that shows or controls it. People protect the first and forget the second. Neither deserves more trust than your bank account.</span></li><li><b class="ask">Ask</b><span>How many devices in your home are online that weren't ten years ago? <em>Count TV, speaker, doorbell, bulbs, plugs, vacuum, printer, fridge.</em></span></li><li><b class="tip">Tip</b><span>The FTC's device page (August 2022): change the default username and password, update regularly, disable features you won't use (including remote management), review a smart TV's tracking settings, and note that voice assistants "can also listen all the time and even send recordings to the manufacturer". The Vizio order was announced on 6 February 2017: a $2.2 million settlement with the FTC and New Jersey, with part suspended; the FTC alleged the viewing data was collected and shared "without viewers' informed consent". NCSC adds that the UK law banning default passwords on smart devices has applied since 29 April 2024 (next slides).</span></li><li><b class="next">Next</b><span>"Where do these things sit on your network?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="segment" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE 02</p><h2>A separate network for guests and smart devices</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Network layout" id="hm-mode">
+        <button type="button" data-m="flat" aria-pressed="true">One network</button>
+        <button type="button" data-m="split" aria-pressed="false">Main, smart and guest</button>
+      </div>
+      <div class="house" id="hm-house" role="group" aria-label="Devices in the house. Pick one to see what it can reach."></div>
+      <p class="hm-out" id="hm-out"></p>
+      <p class="comment" id="hm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Guests get the guest network,</b> with its own passphrase, so your main one stays private and a visitor's infected phone stays away from your files.</li>
+        <li><b>Smart gadgets go on a separate network too</b> (the guest network, or a dedicated one if your router has it). If one is hacked, your laptop and phone are out of its reach.</li>
+        <li><b>The trade-off:</b> casting, printing and some smart-home controls may need devices on the same network. Trade a little convenience for distance.</li>
+      </ul>
+      <p class="note">"Can reach" means the router would let them talk, not that anything bad is happening. Routers differ: some let you allow specific connections.</p>
+      <p class="src">Sources: <a href="https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network" target="_blank" rel="noopener">FTC</a> · <a href="https://csiac.dtic.mil/articles/nsa-releases-best-practices-for-securing-your-home-network/" target="_blank" rel="noopener">NSA home network guidance (summary)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start on "One network", with the smart plug selected: it can reach every other device. Pick the laptop, the backup drive, the camera: same story. Switch to "Main, smart and guest": the colours split into three groups, and each device can only reach its own group and the internet. Pick the visitor's phone: nothing of yours is reachable.</span></li><li><b class="say">Say</b><span>The point isn't that your TV is plotting something. It's that you can't update most gadgets reliably, so you limit the damage if one goes wrong. Think of it as putting the gadgets in a different room with a lock on the door.</span></li><li><b class="tip">Tip</b><span>The FTC says a guest network keeps guest devices that might carry malware off your primary network and lets you keep your main password private. The NSA's February 2023 home-network sheet recommends wireless network segmentation (primary, guest and IoT networks); I could only read summaries of it, as its PDF blocks automated reading. Routers differ: look for "guest network", "IoT network", "client isolation" or "AP isolation". If yours has no guest network, a mesh system or a second router can add one. In the demo every device can reach its own network and the internet; real routers can be stricter or looser.</span></li><li><b class="next">Next</b><span>"Which device goes where?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sorter" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE 03</p><h2>Which network does each device belong on?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <ul class="sorter" id="so-list"></ul>
+      <div class="controls">
+        <button type="button" class="btn" id="so-check">Check my answers</button>
+        <button type="button" class="btn btn-ghost" id="so-reset">Start again</button>
+      </div>
+      <p class="comment" id="so-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules" id="so-help">
+        <li><b>Main:</b> the devices that hold your accounts and files, and that you keep updated.</li>
+        <li><b>Smart:</b> gadgets you can't fully control, that rarely update, or that see and hear your home.</li>
+        <li><b>Guest:</b> anyone else's device.</li>
+        <li>A few are a judgement call: a printer or games console works on either, as long as it isn't next to your files.</li>
+      </ul>
+      <ul class="pa-why" id="so-why" hidden></ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Put each device on a network, then check. The rule of thumb is: would I be upset if this were compromised, and can I keep it updated? Yes and yes means Main. No and no means Smart.</span></li><li><b class="say">Say</b><span>Guests are easy. Gadgets are the question. If the router only has one extra network, put guests and gadgets on it: it's still better than one big network.</span></li><li><b class="tip">Tip</b><span>This is an illustration, not a rule from the sources: the logic is the FTC's and NSA's segmentation advice applied to everyday devices. Work laptops: follow your employer's advice, which may differ.</span></li><li><b class="next">Next</b><span>"And when updates stop?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="updates" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE 04</p><h2>Updates, and the "no more updates" problem</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Turn on automatic updates:</b> the router, each app, each device that offers it.</li>
+        <li><b>Before you buy,</b> ask how many years of security updates it gets, and treat the end date as a "use by" date.</li>
+        <li><b>When updates stop,</b> a device doesn't stop working. It stops being safe to leave exposed.</li>
+      </ul>
+      <h3>An old device lost its updates. What now?</h3>
+      <div class="eo">
+        <div class="seg-pick" role="group" aria-label="Does it see, hear or unlock things?" data-q="sens"><span>Camera, mic or lock?</span><button type="button" data-v="y" aria-pressed="false">Yes</button><button type="button" data-v="n" aria-pressed="false">No</button></div>
+        <div class="seg-pick" role="group" aria-label="Does it still work without the internet?" data-q="off"><span>Works offline?</span><button type="button" data-v="y" aria-pressed="false">Yes</button><button type="button" data-v="n" aria-pressed="false">No</button></div>
+        <p class="eo-out" id="eo-out">Answer both questions.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Nest thermostats, October 2025</b><span>Google ended support for first- and second-generation Nest Learning Thermostats on 25 October 2025: no more software or security updates, and no app. Schedules still run on the device.</span></div>
+      <div class="card"><b>Wemo, January 2026</b><span>Belkin ended support for most older Wemo products on 31 January 2026: no more updates, app or cloud features. Products set up with Apple HomeKit were due to keep working.</span></div>
+      <div class="card"><b>Labels and laws</b><span>UK law since 29 April 2024 bans default passwords and requires a stated support period. EU reporting duties began 11 September 2026. The voluntary US Cyber Trust Mark wasn't in shops by late October 2026.</span></div>
+      <p class="src">Sources: <a href="https://support.google.com/googlehome/answer/16233096" target="_blank" rel="noopener">Google: Nest end of support</a> · <a href="https://techcrunch.com/2025/07/10/belkin-ends-support-for-most-wemo-devices-and-its-wemo-app" target="_blank" rel="noopener">TechCrunch: Wemo</a> · <a href="https://www.ncsc.gov.uk/guidance/smart-devices-in-the-home" target="_blank" rel="noopener">NCSC</a> · <a href="https://digital-strategy.ec.europa.eu/en/policies/cyber-resilience-act" target="_blank" rel="noopener">EU CRA</a> · <a href="https://www.nextgov.com/cybersecurity/2026/10/fcc-commissioner-hopes-cyber-trust-mark-products-reach-shoppers-within-year/416878/" target="_blank" rel="noopener">Nextgov: Cyber Trust Mark</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Everything stops getting updates eventually, usually long before it stops working. That's the real cost of a cheap smart gadget: the date it quietly becomes a risk. Ask for the date when you buy it.</span></li><li><b class="show">Show</b><span>Answer the two questions in the helper. A camera, microphone or lock with no updates is the one to replace first; something harmless that works offline can simply be taken off the internet.</span></li><li><b class="tip">Tip</b><span>Google's page: the thermostats "will no longer receive software or security updates", and "the pre-set schedules will continue to work". Wemo: announced 10 July 2025; per TechCrunch the devices lose firmware and software updates, the app and cloud features; HomeKit-set-up and Thread products keep working; I couldn't read Belkin's own page. NCSC: UK rules from 29 April 2024 ban default passwords and require stating the product support end date. EU CRA (Commission page): in force 10 December 2024, reporting from 11 September 2026, main obligations from 11 December 2027. The US Cyber Trust Mark is the FCC's voluntary label: UL Solutions withdrew as lead administrator in December 2025, ioXt Alliance was named in April 2026, and on 28 October 2026 an FCC commissioner said she hoped labelled products would reach shoppers "within the next year"; the label is meant to include the support commitment and says it can't guarantee safety. Check it hasn't moved. The FBI's May 2025 PSA says routers dated 2010 or earlier likely no longer get updates.</span></li><li><b class="next">Next</b><span>"What can your provider see?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="dns" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// EVERYTHING ELSE 05</p><h2>What your provider can see, and private DNS</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="DNS" id="dn-mode">
+        <button type="button" data-m="plain" aria-pressed="true">Provider's DNS</button>
+        <button type="button" data-m="enc" aria-pressed="false">Encrypted DNS, a resolver I chose</button>
+      </div>
+      <div class="table-wrap"><table class="grid-table dn-table"><thead><tr><th>What</th><th>Who can see it</th></tr></thead><tbody id="dn-rows"></tbody></table></div>
+      <p class="comment" id="dn-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Encrypted DNS</b> hides your lookups from the network between you and the resolver. Android's "Private DNS" is on automatic by default; routers and other devices may need setting.</li>
+        <li><b>It moves trust, it doesn't remove it.</b> The resolver you choose still sees every lookup.</li>
+        <li><b>Some resolvers block known-bad sites:</b> Quad9 (9.9.9.9) blocks known malware domains, Cloudflare 1.1.1.2 blocks malware and 1.1.1.3 adds adult content. A home filter like Pi-hole or AdGuard Home can cut ads and trackers for every device.</li>
+        <li><b>Blocking can break a page now and then.</b> Keep a way to switch it off.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc9076.html" target="_blank" rel="noopener">RFC 9076: DNS privacy</a> · <a href="https://www.rfc-editor.org/rfc/rfc9849.html" target="_blank" rel="noopener">RFC 9849: ECH</a> · <a href="https://support.google.com/android/answer/9654714" target="_blank" rel="noopener">Android: Private DNS</a> · <a href="https://quad9.net/service/service-addresses-and-features/" target="_blank" rel="noopener">Quad9</a> · <a href="https://developers.cloudflare.com/1.1.1.1/setup/" target="_blank" rel="noopener">Cloudflare</a> · <a href="https://pi-hole.net/" target="_blank" rel="noopener">Pi-hole</a> · <a href="https://adguard.com/en/adguard-home/overview.html" target="_blank" rel="noopener">AdGuard Home</a> · <a href="../how-https-works/">How HTTPS Really Works</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Start on "Provider's DNS": your provider carries all your traffic, and with plain DNS it sees each website name your devices ask for. Switch to encrypted DNS: only the resolver you chose sees the lookups. The pages you read are hidden from everyone on the path in both cases, because of HTTPS.</span></li><li><b class="say">Say</b><span>Your internet provider is the one company that carries every byte. It can't read an HTTPS page, but it can see who you talk to and when. Encrypted DNS removes one of the ways it learns site names. It doesn't make you invisible, and a VPN or Tor is a different trade, which is the Privacy tools talk.</span></li><li><b class="tip">Tip</b><span>RFC 9076 section 5.1: for unencrypted transports, "DNS traffic can be seen by an eavesdropper like any other traffic"; section 6.1.4.1: "Use of encrypted transports does not reduce the data available in the recursive resolver". The website name can also appear in the connection setup (the TLS "server name") unless the site and browser use Encrypted Client Hello, published as RFC 9849 in March 2026; many sites don't use it yet. What your provider does with data about you varies by country and company: ask what they log. Quad9's page lists 9.9.9.9 and 149.112.112.112 as "Malware Blocking, DNSSEC Validation"; Cloudflare's setup page lists 1.1.1.2 for malware blocking and 1.1.1.3 for malware and adult content. Android's help page says Private DNS is used on all networks that can by default.</span></li><li><b class="next">Next</b><span>"Pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your smart plug stops getting updates. What are your options?</p><details><summary>Hint</summary><p>What does it control? Can it work without the internet? Where is it on your network?</p></details><details class="answer"><summary>Answer</summary><p>Keep it on the guest or smart network, and switch off its cloud features and remote access if it works without them. Replace it if it controls something that matters, such as a heater, a lock or a camera. Unplug it if you don't use it. Next time, check the update promise before buying.</p></details></li>
+      <li><p>A visitor asks for the Wi-Fi password. Which network do they get, and why?</p><details><summary>Hint</summary><p>What can their phone reach on each network?</p></details><details class="answer"><summary>Answer</summary><p>The guest network, with its own passphrase. Their phone, and anything on it, can reach the internet but not your laptop, backup drive or cameras, and you never share the main passphrase.</p></details></li>
+      <li><p>You switch your router to encrypted DNS. Who can still see which sites your devices look up?</p><details><summary>Hint</summary><p>Who runs the new resolver? And what else gives a site's name away?</p></details><details class="answer"><summary>Answer</summary><p>The resolver you chose sees every lookup, and your provider can often still see site names in the connection setup (unless the site uses Encrypted Client Hello) and which servers you talk to. What no one on the path can read is the content of HTTPS pages.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>If someone asks about a VPN: it moves the visibility from your provider to the VPN company, which is a trust decision, not a free pass. The Privacy tools talk covers it.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="checklist" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// YOUR CHECKLIST 01</p><h2>The 30-minute evening checklist</h2></header>
+  <div class="slide-body stack">
+    <div class="plan" id="hn-plan">
+      <div><b>1 · First 10 minutes: the big wins</b>
+        <label><input type="checkbox" data-k="login"> Router admin login changed (not the factory one, not my Wi-Fi passphrase)</label>
+        <label><input type="checkbox" data-k="fw"> Router firmware updated, and automatic updates on (or a reminder in my calendar)</label>
+        <label><input type="checkbox" data-k="remote"> Remote management is off</label>
+        <label><input type="checkbox" data-k="wifi"> Wi-Fi is WPA3 (or WPA2 with AES) with a long random passphrase</label>
+      </div>
+      <div><b>2 · Next 10 minutes: close the doors</b>
+        <label><input type="checkbox" data-k="wps"> WPS is off, and UPnP is off (or I know what it has opened)</label>
+        <label><input type="checkbox" data-k="guest"> A guest network exists, with its own passphrase</label>
+        <label><input type="checkbox" data-k="iot"> TV, cameras, speakers and plugs are on the guest or smart network</label>
+        <label><input type="checkbox" data-k="acct"> Camera and smart-home accounts have a unique password and two-step sign-in</label>
+      </div>
+      <div><b>3 · Last 10 minutes: look after it</b>
+        <label><input type="checkbox" data-k="eol"> I know when each smart device stops getting updates (or I've set a reminder to look)</label>
+        <label><input type="checkbox" data-k="auto"> Automatic updates are on for my devices and apps</label>
+        <label><input type="checkbox" data-k="privacy"> I've reviewed the tracking and microphone settings on the TV and speakers</label>
+        <label><input type="checkbox" data-k="logout"> I've logged out of the router's admin page and saved its login in my password manager</label>
+      </div>
+    </div>
+    <p class="comment" id="hn-note"></p>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Give people a few minutes to tick what they already know is done. Ticks are saved in this browser only. Most people find a handful of gaps; that's the point. Suggest they take a photo of the unticked ones.</span></li><li><b class="say">Say</b><span>It's ordered by impact: the first ten minutes close the doors most often used. If you only get through group one tonight, that's still a big step. Come back for the rest this weekend.</span></li><li><b class="tip">Tip</b><span>The FTC's advice includes logging out of the router's admin account after setup, so no one can use an open session. Tell people to write down the router's maker and model and the date they did this, so they know what to look for when a support page says "affected models".</span></li><li><b class="next">Next</b><span>"Myth or real?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="myths" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// YOUR CHECKLIST 02</p><h2>Myth or real?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="mq-count" id="mq-count"></p>
+      <p class="mq-claim" id="mq-claim"></p>
+      <div class="controls" id="mq-btns">
+        <button type="button" class="btn" data-a="real">Real</button>
+        <button type="button" class="btn" data-a="myth">Myth</button>
+        <button type="button" class="btn btn-ghost" id="mq-next" hidden>Next ›</button>
+      </div>
+      <p class="verdict" id="mq-verdict" hidden></p>
+      <p class="mq-why" id="mq-why"></p>
+      <p class="comment" id="mq-score"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The old tricks, like hiding the name, feel like security, and the boring settings do the work.</li>
+        <li>The pattern from this talk: <b>turn off what you don't use, separate what you can't trust, and update what stays.</b></li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Read each claim; let the room vote by show of hands before pressing a button, then read the "why".</span></li><li><b class="tip">Tip</b><span>Sources: Apple's router guidance (hidden network and MAC filtering both set to Disabled, with the reasons quoted earlier); FTC v. Vizio (2017) and the FTC's advice to review a TV's tracking settings; the FTC on guest networks ("keeps guest devices with possible malware off your primary network"); the FBI's May 2025 PSA on routers that no longer get updates.</span></li><li><b class="next">Next</b><span>"Six habits to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// YOUR CHECKLIST 03</p><h2>Six habits to take home</h2></header>
+  <div class="slide-body">
+    <div class="habits-grid habits-3">
+      <div class="habit"><b>1 · A router you control</b><span>Its own admin login, updates on, remote management off.</span></div>
+      <div class="habit"><b>2 · Strong Wi-Fi</b><span>WPA3 or WPA2 with AES, a long random passphrase, a neutral name.</span></div>
+      <div class="habit"><b>3 · Doors closed</b><span>WPS and UPnP off, and no camera or admin page forwarded to the internet.</span></div>
+      <div class="habit"><b>4 · Separate networks</b><span>Guests and smart gadgets away from your laptop and phone.</span></div>
+      <div class="habit"><b>5 · Accounts too</b><span>Unique password and two-step sign-in on every camera and smart-home account.</span></div>
+      <div class="habit"><b>6 · A "use by" date</b><span>Know when each gadget stops updating, then isolate or replace it.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Six habits, and most of them are things you can finish before bedtime. If you only do one tonight, change the router's admin login and turn off remote management: they cost nothing and close the doors attackers use most.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a setting you couldn't find on your own router. (Please don't share passphrases or logins.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The checklist and demos stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://consumer.ftc.gov/articles/how-secure-your-home-wi-fi-network" target="_blank" rel="noopener">FTC: How to secure your home Wi-Fi network</a><span>The checklist, in the regulator's words.</span></li>
+        <li><a href="https://support.apple.com/en-us/102766" target="_blank" rel="noopener">Apple: Recommended settings for Wi-Fi routers</a><span>Mode, name, updates and more, setting by setting.</span></li>
+        <li><a href="https://www.ncsc.gov.uk/guidance/smart-devices-in-the-home" target="_blank" rel="noopener">NCSC: Smart devices at home</a><span>Passwords, updates and support end dates.</span></li>
+        <li><a href="../how-https-works/">How HTTPS Really Works</a><span>What your provider and a café network can and can't see.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The passphrase checker, router, UPnP list, network map and quizzes are simulations in your browser; nothing you type is sent anywhere, and a made-up passphrase is all you need. Router menus differ by maker and model. Word list: EFF short wordlist #1 (CC BY 3.0 US). Facts checked 9 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Offer to help people find a setting on their own router after the talk: bring the model name.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

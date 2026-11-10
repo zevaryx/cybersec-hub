@@ -1,0 +1,109 @@
+/* talk.css: styles for "Securing Your Home Network". The shared theme is in ../../shared/deck.css. */
+
+.roadmap-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+code { font: .9em var(--mono); color: var(--yellow); overflow-wrap: anywhere; }
+.prompt #hero-in { max-width: 100%; }
+.src { font: .62em/1.5 var(--mono); letter-spacing: .06em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+.src a { color: var(--cyan); }
+h3 { font-size: 1.05em; color: var(--cyan); }
+.seg-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seg-pick button { font: 600 .68em var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 7px 10px; background: none; color: var(--muted); border: 1px solid var(--line); cursor: pointer; }
+.seg-pick button:hover { color: var(--cyan); border-color: var(--cyan); }
+.seg-pick button[aria-pressed="true"] { color: var(--void); background: var(--cyan); border-color: var(--cyan); }
+.seg-pick > span { font: .68em var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.verdict { font: 700 1.05em var(--mono); padding: 12px 14px; border: 1px solid currentColor; margin: 0; }
+.verdict.ok { color: var(--ok); } .verdict.bad { color: var(--bad); }
+.comment.ok { color: var(--ok); }
+
+/* passphrase and UPnP stats */
+.pc-stats .stat b { font-size: 1.25em; overflow-wrap: anywhere; }
+.pc-stats .stat-bad b { color: var(--bad); } .pc-stats .stat-ok b { color: var(--ok); }
+
+/* UPnP requests */
+.upnp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.upnp-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--line); border-left: 3px solid var(--line); background: rgba(21, 18, 51, .7); }
+.upnp-item.open { border-left-color: var(--bad); }
+.upnp-item > div { display: grid; gap: 1px; min-width: 0; }
+.upnp-item b { color: var(--cyan); font-size: .9em; }
+.upnp-item span { font-size: .82em; color: var(--fg); }
+.upnp-item small { font-size: .7em; color: var(--muted); line-height: 1.35; }
+.chip { flex: none; font: 700 .64em var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border: 1px solid currentColor; }
+.upnp-item .chip.bad { color: var(--bad); } .upnp-item .chip.ok { color: var(--ok); }
+.upnp-item .btn { flex: none; }
+.up-count { margin: 0; font-size: .9em; } .up-count b { font: 700 1.1em var(--mono); } .up-count .bad { color: var(--bad); } .up-count .ok { color: var(--ok); }
+
+/* mock router admin page */
+.rtr { display: grid; gap: 8px; padding: 14px 16px 16px; border: 2px solid var(--line); border-radius: 6px; background: linear-gradient(160deg, #1b1640, #0b0918); }
+.rtr-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.rtr-head b { color: var(--yellow); } .rtr-head span { color: var(--muted); font: .72em var(--mono); }
+.perm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.perm { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; font-size: .8em; color: var(--fg); background: rgba(255, 255, 255, .06); border: 1px solid transparent; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.perm span { min-width: 0; }
+.perm b { flex: 0 1 auto; text-align: right; font: 700 .86em var(--mono); color: var(--yellow); }
+.perm.ok { border-color: var(--ok); } .perm.bad { border-color: var(--bad); }
+.perm:hover { border-color: var(--cyan); }
+.rtr .controls { gap: 8px; }
+.pa-why { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .74em; line-height: 1.35; }
+.pa-why[hidden], .rules[hidden] { display: none; }
+.pa-why li { display: grid; grid-template-columns: 5ch minmax(0, 1fr); gap: 8px; }
+.pa-why b { font: 700 .9em var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.pa-why .ok b { color: var(--ok); } .pa-why .bad b { color: var(--bad); }
+.pa-why span { color: var(--muted); }
+
+/* the house */
+.house { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.dev { display: grid; gap: 2px; align-content: center; text-align: left; font: inherit; color: var(--fg); padding: 10px 10px; border: 1px solid var(--line); border-top: 3px solid var(--muted); background: rgba(21, 18, 51, .7); cursor: pointer; transition: opacity .2s, border-color .2s; min-height: 3.4em; }
+.dev b { font-size: .82em; } .dev small { font: .62em var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dev.z-main { border-top-color: var(--cyan); } .dev.z-smart { border-top-color: var(--yellow); } .dev.z-guest { border-top-color: var(--pink); }
+.dev.sel { background: var(--cyan); border-color: var(--cyan); color: var(--void); } .dev.sel small { color: var(--void); }
+.dev.reach { border-color: var(--bad); box-shadow: 0 0 10px rgba(255, 46, 136, .25); }
+.dev.blocked { opacity: .45; }
+.dev:hover { border-color: var(--cyan); }
+.hm-out { margin: 0; font-size: .9em; } .hm-out b { color: var(--cyan); }
+
+/* sorter */
+.sorter { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.so-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 3px 10px; border: 1px solid var(--line); border-left: 3px solid var(--line); background: rgba(21, 18, 51, .7); font-size: .8em; }
+.so-row.ok { border-left-color: var(--ok); } .so-row.bad { border-left-color: var(--bad); }
+.so-row span { min-width: 0; }
+.so-row .seg-pick { flex: none; flex-wrap: nowrap; gap: 4px; }
+.so-row .seg-pick button { padding: 4px 8px; font-size: .62em; }
+
+/* end-of-support helper */
+.eo { display: grid; gap: 8px; }
+.eo-out { margin: 0; padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--yellow); background: rgba(21, 18, 51, .7); font-size: .84em; min-height: 3em; }
+
+/* who can see what */
+.dn-table { table-layout: fixed; } .dn-table tbody th { white-space: normal; overflow-wrap: anywhere; } .dn-table th { font-size: .85em; } .dn-table td { font-size: .82em; } .dn-table td.ok { color: var(--ok); }
+
+/* checklist + habits */
+.plan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.plan > div { display: grid; gap: 10px; align-content: start; padding: 14px 16px; border: 1px solid var(--line); background: rgba(21, 18, 51, .7); }
+.plan > div > b { color: var(--pink); font-size: 1.05em; margin-bottom: 2px; }
+.plan > div:nth-child(2) > b { color: var(--cyan); } .plan > div:nth-child(3) > b { color: var(--ok); }
+.plan label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: .84em; line-height: 1.4; }
+.plan input { flex: none; margin-top: 2px; }
+.habits-grid { display: grid; gap: 14px; }
+.habits-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.habits-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.habit { display: grid; gap: 6px; align-content: start; padding: 16px 18px; border: 1px solid var(--line); border-left: 3px solid var(--pink); background: rgba(21, 18, 51, .7); }
+.habit b { color: var(--pink); font-size: 1.05em; }
+.habit span { color: var(--muted); font-size: .9em; }
+
+/* myth or real */
+.mq-count { font: .72em var(--mono); letter-spacing: .1em; color: var(--pink); margin: 0; text-transform: uppercase; }
+.mq-claim { font: 700 1.1em/1.45 var(--mono); color: var(--yellow); padding: 14px 16px; border: 1px solid var(--line); background: var(--void); margin: 0; min-height: 3.4em; }
+.mq-why { margin: 0; color: var(--muted); }
+
+/* narrow screens (scroll view) */
+@media (max-width: 900px) {
+  .mode-scroll .plan, .mode-scroll .habits-3, .mode-scroll .roadmap-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mode-scroll .house { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .mode-scroll .plan, .mode-scroll .habits-3, .mode-scroll .habits-2, .mode-scroll .roadmap-3, .mode-scroll .props-2 { grid-template-columns: minmax(0, 1fr); }
+  .mode-scroll .house { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mode-scroll .so-row { flex-wrap: wrap; }
+  .mode-scroll .upnp-item { flex-wrap: wrap; }
+}
+.mode-scroll .prompt #hero-in { display: block; width: 100% !important; box-sizing: border-box; }
