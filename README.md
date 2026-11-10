@@ -27,6 +27,11 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | General 4 | **Your Phone, Safely** | Beginner | about 55 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/mobile-safety/) |
 | Developer 4 | **Web Application Security Essentials** | Intermediate | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/web-app-security/) |
 | Security 4 | **Vulnerability and Patch Management** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/vulnerability-management/) |
+| General 5 | **Securing Your Home Network** | Beginner | about 70 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/home-network/) |
+| General 6 | **Backups and Ransomware** | Beginner | about 55 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/backups-and-ransomware/) |
+| General 7 | **Privacy Tools Explained** | Beginner | about 80 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/privacy-tools/) |
+| General 8 | **Modern Messaging Protocols** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/modern-messaging/) |
+| General 9 | **Zero-Knowledge Proofs** | Advanced | about 95 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/zero-knowledge-proofs/) |
 
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
@@ -56,6 +61,59 @@ Four parts, with checkpoints after parts 1 and 3:
 4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
 
 Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
+
+### Zero-Knowledge Proofs
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Intuition** (25 min): a cave you can play as verifier or bluffer, Where's Waldo with a piece of cardboard, the three properties (a quiz on which one is broken), and why repeating a round collapses a cheater's odds, including what goes wrong if the calls are predictable
+2. **A real protocol** (30 min): Schnorr's proof of knowledge on a toy curve and on P-256 step by step, two answers to one commitment revealing the secret, a transcript simulator you can't tell from the real thing, and Fiat-Shamir with two real bugs (forgetting the commitment, forgetting the public key) that let you forge signatures
+3. **Real-world ZK** (25 min): sealed envelopes (salted SHA-256 commitments), a graph 3-colouring proof, a Merkle membership proof with nullifiers, an over-18 check at three levels (the whole ID, salted digests with a real ECDSA signature, a zero-knowledge illustration), SNARKs, STARKs and Bulletproofs side by side, and where zero-knowledge is and isn't used
+4. **Wrap-up** (10 min): what a valid proof does not guarantee, and eight questions to ask when someone says "zero-knowledge", saved in your browser
+
+The demos use real elliptic-curve arithmetic (P-256 and a tiny curve), SHA-256 and an ECDSA signature in teaching code, never for real secrets. The zero-knowledge proofs on the membership and age slides are stand-ins and say so. Sources (the original papers, Trail of Bits' Frozen Heart disclosure, BIP340, RFC 8032, RFC 9901, Zcash's own disclosures, Google's Longfellow ZK, the European Commission's age-verification page) were checked on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes.
+
+### Modern Messaging Protocols
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Starting a conversation** (25 min): a step-through X25519 key exchange, starting a chat when Bob is offline (prekeys and X3DH, with a dishonest-server toggle), the post-quantum extra secret against "harvest now, decrypt later", and safety numbers (including a swapped-key and a new-phone case)
+2. **Ratchets** (30 min): forward secrecy with a hash chain, healing with a fresh Diffie-Hellman step, a live Double Ratchet where you can copy Alice's keys and watch the thief get locked out, three designs compared on the same twelve messages, and out-of-order delivery with a skip limit
+3. **Groups, devices, metadata** (20 min): pairwise copies, sender keys and the MLS key tree (with a clickable tree), one ciphertext per device, and what sealed sender hides and doesn't
+4. **Wrap-up** (10 min): what end-to-end encryption doesn't protect, a timeline of what has shipped versus what is beta or announced, and a ten-box checklist that remembers your ticks
+
+The demos use real X25519 (checked against the RFC 7748 test vectors), HMAC, HKDF and AES-GCM in teaching code, never for real messages; the post-quantum secret is a stand-in. Signal's X3DH, PQXDH and Double Ratchet specifications, Sesame, Apple's PQ3 and Contact Key Verification posts, RFC 9420 and the sources on each slide were checked on 9 November 2026; the unconfirmed items (such as whether Signal's post-quantum ratchet is now enforced for everyone) are listed in the slides' speaker notes.
+
+### Privacy Tools Explained
+
+Four parts, with checkpoints after parts 2 and 3:
+
+1. **A way to think about privacy** (15 min): threat models in plain words, and one question for every tool: hidden from whom, and who do I trust instead? A tool explorer for nine tools
+2. **Hiding where you go** (25 min): who sees what on the way (HTTP or HTTPS, direct, VPN or Tor), a VPN advert claim checker, Tor's three layers with real AES-GCM you can peel, private DNS and Encrypted ClientHello, and what private windows and tracker blocking really do
+3. **Hiding what you say and store** (25 min): "encrypted" versus end-to-end (a who-holds-the-key lab with real AES-GCM), messaging apps and the metadata envelope, the cloud backup gap, and disk encryption and where the recovery key lives
+4. **Wrap-up** (10 min): a "hide X from Y" tool chooser and a 12-box privacy checklist that remembers your ticks
+
+Every demo is a simulation in your browser: no real network traffic, and nothing you type is sent anywhere. Tools are named as examples, not recommendations. Claims about Tor, VPNs, private browsing, ECH, messaging apps, backups and disk encryption were checked against the vendors' and projects' own pages on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes.
+
+### Backups and Ransomware
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **How ransomware works** (16 min): how it gets in, what it does next (locking, stealing, deleting backups), why you can't crack the key (a key-size calculator with the age of the universe for scale), and why paying is a gamble and a hard call
+2. **Backups that survive** (22 min): sync is not backup (delete a file or lock the laptop and watch where it spreads), 3-2-1 plus a copy you can't reach, a plan builder that tests your copies against fire, theft, late deletes and ransomware and remembers your plan, how far back real services let you go, encrypting backups and where the key lives, a restore test that remembers your ticks, and how long a restore takes
+3. **The bad day** (13 min): a ransomware morning, simulated; the first hour; practice for small teams, with a drawn tabletop scenario; six habits
+
+Ransomware statistics (Coveware, Chainalysis, FBI IC3, Verizon), official guidance (CISA, NCSC, FBI, FTC, OFAC), the 3-2-1 rule's sources and consumer cloud retention windows were checked against primary sources on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes. Nothing real is encrypted, locked or deleted: files are only marked "locked" on screen.
+
+### Securing Your Home Network
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **The router** (25 min): why it's the front door, the four settings that matter most (admin login, firmware, remote management, WPS), WPA3 versus WPA2 with a passphrase checker and random-passphrase maker, UPnP, and a mock router admin page to fix
+2. **Everything else on the network** (25 min): smart devices and the accounts behind them, a network map showing what each device can reach on one network versus separate guest and smart networks, a sorter, updates and end of support, and what your provider can see with plain versus encrypted DNS
+3. **Your checklist** (15 min): a 30-minute evening checklist that remembers your ticks, a myth-or-real quiz, and six habits
+
+Router, Wi-Fi and smart-device guidance (FTC, CISA, FBI, Apple, the Wi-Fi Alliance), end-of-support examples and the UK, EU and US labelling and law dates were checked against primary sources on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes. The random-word passphrases use the EFF short wordlist (CC BY 3.0 US).
 
 ### Vulnerability and Patch Management
 
@@ -262,7 +320,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/, mobile-safety/, web-app-security/, vulnerability-management/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/, mobile-safety/, web-app-security/, vulnerability-management/, home-network/, backups-and-ransomware/, privacy-tools/, modern-messaging/, zero-knowledge-proofs/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos

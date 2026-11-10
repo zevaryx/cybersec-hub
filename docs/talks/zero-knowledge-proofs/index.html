@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zero-Knowledge Proofs</title>
+<meta name="description" content="Zero-Knowledge Proofs: how to prove you know a secret, or that a statement is true, without revealing anything else. Real Schnorr proofs, Fiat-Shamir, commitments and Merkle trees running in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/zero-knowledge-proofs/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Zero-Knowledge Proofs">
+<meta property="og:description" content="Prove you know a secret without revealing it. A cave, a real Schnorr proof, Fiat-Shamir, graph colouring and an over-18 check, live in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/zero-knowledge-proofs/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/zero-knowledge-proofs/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Zero-Knowledge Proofs in neon, beside a terminal that shows how few rounds it takes to make a cheater's odds vanish.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M6 26V12a10 10 0 0 1 20 0v14' fill='none' stroke='%2300f0ff' stroke-width='2'/%3E%3Cpath d='M12 26v-8a4 4 0 0 1 8 0v8' fill='none' stroke='%23ff2d78' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "zero-knowledge-proofs", "title": "Zero-Knowledge Proofs", "footer": "ZK", "subtitle": "GENERAL TRACK · 09",
+  "parts": [{ "name": "Intuition", "minutes": 25 }, { "name": "A real protocol", "minutes": 30 },
+            { "name": "Real-world ZK", "minutes": 25 }, { "name": "Wrap-up", "minutes": 10 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">ZK<span>PROOFS</span></a>
+  <div class="scroll-parts">
+    <a href="#cave" data-part="1"><b>01</b>Intuition</a>
+    <a href="#schnorr" data-part="2"><b>02</b>A real protocol</a>
+    <a href="#commit" data-part="3"><b>03</b>Real-world</a>
+    <a href="#limits" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 09 · ADVANCED · CRYPTO 101 HELPS</p>
+      <h1><span class="pre">Zero-Knowledge</span> <span class="glitch" data-text="Proofs">Proofs</span></h1>
+      <p class="lede">How to convince someone that you know a secret, or that a statement is true, while showing them nothing else. A cave, a real Schnorr proof, Fiat-Shamir, a graph-colouring puzzle and an over-18 check, all running in your browser.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/zero-knowledge-proofs/">zevaryx.github.io/cybersec-hub</a></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ prove --rounds&nbsp;<input id="hero-in" value="20" maxlength="24" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About ninety minutes, four parts, three checkpoints. This is the most abstract talk in the General track, so the plan is: a picture first, then a button, then a little maths for anyone who wants it. The question for the next hour and a half: how can I convince you I know something, without telling you what it is?</span></li><li><b class="show">Show</b><span>The terminal on the right. Type a number of rounds. Each round halves the odds that a cheater gets through, so twenty rounds already means about one in a million. The numbers are exact; nothing is simulated yet.</span></li><li><b class="tip">Eggs</b><span>Terminal: 0, 1, 10, 42, 64, 128, 1000 or a negative number; "open sesame"; "waldo"; "schnorr"; "Alice" or "Bob"; half a round (0.5); words it doesn't understand. Cave: ten honest rounds in a row, and a bluffer's lucky streak. Where's Waldo: ten shuffles. Properties quiz: 4 of 4 or 0 of 4. Repeating rounds: 1,000 bluffers at 40 rounds, and a predictable verifier. Schnorr: 200 bluffers on each curve. Extract: recover the secret. Simulator: five right guesses in a row, and a balanced score. Fiat-Shamir: an empty message, and the forged signatures. Commitments: "rock", "paper" and "scissors", and "yes" with no salt. Colouring: checking all 14 edges, and catching the cheat. Membership: voting twice, and in a new poll. Age: exactly 18, under 18, and age 0. Systems: tick all three boxes. Limits quiz: 6 of 6. Checklist: all eight boxes. And the browser console.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#cave"><small>PART 1 · 25 MIN</small><b>Intuition</b></a><span>The cave</span><span>Where's Waldo, with cardboard</span><span>Three properties</span><span>Repeating the round</span></li>
+      <li><a href="#schnorr"><small>PART 2 · 30 MIN</small><b>A real protocol</b></a><span>Schnorr on an elliptic curve</span><span>Two answers reveal the secret</span><span>A transcript you can fake</span><span>Fiat-Shamir and its traps</span></li>
+      <li><a href="#commit"><small>PART 3 · 25 MIN</small><b>Real-world ZK</b></a><span>Sealed envelopes</span><span>Proving a puzzle, and a list</span><span>Over 18, no birthday</span><span>SNARKs, STARKs, and uses</span></li>
+      <li><a href="#limits"><small>PART 4 · 10 MIN</small><b>Wrap-up</b></a><span>What a proof can't tell you</span><span>Eight questions to ask</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour. The maths is real (elliptic-curve arithmetic, SHA-256 and an ECDSA signature), but it's teaching code, never for real secrets. Two slides use stand-ins for the proofs themselves, and say so. Nothing you type leaves this page.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is pure intuition: a cave and a puzzle, no maths. Part 2 is one real protocol, small enough to see every number, including the clever trick that turns it into a signature. Part 3 is what the idea grows into: proving puzzles, membership in a list and an age check, then what the big proof systems cost. Part 4 is the honest bit: what a proof still can't promise.</span></li><li><b class="say">Say</b><span>If the maths in part 2 is too much, ride it out: the buttons show every step, and the pictures carry the idea.</span></li><li><b class="next">Next</b><span>"First, why anyone wanted this."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>To prove you know something, you usually hand it over</h2></header>
+  <div class="slide-body stack">
+    <p class="big-lede">A password is a proof by disclosure: you show the secret and the other side keeps it. An ID shows your birthday to prove you're over 18. Zero-knowledge proofs ask: can the proof carry only the fact, and none of the secret?</p>
+    <div class="cards-3">
+      <div class="card"><b>1985: a new kind of proof</b><span>Goldwasser, Micali and Rackoff defined interactive proofs and "knowledge complexity", and showed that a proof can leave the verifier with nothing except the fact that the statement is true.</span></div>
+      <div class="card"><b>1989: a cave, and a smart card</b><span>Quisquater, Guillou and Berson explained zero knowledge with an Ali Baba cave, in a paper called "How to explain zero-knowledge protocols to your children". The same year, Schnorr published an efficient identification scheme built for smart cards.</span></div>
+      <div class="card"><b>Today: proving without handing over</b><span>An age check that reveals "over 18" and nothing else, anonymous votes, payments whose amounts stay hidden, and proofs that a computer ran a program correctly.</span></div>
+    </div>
+    <p class="src">Sources: <a href="https://dblp.org/rec/conf/stoc/GoldwasserMR85.html" target="_blank" rel="noopener">Goldwasser, Micali, Rackoff (STOC 1985)</a> · <a href="https://www.fermatslibrary.com/s/how-to-explain-zero-knowledge-protocols-to-your-children" target="_blank" rel="noopener">Quisquater et al. (1989), annotated copy</a> · <a href="https://link.springer.com/doi/10.1007/0-387-34805-0_22" target="_blank" rel="noopener">Schnorr (CRYPTO 1989)</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three dates and one idea. Ordinary security hands the secret over: your password goes to a server, and you trust it to behave. In 1985 three researchers showed you can prove a statement and reveal nothing but its truth. In 1989 two things happened: a story clear enough for children, and an efficient protocol small enough for a smart card. Today the same idea sits behind some age checks, some payments and some blockchains.</span></li><li><b class="ask">Ask</b><span>Where have you handed over far more than you needed to prove? <em>(Showing a driving licence to prove you're over 18 is the usual answer: it also shows your name, address and exact birthday.)</em></span></li><li><b class="tip">Check</b><span>The 1989 date for the cave paper is the CRYPTO '89 conference; the Springer chapter is dated 1990. The Schnorr paper is "Efficient Identification and Signatures for Smart Cards", CRYPTO '89 (LNCS 435). The journal paper that followed has a different title. The first slide-3 link goes to the DBLP record of the 1985 extended abstract; the full journal version is SIAM J. Computing, 1989. The cave paper is in LNCS 435 (CRYPTO '89), starting at page 628 (a 2002 mailing-list post links the Springer record). Springer, DBLP and a university mirror block or time out for automated readers, so I could not open them: the Schnorr DOI and its page numbers (239 to 252) rest on search listings, and the cave paper's link goes to an annotated copy (Fermat's Library) that I could read only in part.</span></li><li><b class="next">Next</b><span>"Let's start in a cave."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="cave" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// INTUITION 01</p><h2>The cave: prove you know the magic word without saying it</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <svg class="cave-svg" viewBox="0 0 360 246" role="img" aria-label="A ring-shaped cave with an entrance at the bottom, a left tunnel A, a right tunnel B, and a magic door joining them at the back">
+        <path class="tun" d="M180 226 V196 M180 196 Q60 196 60 118 V66 Q60 28 100 28 H260 Q300 28 300 66 V118 Q300 196 180 196"/>
+        <path class="tun-in" d="M180 226 V196 M180 196 Q60 196 60 118 V66 Q60 28 100 28 H260 Q300 28 300 66 V118 Q300 196 180 196"/>
+        <rect class="door" id="cv-door" x="166" y="14" width="28" height="28" rx="3"/>
+        <text class="cv-t" x="180" y="9" text-anchor="middle">magic door</text>
+        <text class="cv-t big" x="34" y="122" text-anchor="middle">A</text>
+        <text class="cv-t big" x="326" y="122" text-anchor="middle">B</text>
+        <text class="cv-t" x="180" y="243" text-anchor="middle">entrance (the verifier waits here)</text>
+        <circle class="tok" id="cv-tokA" cx="60" cy="100" r="9" hidden></circle>
+        <circle class="tok" id="cv-tokB" cx="300" cy="100" r="9" hidden></circle>
+        <text class="cv-q" id="cv-q" x="180" y="120" text-anchor="middle">out of sight</text>
+      </svg>
+      <div class="seg-pick" id="cv-who" role="group" aria-label="Who is in the cave"><span>Prover</span><button type="button" data-v="know" aria-pressed="true">Knows the word</button><button type="button" data-v="bluff" aria-pressed="false">Bluffing</button></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="cv-a">Call out: A</button>
+        <button type="button" class="btn btn-sm" id="cv-b">Call out: B</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cv-rand">Call at random</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cv-ten">Run 10 rounds</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cv-reset">Start over</button>
+      </div>
+      <div class="meter" aria-hidden="true"><i id="cv-bar"></i></div>
+      <p class="cmp-sum" id="cv-stat"></p>
+      <pre class="term-sm scrolly" id="cv-log" aria-live="polite"></pre>
+      <p class="comment" id="cv-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The prover walks in</b> and takes tunnel A or B while the verifier waits at the entrance, out of sight. Deep inside, a door joins the two tunnels. It opens only with a magic word.</li>
+        <li><b>The verifier shouts</b> which tunnel the prover must come out of. Someone who knows the word can always do it, crossing the door if they have to. A bluffer can only do it when they happened to pick the called side: half the time.</li>
+        <li><b>One round proves little. Many rounds prove a lot.</b> Ten clean rounds in a row would fool a bluffer about 1 time in 1,024.</li>
+        <li><b>The verifier never hears the word</b>, and learns nothing else about it.</li>
+      </ul>
+      <p class="callout"><b>A RECORDING PROVES NOTHING</b> The verifier could agree the calls with a friend beforehand and film a fake cave. So a video convinces nobody else. That's what zero-knowledge means; slide 11 makes it exact.</p>
+      <p class="src">Source: <a href="https://www.fermatslibrary.com/s/how-to-explain-zero-knowledge-protocols-to-your-children" target="_blank" rel="noopener">Quisquater et al., "How to explain zero-knowledge protocols to your children" (annotated copy)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Tell the story first: a ring-shaped cave, a door at the back that only opens with a magic word. The prover goes in by one tunnel, the verifier shouts which one to come out of. (Cryptographers traditionally call them Peggy and Victor, prover and verifier. The original paper tells it as a chase: a thief escapes into a cave whose passage forks left and right, and the verifier-and-prover version is the usual retelling. The excerpt I could read stops before the door and the magic word, which are as the story is usually told.)</span></li><li><b class="show">Show</b><span>Leave "Knows the word" selected, press "Call out: A" a few times, then "Run 10 rounds": every round succeeds, because crossing the door is no problem. The log shows which tunnel the prover had actually entered; the verifier never sees that. Now switch to "Bluffing" and run 10 rounds: it fails about half the time, and a failure resets the confidence bar.</span></li><li><b class="ask">Ask</b><span>I've seen the prover come out of A five times in a row. Am I sure? <em>(No: a bluffer does that once in 32 tries. Keep going, and the odds shrink with every round.)</em></span></li><li><b class="say">Say</b><span>The key point: the verifier learns the prover knows the word, and learns nothing about the word itself. And a film of this convinces no one else, because the verifier could have staged it. That second point is surprising and is exactly what "zero-knowledge" means.</span></li><li><b class="next">Next</b><span>"A second picture, with a piece of cardboard."</span></li></ul></div>
+</section>
+
+<section class="slide" id="waldo" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// INTUITION 02</p><h2>Where's Waldo, with a big piece of cardboard</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="wd-who" role="group" aria-label="Who is proving"><span>Prover</span><button type="button" data-v="found" aria-pressed="true">Found Waldo</button><button type="button" data-v="not" aria-pressed="false">Hasn't found him</button></div>
+      <div class="wd-pair">
+        <div class="wd-col"><small>The prover's picture (secret)</small><div class="wd-pic" id="wd-pic" aria-label="A grid of symbols with one striped figure hidden among them"></div></div>
+        <div class="wd-col"><small>What the verifier sees</small><div class="wd-card" id="wd-card"><div class="wd-hole" id="wd-hole"></div></div></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="wd-shuffle">Slide the picture behind the card</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="wd-peek">Peek at the picture (what the verifier must NOT see)</button>
+      </div>
+      <p class="verdict ok" id="wd-verdict"></p>
+      <p class="comment" id="wd-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The setup:</b> the prover has a huge picture with one striped figure somewhere in it. They lay it behind a sheet of card, much bigger than the picture, with a single figure-sized hole in it. Out of the verifier's sight they slide the picture around until the figure shows through the hole.</li>
+        <li><b>The verifier sees the figure and nothing else:</b> not where it was in the picture, because the card hides the picture's edges and how far it was moved.</li>
+        <li><b>Why it's convincing:</b> only someone who found the figure can put it in the hole. A prover who hasn't found it shows a decoy, and is rejected.</li>
+        <li><b>Why it's zero-knowledge:</b> the verifier's view, a striped figure in a hole, looks the same wherever the figure really was.</li>
+      </ul>
+      <p class="callout"><b>THE CATCH</b> The verifier has to know the picture is the real one. A prover who cuts a striped figure out of some other picture proves nothing. A proof is only about a <i>statement</i> everyone agrees on ("this picture contains the figure"), and that agreement is part of the setup.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Press "Slide the picture behind the card" a few times: the picture on the left rearranges (the figure ends up somewhere new each time), and the verifier's window never changes. Press "Peek" to show the thing that must stay hidden. Then pick "Hasn't found him" and slide again: the hole now shows a decoy and the verifier rejects.</span></li><li><b class="say">Say</b><span>Same three ideas as the cave, in a different costume. If you have Waldo, you can always show him through the hole (complete). If you don't, you can't fake it (sound). And what the verifier sees is the same wherever Waldo was (zero-knowledge).</span></li><li><b class="ask">Ask</b><span>What could a dishonest prover do to cheat? <em>(Cut a Waldo out of another picture, or show a pre-made card. The verifier must check the picture is the agreed one. Real proofs are always about a statement both sides agree on.)</em></span></li><li><b class="next">Next</b><span>"Let's name the three properties."</span></li></ul></div>
+</section>
+
+<section class="slide" id="properties" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// INTUITION 03</p><h2>Three properties: complete, sound, zero-knowledge</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-3">
+      <div class="card"><b>Completeness</b><span>If the statement is true and both sides follow the rules, the verifier accepts. <i>Cave: someone who knows the word always comes out of the right side.</i></span></div>
+      <div class="card"><b>Soundness</b><span>If the statement is false, no cheater can make the verifier accept, except with a tiny probability. <i>Cave: a bluffer is caught half the time, every round.</i></span></div>
+      <div class="card"><b>Zero-knowledge</b><span>The verifier learns nothing except that the statement is true. <i>Cave: the word stays secret, and a recording convinces nobody else.</i></span></div>
+    </div>
+    <div class="pr-quiz-box">
+      <p class="mini-label">WHICH PROPERTY IS BROKEN?</p>
+      <div class="pr-quiz" id="pr-quiz"></div>
+      <p class="cmp-sum" id="pr-score"></p>
+      <p class="comment" id="pr-note"></p>
+    </div>
+    <p class="src">Sources: <a href="https://dblp.org/rec/conf/stoc/GoldwasserMR85.html" target="_blank" rel="noopener">Goldwasser, Micali, Rackoff (1985)</a> · <a href="https://toc.cryptobook.us/" target="_blank" rel="noopener">Boneh and Shoup, A Graduate Course in Applied Cryptography, chapter 19</a></p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Three words to carry out of the room. Completeness: honest provers get through. Soundness: cheaters don't (almost always). Zero-knowledge: the verifier gets nothing but "yes". Each one can fail on its own, and a proof that has two of the three is a different, usually less useful, thing.</span></li><li><b class="show">Show</b><span>The four scenarios below. Let the room vote before pressing. Scenario 4 is a trick: nothing is broken.</span></li><li><b class="say">Say</b><span>One precision. Some explainers say a sound proof is "impossible to fool". The accurate statement is probabilistic: a cheater succeeds with probability at most some tiny number, and for many real systems that also assumes a hard maths problem stays hard. That's why you will see "negligible" in papers.</span></li><li><b class="next">Next</b><span>"And that tiny probability comes from repeating the round."</span></li></ul></div>
+</section>
+
+<section class="slide" id="repeating" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// INTUITION 04</p><h2>Repeat the round, and the cheater's odds collapse</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="range-row"><span>Rounds</span><input type="range" id="rp-n" min="1" max="40" value="10" aria-label="Number of rounds"><output id="rp-n-out">10</output></div>
+      <div class="seg-pick" id="rp-mode" role="group" aria-label="How the verifier picks the calls"><span>Verifier's calls</span><button type="button" data-v="random" aria-pressed="true">Unpredictable</button><button type="button" data-v="guess" aria-pressed="false">Predictable</button></div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="rp-run">Try 1,000 bluffers</button></div>
+      <pre class="term-sm" id="rp-out" aria-live="polite"></pre>
+      <p class="comment" id="rp-note"></p>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table st-table rp-table"><thead><tr><th>Rounds</th><th>A bluffer passes all of them</th></tr></thead><tbody>
+        <tr><th>1</th><td>1 in 2 (a coin flip)</td></tr>
+        <tr><th>10</th><td>1 in 1,024</td></tr>
+        <tr><th>20</th><td>1 in 1,048,576</td></tr>
+        <tr><th>40</th><td>1 in 1,099,511,627,776</td></tr>
+        <tr><th>64</th><td>1 in 18,446,744,073,709,551,616</td></tr>
+        <tr><th>128</th><td>about 1 in 3.4 × 10<sup>38</sup></td></tr>
+      </tbody></table></div>
+      <ul class="rules">
+        <li><b>Each round is an independent coin flip</b> for the bluffer, so <i>n</i> rounds means <i>n</i> heads in a row: 1 in 2<sup><i>n</i></sup>.</li>
+        <li><b>The honest prover never worries:</b> they pass every round.</li>
+      </ul>
+      <p class="callout"><b>THE CATCH</b> The calls must be <i>unpredictable</i> and chosen <i>after</i> the prover has committed to a tunnel. If the bluffer can guess the calls, they enter the right tunnel every time and never need the word. Remember this for slide 12.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Slide to 10 rounds and press "Try 1,000 bluffers": about one of them (1,000 / 1,024) survives. Slide to 20: none do. Slide to 40: none, and you would need around a trillion bluffers to expect one survivor. Then pick "Predictable" and run it again: every bluffer passes, whatever the number of rounds.</span></li><li><b class="say">Say</b><span>This is where "a proof by repetition" gets its power: you don't need a clever argument, you need independent rounds with unpredictable questions. And this is where the trap is: if the questions are predictable, repetition is worthless. In part 2 we'll see how to keep the questions unpredictable even when there's no verifier in the room.</span></li><li><b class="tip">Check</b><span>The simulation uses the browser's secure random generator for the coin flips; the numbers on the right are exact powers of two. 2^64 is 18,446,744,073,709,551,616 and 2^128 is about 3.4 × 10^38.</span></li><li><b class="next">Next</b><span>"Checkpoint time."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>In the cave story, why isn't one successful round convincing?</p><details><summary>Hint</summary><p>What can a bluffer do in a single round?</p></details><details class="answer"><summary>Answer</summary><p>A bluffer who happens to be in the tunnel the verifier calls passes, which is half the time. Many independent rounds make the chance 1 in 2<sup>n</sup>.</p></details></li>
+      <li><p>Which property says the verifier learns nothing except "yes"?</p><details><summary>Hint</summary><p>Think about what the verifier learned in the cave.</p></details><details class="answer"><summary>Answer</summary><p>Zero-knowledge. Completeness is about honest provers always being accepted, and soundness is about cheaters being caught.</p></details></li>
+      <li><p>What goes wrong if the verifier's calls are predictable?</p><details><summary>Hint</summary><p>Could a bluffer plan ahead?</p></details><details class="answer"><summary>Answer</summary><p>The bluffer enters the tunnel they know will be called and passes every round without the word. Challenges must be unpredictable and chosen after the prover has committed.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>Question 3 is the one to dwell on: it is the setup for Fiat-Shamir in part 2.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="schnorr" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// A REAL PROTOCOL 01</p><h2>Schnorr: prove you know x without revealing x</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" id="sc-curve" role="group" aria-label="Curve"><span>Curve</span><button type="button" data-v="toy" aria-pressed="true">Tiny numbers</button><button type="button" data-v="p256" aria-pressed="false">NIST P-256</button></div>
+      <div class="seg-pick" id="sc-who" role="group" aria-label="Who is proving"><span>Prover</span><button type="button" data-v="know" aria-pressed="true">Knows x</button><button type="button" data-v="bluff" aria-pressed="false">Bluffing</button></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="sc-1">1 · Set up</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sc-2" disabled>2 · Commit</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sc-3" disabled>3 · Challenge</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sc-4" disabled>4 · Respond</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sc-5" disabled>5 · Check</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sc-reset">Start over</button>
+      </div>
+      <div class="table-wrap"><table class="grid-table st-table sc-table"><thead><tr><th></th><th>Prover</th><th>Anyone watching</th></tr></thead><tbody id="sc-rows"></tbody></table></div>
+      <p class="comment" id="sc-note"></p>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="sc-bluff">Run 200 bluffing provers</button><span class="cmp-sum" id="sc-stat"></span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The statement:</b> "I know a number <i>x</i> such that <i>Y</i> = <i>x</i>·<i>G</i>". <i>G</i> is a fixed point on an elliptic curve, <i>Y</i> is public, and finding <i>x</i> from <i>Y</i> is the discrete-logarithm problem.</li>
+        <li><b>Commit:</b> pick a random <i>k</i> and send <i>R</i> = <i>k</i>·<i>G</i>. <b>Challenge:</b> the verifier sends a random <i>c</i>. <b>Respond:</b> <i>s</i> = <i>k</i> + <i>c</i>·<i>x</i> (mod <i>n</i>).</li>
+        <li><b>Check:</b> <i>s</i>·<i>G</i> must equal <i>R</i> + <i>c</i>·<i>Y</i>. It does, because <i>s</i>·<i>G</i> = <i>k</i>·<i>G</i> + <i>c</i>·(<i>x</i>·<i>G</i>).</li>
+        <li><b>Why <i>s</i> doesn't leak <i>x</i>:</b> <i>k</i> is random and used once, so <i>k</i> + <i>c</i>·<i>x</i> is just a random-looking number.</li>
+      </ul>
+      <p class="callout"><b>SAME CURVES AS CRYPTO 101</b> "Tiny numbers" is the curve <i>y</i>² = <i>x</i>³ + 2<i>x</i> + 2 over the numbers mod 17, so you can follow every step. NIST P-256 is the real thing, from the same shared code as Crypto 101's signatures.</p>
+      <p class="src">Sources: <a href="https://link.springer.com/doi/10.1007/0-387-34805-0_22" target="_blank" rel="noopener">Schnorr (CRYPTO 1989)</a> · <a href="https://toc.cryptobook.us/" target="_blank" rel="noopener">Boneh and Shoup, chapter 19</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>Same shape as the cave: commit, challenge, respond. The "tunnel" is now a random number <i>k</i> hidden inside a point <i>R</i>; the "call" is a number <i>c</i>; and the "come out the right side" is a number <i>s</i> that only someone who knows <i>x</i> can produce for any <i>c</i> they're asked.</span></li><li><b class="show">Show</b><span>On "Tiny numbers", press 1 to 5 in order and read the table: Y is public, k stays with the prover, R and c and s are what the watcher sees, and the check line shows both sides of the equation matching. Press "Start over" and repeat on NIST P-256: same steps, 256-bit numbers.</span></li><li><b class="show">Show</b><span>Select "Bluffing" and run 200 bluffing provers on "Tiny numbers": about 10 of them (200/19) get lucky, because the toy challenge has only 19 possible values. Switch to P-256: none do. The bluffer's best strategy is to guess the challenge in advance, so the chance per round is one in the number of possible challenges.</span></li><li><b class="ask">Ask</b><span>Why do we need the random k at all? <em>(Without it, s = c·x would hand over x as soon as anyone divides by c. k acts as a one-time pad for x.)</em></span></li><li><b class="tip">Check</b><span>This is the Schnorr identification protocol (CRYPTO '89). Soundness error per round is 1 / (number of possible challenges); here the challenge is any number below the group order n. The toy curve's group order is 19. The bluff strategy is the textbook one: pick c and s first and solve for R.</span></li><li><b class="next">Next</b><span>"What happens if the prover answers two different questions about the same commitment?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="extract" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// A REAL PROTOCOL 02</p><h2>Soundness: two answers to one commitment reveal the secret</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ex-1">1 · Prover commits (R)</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ex-2" disabled>2 · Ask challenge c₁</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ex-3" disabled>3 · Rewind: ask c₂ about the same R</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ex-4" disabled>4 · Extract the secret</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ex-reset">Start over</button>
+      </div>
+      <pre class="term-sm" id="ex-out" aria-live="polite"></pre>
+      <div class="controls"><button type="button" class="btn btn-sm" id="ex-reuse">Same arithmetic: a signer reuses k</button></div>
+      <p class="comment" id="ex-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>A prover who can answer two different challenges for the same <i>R</i></b> must know <i>x</i>: subtracting the answers gives <i>s</i>₁ − <i>s</i>₂ = (<i>c</i>₁ − <i>c</i>₂)·<i>x</i>, so <i>x</i> = (<i>s</i>₁ − <i>s</i>₂) / (<i>c</i>₁ − <i>c</i>₂). The division works because the group order <i>n</i> is prime.</li>
+        <li><b>That's the proof of soundness:</b> a prover who convinces the verifier reliably could be "rewound" and asked twice, so they must hold <i>x</i>. Cheaters can't, because they can answer only one challenge per commitment.</li>
+        <li><b>The flip side for honest provers:</b> never answer twice. <i>k</i> is single-use. Reuse it and anyone can compute <i>x</i>.</li>
+      </ul>
+      <p class="callout"><b>THE SAME BUG, IN THE WILD</b> A repeated nonce in an ECDSA signature gives away the private key by this arithmetic. In 2010 the fail0verflow group showed, at the 27C3 conference, that Sony's PS3 firmware signing reused one; their slides say "from a pair of signatures that use the same m, we can compute m and k". Crypto 101 has a <a href="../crypto-101/#ecdsa">slide on exactly this</a>.</p>
+      <p class="src">Sources: <a href="https://fahrplan.events.ccc.de/congress/2010/Fahrplan/attachments/1780_27c3_console_hacking_2010.pdf" target="_blank" rel="noopener">fail0verflow, "Console Hacking 2010" (27C3)</a> · <a href="https://toc.cryptobook.us/" target="_blank" rel="noopener">Boneh and Shoup, §19.4.1 (special soundness)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press 1 to 4. The prover commits once. We ask c₁ and get s₁. Then we "rewind" and ask c₂ about the same R and get s₂. The page divides, and the number it prints equals the prover's secret x, which was hidden all along. Then press "Same arithmetic: a signer reuses k": two Schnorr signatures on different messages with the same k, and the key falls out the same way.</span></li><li><b class="say">Say</b><span>This is the soundness argument in one line. A cheater can answer one question; a prover who can answer two must know the secret. Cryptographers call it special soundness, and the rewinding trick is how they prove that an honest-looking prover really knows what they claim.</span></li><li><b class="say">Say</b><span>Don't forget the practical lesson: for a real prover, k must be fresh every time. That's why signing code is full of warnings about nonces, and why the same arithmetic broke a game console.</span></li><li><b class="tip">Check</b><span>The fail0verflow slides (27C3, 29 December 2010) show the ECDSA arithmetic for a repeated random number and a slide titled "Sony's ECDSA code". They did not publish the key they could derive. Read from the slide PDF on 9 November 2026: the ECDSA arithmetic and the quote on the slide. The slide titled "Sony's ECDSA code" is an image I could not read, so the claim that Sony's implementation used a fixed random number rests on contemporary reports of the talk (for example Exophase) and on Crypto 101's own slide.</span></li><li><b class="next">Next</b><span>"Now the opposite worry: what does the verifier learn?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="simulator" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// A REAL PROTOCOL 03</p><h2>Zero-knowledge: a transcript you can fake</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="note">Two transcripts of the same proof, for the same public <i>Y</i> on P-256. One is a real run by a prover who knows <i>x</i>. The other was made with no secret at all. Both pass the check. Which is which?</p>
+      <div class="sm-pair"><div class="sm-box" id="sm-a"></div><div class="sm-box" id="sm-b"></div></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="sm-ga">A is the real one</button>
+        <button type="button" class="btn btn-sm" id="sm-gb">B is the real one</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sm-new">New pair</button>
+      </div>
+      <p class="cmp-sum" id="sm-score"></p>
+      <p class="comment" id="sm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The simulator doesn't know <i>x</i>.</b> It picks <i>c</i> and <i>s</i> at random first, then works out <i>R</i> = <i>s</i>·<i>G</i> − <i>c</i>·<i>Y</i>. The result passes the verifier's check.</li>
+        <li><b>Real and fake come from the same distribution</b> (<i>c</i> and <i>s</i> are uniformly random, and <i>R</i> follows from them). So a transcript carries no information about <i>x</i>: anyone could have made it.</li>
+        <li><b>That is zero-knowledge:</b> if the verifier could have produced the whole conversation alone, the conversation can't have taught them anything.</li>
+        <li><b>And the film proves nothing:</b> the cave recording is exactly such a transcript.</li>
+      </ul>
+      <p class="callout"><b>WHY CHEATERS CAN'T USE THIS</b> The simulator picks <i>c</i> <i>before</i> <i>R</i>. A live verifier picks <i>c</i> <i>after</i> seeing <i>R</i>, so a cheater would have to guess it in advance. Strictly, the plain protocol is "honest-verifier" zero-knowledge: it assumes the verifier picks <i>c</i> at random. Full zero-knowledge against any verifier needs extra steps.</p>
+      <p class="src">Source: <a href="https://toc.cryptobook.us/" target="_blank" rel="noopener">Boneh and Shoup, §19.1.1 (honest verifier zero knowledge) and §19.4.2</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Make a guess, press the button, and the page reveals which was real and tallies your score. Press "New pair" and repeat. Both transcripts always show "verifier's check: accepted". Over many guesses you should land near 50%, which is exactly what zero-knowledge predicts: the two are indistinguishable.</span></li><li><b class="say">Say</b><span>This slide is the definition of zero-knowledge made concrete. If I can write a program that, without the secret, produces transcripts that look exactly like real ones, then anyone who watched the real conversation learned nothing they couldn't have made up. It also explains deniability: a transcript of an interactive proof can't convince a third party.</span></li><li><b class="ask">Ask</b><span>If the simulator can fake it, why can't a cheater use it to fool a live verifier? <em>(Because it picks the challenge first. The live verifier picks the challenge after seeing R. The cheater has to commit to R before the question arrives.)</em></span></li><li><b class="tip">Check</b><span>The "same distribution" claim is for an honest verifier (Boneh and Shoup, Definition 19.1). The toy-curve version of this check was run for the build: over 38,000 samples, real and simulated transcripts matched across all 361 possible (c, s) pairs. A verifier that picks challenges adaptively needs a stronger protocol.</span></li><li><b class="next">Next</b><span>"Now remove the verifier, with a hash."</span></li></ul></div>
+</section>
+
+<section class="slide" id="fiat-shamir" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// A REAL PROTOCOL 04</p><h2>Fiat-Shamir: let a hash ask the question</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <label class="field">Message to sign<input id="fs-msg" class="mono" maxlength="40" value="pay Alice 5" spellcheck="false" autocomplete="off"></label>
+      <div class="seg-pick" id="fs-mode" role="group" aria-label="What the hash covers"><span>The hash covers</span><button type="button" data-v="strong" aria-pressed="true">Everything</button><button type="button" data-v="noR" aria-pressed="false">Bug A: not the commitment</button><button type="button" data-v="noY" aria-pressed="false">Bug B: not the public key</button></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="fs-sign">1 · Sign</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="fs-edit" disabled>2 · Edit the message afterwards</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="fs-forge">3 · Forge it without the secret</button>
+      </div>
+      <pre class="term-sm" id="fs-out" aria-live="polite"></pre>
+      <p class="comment" id="fs-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Replace the verifier's random <i>c</i> with a hash:</b> <i>c</i> = H(<i>G</i>, <i>Y</i>, <i>R</i>, message). There's nobody to ask: the proof is just (<i>R</i>, <i>s</i>), and anyone can check it, any time.</li>
+        <li><b>It stays unpredictable</b> because <i>c</i> can't be known until <i>R</i> is fixed, and changing <i>R</i> changes <i>c</i> completely. That's the "after the commitment" rule from slide 7.</li>
+        <li><b>With the message inside the hash it's a signature.</b> Ed25519 and Bitcoin's BIP340 signatures are Schnorr-style signatures built this way.</li>
+        <li><b>The trap: hash everything.</b> All public values in the statement, plus every commitment. Leave one out and the demo's two bugs appear: anyone can forge, or a signature can be moved to a related key.</li>
+      </ul>
+      <p class="callout"><b>REAL BUGS</b> In April 2022 Trail of Bits disclosed "Frozen Heart": proof libraries (PlonK and Bulletproofs implementations among them) that left public values out of the hash, which let attackers forge proofs for false statements. A 2023 study found 36 such implementations across 12 proof systems.</p>
+      <p class="src">Sources: <a href="https://blog.trailofbits.com/2022/04/13/part-1-coordinated-disclosure-of-vulnerabilities-affecting-girault-bulletproofs-and-plonk/" target="_blank" rel="noopener">Trail of Bits: Frozen Heart disclosure</a> · <a href="https://eprint.iacr.org/2023/691" target="_blank" rel="noopener">Dao, Miller, Wright, Grubbs: weak Fiat-Shamir attacks</a> · <a href="https://bips.dev/340/" target="_blank" rel="noopener">BIP340</a> · <a href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-fiat-shamir/" target="_blank" rel="noopener">IETF CFRG Fiat-Shamir draft</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>With "Everything" selected, press 1: one signature (R, s), and the verifier's check passes. Press 2: edit the message, and the same signature fails, because the hash changed. Press 3: the forgery attempt fails, because the attacker would have to find an R that fits a challenge that depends on R.</span></li><li><b class="show">Show</b><span>Now pick "Bug A: not the commitment" and press 3: the forgery succeeds, for anyone, with no secret. The attacker picks s first and solves for R, exactly the simulator trick from the last slide, because the hash no longer depends on R. Then pick "Bug B: not the public key", press 1 then 3: a valid signature for Y becomes a valid signature for a related key Y + t·G, no secret needed. That's why Bitcoin's BIP340 puts the public key inside the hash.</span></li><li><b class="say">Say</b><span>The one rule: hash the whole statement and every commitment. It sounds obvious, and it was missed in real libraries for years. The reason is that papers sometimes describe the transform loosely and implementers copy what's written.</span></li><li><b class="ask">Ask</b><span>What other thing could you put in the hash to be safe? <em>(A context or domain label: "this is a login proof for example.com, 14 Nov". It stops a proof made for one purpose being replayed for another. The demo hashes a fixed label and the curve name.)</em></span></li><li><b class="tip">Check</b><span>Trail of Bits: affected projects included Dusk Network's PlonK, Iden3's SnarkJS and ConsenSys's gnark; notified 18 March 2022; published 13 April 2022. The Bulletproofs flaw traced to a recommendation in the original paper. Dao et al. (IEEE S&amp;P 2023): 36 weak implementations, 12 proof systems; their abstract says weak Fiat-Shamir can break classic protocols such as Schnorr's. The IETF CFRG drafts on sigma protocols and Fiat-Shamir were at revision 02 in March 2026; their current status wasn't checked. Ed25519 as Schnorr-style: RFC 8032 section 1 says EdDSA "is a variant of Schnorr's signature system with (possibly twisted) Edwards curves" (read 9 November 2026).</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>If the prover answers two different challenges for the same commitment, what leaks, and which Crypto 101 slide showed that already?</p><details><summary>Hint</summary><p><i>s</i>₁ − <i>s</i>₂ = (<i>c</i>₁ − <i>c</i>₂)·<i>x</i>.</p></details><details class="answer"><summary>Answer</summary><p>The secret <i>x</i>. Crypto 101's ECDSA slide, "Reuse the random number, lose the key", is the same arithmetic.</p></details></li>
+      <li><p>A simulator can make transcripts that pass the check without knowing <i>x</i>. Why doesn't that let a cheater fool a live verifier?</p><details><summary>Hint</summary><p>In which order does the simulator choose <i>c</i> and <i>R</i>?</p></details><details class="answer"><summary>Answer</summary><p>It picks <i>c</i> first and builds <i>R</i> to fit. A live verifier picks <i>c</i> after seeing <i>R</i>, so the cheater would have to guess it in advance: one chance in the number of possible challenges.</p></details></li>
+      <li><p>Your Fiat-Shamir hash covers the commitment and the message but not the public key. What can go wrong?</p><details><summary>Hint</summary><p>Which values did you leave out?</p></details><details class="answer"><summary>Answer</summary><p>A valid signature for <i>Y</i> can be turned into one for the related key <i>Y</i> + <i>t</i>·<i>G</i> with no secret, which is why Bitcoin's BIP340 hashes the public key. Hash every public value and every commitment.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>If question 2 stalls, go back to the simulator slide and ask which of R and c it picks first.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="commit" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// REAL-WORLD ZK 01</p><h2>Building block: the sealed envelope (a commitment)</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="field">Value to seal<input id="cm-val" class="mono" maxlength="30" value="rock" spellcheck="false" autocomplete="off"></label>
+      <div class="seg-pick" id="cm-salt" role="group" aria-label="Salt"><span>Envelope</span><button type="button" data-v="salt" aria-pressed="true">With a random salt</button><button type="button" data-v="none" aria-pressed="false">No salt</button></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="cm-commit">1 · Commit</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cm-reveal">2 · Reveal</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cm-change">Try to change my mind</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cm-guess">Guess from the digest</button>
+      </div>
+      <pre class="term-sm" id="cm-out" aria-live="polite"></pre>
+      <p class="comment" id="cm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>A commitment is a sealed envelope:</b> you publish a digest now, and open it later. Here it's SHA-256(salt ‖ value).</li>
+        <li><b>Hiding:</b> the digest reveals nothing about the value, as long as the value is unpredictable or salted.</li>
+        <li><b>Binding:</b> you can't open it to a different value later. Finding two values with the same digest would break SHA-256's collision resistance.</li>
+        <li><b>Without a salt, small secrets fall out:</b> if the value could only be yes/no, 0 to 999, or rock/paper/scissors, a guesser hashes every option and compares. A fresh random salt (16 bytes here) stops that.</li>
+        <li><b>Almost every zero-knowledge proof uses them.</b> The next slide hides a whole colouring this way.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Keep "rock" with a random salt: press 1, then 2 (the opened value and salt re-hash to the same digest), then "Try to change my mind": opening to "paper" fails. Now pick "No salt", commit "rock" and press "Guess from the digest": the guesser finds it in a handful of tries, because there are only a few plausible values. With a salt, the same guesser fails.</span></li><li><b class="say">Say</b><span>Two promises: hiding (nobody can see inside) and binding (you can't swap the contents). They're why games like rock-paper-scissors can be played over the internet fairly: both commit, then both open.</span></li><li><b class="next">Next</b><span>"Now use envelopes to prove something."</span></li></ul></div>
+</section>
+
+<section class="slide" id="colouring" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// REAL-WORLD ZK 02</p><h2>Proving a puzzle: three-colouring a map</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <svg class="gc-svg" id="gc-svg" viewBox="0 0 300 250" role="img" aria-label="A graph of eight circles joined by fourteen lines. Click a line to challenge it."></svg>
+      <div class="seg-pick" id="gc-who" role="group" aria-label="Colouring"><span>Prover's colouring</span><button type="button" data-v="valid" aria-pressed="true">Valid</button><button type="button" data-v="cheat" aria-pressed="false">One slip (edge 5-7)</button></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="gc-next">Challenge a random edge</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="gc-20">Run 20 rounds</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="gc-until">Run until caught</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="gc-reset">Start over</button>
+      </div>
+      <p class="cmp-sum" id="gc-stat"></p>
+      <pre class="term-sm scrolly" id="gc-log" aria-live="polite"></pre>
+      <p class="comment" id="gc-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The puzzle:</b> colour the eight circles with three colours so that no two joined circles match. The prover has a solution and wants to prove it without showing it.</li>
+        <li><b>Each round:</b> the prover renames the three colours at random, seals every circle's colour in its own salted envelope, and shows the eight envelopes. The verifier picks <i>one line</i> (click one, or press the button). The prover opens just its two ends. The verifier checks the envelopes and that the colours differ.</li>
+        <li><b>The verifier learns nothing:</b> two different colours, randomly renamed each round, are all they ever see.</li>
+        <li><b>A cheater with one bad line</b> is caught only when that line is picked: 1 in 14 per round. So many rounds are needed: <b id="gc-rounds">188</b> for odds of 1 in a million.</li>
+        <li><b>Why bother:</b> 3-colouring is NP-complete, so any puzzle of that kind (every NP problem) can be converted into it and proved this way (Goldreich, Micali, Wigderson, 1986), assuming one-way functions exist.</li>
+      </ul>
+      <p class="callout"><b>NOT HOW REAL SYSTEMS DO IT</b> It shows that <i>any</i> checkable statement can be proved in zero knowledge. Practical systems use far more efficient encodings; the next slides look at them.</p>
+      <p class="src">Sources: <a href="https://people.csail.mit.edu/silvio/Selected%20Scientific%20Papers/Zero%20Knowledge/Proofs_That_Yield_Nothing_But_Their_Validity_or_All_Languages_in_NP_Have_Zero-Knowledge_Proof_Systems.pdf" target="_blank" rel="noopener">Goldreich, Micali, Wigderson (JACM 1991)</a> · <a href="https://www.cs.princeton.edu/courses/archive/fall07/cos433/lec16.pdf" target="_blank" rel="noopener">Princeton COS 433 lecture notes</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>With "Valid" selected press "Challenge a random edge" a few times: each round the page seals eight envelopes (real SHA-256 with random salts), opens the two ends of one line and checks them. Run 20 rounds: all pass. Click different lines yourself. Now pick "One slip" and press "Run until caught": the cheat is caught only when line 5-7 comes up, after a handful or a few dozen rounds. Click line 5-7 directly and the cheat is caught at once.</span></li><li><b class="say">Say</b><span>Two things at once. For soundness: a cheater with a wrong colouring survives a round with probability 13/14, so you need a few hundred rounds to be confident. For zero-knowledge: renaming the colours every round means the opened pair is just "two different colours in random order": watching a thousand rounds teaches you nothing about the real colouring.</span></li><li><b class="ask">Ask</b><span>Why must the prover rename the colours every round? <em>(Otherwise each opened edge would reveal part of the real colouring, and after enough rounds the verifier would have all of it.)</em></span></li><li><b class="tip">Check</b><span>Per-round catch probability is at least 1/|E| (Princeton COS 433 notes; the notes' text has a typo that writes 1 − 1/m for it, but the repetition bound (1 − 1/m)^(mk) ≈ 2^-k is what they use). For |E| = 14 and 2^-20, the page computes 188 rounds. GMW: FOCS 1986, JACM 38(3) 1991; assumes one-way functions. I could not read the original paper's scan; the protocol follows the lecture notes.</span></li><li><b class="next">Next</b><span>"A different kind of statement: 'I'm on the list'."</span></li></ul></div>
+</section>
+
+<section class="slide" id="membership" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// REAL-WORLD ZK 03</p><h2>Prove you're on the list, without saying who</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="mb-who" role="group" aria-label="Which member are you"><span>I am</span></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="mb-v1">Vote in "poll-1"</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="mb-v2">Vote in "poll-2"</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="mb-reset">Start over</button>
+      </div>
+      <div class="mb-pair">
+        <div class="mb-box"><b>Plain Merkle proof</b><small>real and checked here</small><pre class="term-sm" id="mb-plain"></pre></div>
+        <div class="mb-box zk"><b>Zero-knowledge version</b><small>proof bytes are a stand-in</small><pre class="term-sm" id="mb-zk"></pre></div>
+      </div>
+      <p class="comment" id="mb-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The list's fingerprint is a Merkle root:</b> one hash covering every member's commitment, H(secret). Eight members, so a path of three hashes.</li>
+        <li><b>A plain Merkle proof</b> shows your leaf and the path: it proves you're in the list, and also names you, because the leaf is yours.</li>
+        <li><b>The zero-knowledge version</b> says "I know a secret whose hash is some leaf under this root", without saying which. Systems like Semaphore use this for anonymous votes and signals.</li>
+        <li><b>A nullifier</b> = H(secret, poll) lets the verifier reject a second vote in the same poll without learning who voted. A different poll gives an unrelated nullifier.</li>
+        <li><b>What it doesn't hide:</b> that someone voted, when, from which network address. And the crowd is the list: a list of eight is a small crowd.</li>
+      </ul>
+      <p class="callout"><b>STAND-IN</b> The SHA-256 Merkle tree, the path checks and the nullifiers are real and run in this page. The zero-knowledge proof itself is shown as random-looking bytes: making a real one needs a proof system like those on slide 18.</p>
+      <p class="src">Sources: <a href="https://docs.semaphore.pse.dev/" target="_blank" rel="noopener">Semaphore documentation</a> · <a href="https://www.rfc-editor.org/rfc/rfc6962" target="_blank" rel="noopener">RFC 6962 (Merkle hashing with 0x00 and 0x01 prefixes)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Pick a member and press "Vote in poll-1". The left box shows the plain Merkle proof: the leaf and the three sibling hashes, verified against the root, with the line "the verifier now knows: this is Dee". The right box shows what the zero-knowledge version reveals: the root, the poll name, a nullifier and a proof blob; the member's name and leaf don't appear. Press "Vote again in poll-1": the same nullifier appears and the second vote is rejected, still with no name. Press "Vote in poll-2": a different nullifier, unlinkable to the first.</span></li><li><b class="say">Say</b><span>This is the shape of an anonymous ballot or a private payment: prove membership, reveal a one-time tag so you can't reuse it, reveal nothing else. The ingredients are the ones we've seen: hashes, a tree, and a proof system to say "I know a path" without showing the path.</span></li><li><b class="tip">Check</b><span>Semaphore docs: "provable group member without revealing your identity", with a mechanism to prevent double-signaling; groups are Merkle trees. How Semaphore derives its nullifier isn't described on the page I read, so the nullifier construction here (SHA-256 of poll name and secret) is a simplification, as is the whole zero-knowledge part. Merkle hashing uses the 0x00 leaf and 0x01 node prefixes from RFC 6962.</span></li><li><b class="next">Next</b><span>"Same idea, for your age."</span></li></ul></div>
+</section>
+
+<section class="slide" id="age" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// REAL-WORLD ZK 04</p><h2>Over 18, without showing your birthday</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <label class="field ag-age">Your age (years)<input id="ag-age" type="number" min="0" max="120" value="34" inputmode="numeric"></label>
+        <div class="seg-pick" id="ag-level" role="group" aria-label="How you prove it"><span>Show</span><button type="button" data-v="1" aria-pressed="false">1 · The whole ID</button><button type="button" data-v="2" aria-pressed="true">2 · One claim</button><button type="button" data-v="3" aria-pressed="false">3 · A ZK proof</button></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ag-a">Present to shop A</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ag-b">Present to shop B</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ag-cheat">Edit the claim to cheat</button>
+      </div>
+      <pre class="term-sm" id="ag-recv" aria-live="polite"></pre>
+      <ul class="ag-learn" id="ag-learn"></ul>
+      <p class="cmp-sum" id="ag-link"></p>
+      <p class="comment" id="ag-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Level 1, the plain ID:</b> name, birth date, address, all shown to prove one fact.</li>
+        <li><b>Level 2, salted digests:</b> an issuer signs a list of digests, one per claim. You reveal only the claim you choose, plus its salt. The shop learns one fact. This is the idea behind SD-JWT (RFC 9901) and the mobile-ID standard, which has ready-made "age over 18" claims. But the signature is the same at every shop, so shops can compare notes.</li>
+        <li><b>Level 3, zero knowledge:</b> prove "a credential signed by this issuer says I'm over 18" without showing the credential, its signature or the birth date. Every proof looks different, so there's nothing to compare. Google open-sourced such a library (Longfellow ZK) in July 2025.</li>
+        <li><b>Soundness at work:</b> if you aren't over 18, no valid proof exists.</li>
+      </ul>
+      <p class="callout"><b>ILLUSTRATION</b> Levels 1 and 2 are real: SHA-256 digests and an ECDSA signature by a made-up "issuer", verified in this page. Level 3 shows the <i>shape</i> of the result with stand-in bytes; a real one needs the machinery on the next slide.</p>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc9901" target="_blank" rel="noopener">RFC 9901 (SD-JWT)</a> · <a href="https://blog.google/technology/safety-security/opening-up-zero-knowledge-proof-technology-to-promote-privacy-in-age-assurance/" target="_blank" rel="noopener">Google: opening up ZKP technology</a> · <a href="https://github.com/google/longfellow-zk" target="_blank" rel="noopener">longfellow-zk</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start on level 2 with age 34 and press "Present to shop A": the shop receives one claim, age_over_18 = true, plus a digest list and a signature, and the page verifies the signature and the digest. The "what the shop learns" list shows one fact. Press "Present to shop B": the same signature fingerprint appears, so the shops can link you. Press "Edit the claim to cheat" after setting an age under 18: the edited claim fails the digest check.</span></li><li><b class="show">Show</b><span>Switch to level 1: everything is revealed. Switch to level 3: the shop learns only the statement, and each presentation shows different proof bytes (stand-ins), so shop A and shop B can't link them. Set the age to 15: no proof can be made.</span></li><li><b class="say">Say</b><span>Three rungs on a ladder. Showing the ID is the worst. Selective disclosure is a big improvement and already deployed, but it leaves a fingerprint. Zero-knowledge closes that last gap, at the cost of heavier machinery. The honest label on the slide matters: levels 1 and 2 are real here; level 3 shows what you'd get, not how.</span></li><li><b class="tip">Check</b><span>RFC 9901 (SD-JWT, November 2025) uses salted digests so verifiers can't guess undisclosed values. The mobile-ID standard ISO/IEC 18013-5 defines "age_over_NN" elements and a signed list of salted digests: I confirmed this through secondary sources (an ETSI report and vendor documentation), not the standard's text. Google's July 2025 post doesn't say which credential format its library handles; the longfellow-zk README names ISO mdoc, JWT and W3C Verifiable Credentials, reports several independent security reviews, and lists an IETF draft. The Lean model in the repo says it does not verify the code itself.</span></li><li><b class="next">Next</b><span>"What do the big proof systems cost?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="systems" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// REAL-WORLD ZK 05</p><h2>SNARKs, STARKs, Bulletproofs: what's the catch?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="opts" role="group" aria-label="What do you need">
+        <label class="chk-line"><input type="checkbox" id="sy-c1"> No trusted setup</label>
+        <label class="chk-line"><input type="checkbox" id="sy-c2"> Proofs under about 1 KB</label>
+        <label class="chk-line"><input type="checkbox" id="sy-c3"> Believed safe from quantum computers</label>
+      </div>
+      <div class="table-wrap"><table class="grid-table st-table sy-table"><thead><tr><th>System</th><th>Trusted setup?</th><th>Proof size</th><th>Quantum?</th></tr></thead><tbody id="sy-tbody"></tbody></table></div>
+      <p class="comment" id="sy-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Trusted setup:</b> some systems need a one-time ceremony to create public parameters. If someone keeps the secret behind them, they can forge proofs.</li>
+        <li><b>Proof size and cost:</b> checking a proof is cheap by design; <i>making</i> one usually takes much more work than just running the computation. The details vary by system.</li>
+        <li><b>Assumptions:</b> Schnorr and Bulletproofs rest on discrete logarithms, pairing-based SNARKs on pairings (also broken by a large quantum computer), and STARKs on hash functions.</li>
+        <li><b>Zcash's counterfeiting flaw:</b> found on 1 March 2018 and disclosed 5 February 2019. Extra elements in the setup parameters let a cheating prover turn one valid proof into another. The post found no evidence it was exploited, and the Sapling upgrade (28 October 2018) closed it.</li>
+      </ul>
+      <p class="callout"><b>WHY ZCASH CHANGED</b> Its May 2022 upgrade (NU5) moved to Halo 2, which "eliminates protocol reliance on complex setup ceremonies".</p>
+      <p class="src">Sources: <a href="https://eprint.iacr.org/2016/260" target="_blank" rel="noopener">Groth16</a> · <a href="https://eprint.iacr.org/2019/953" target="_blank" rel="noopener">PLONK</a> · <a href="https://eprint.iacr.org/2018/046" target="_blank" rel="noopener">STARK</a> · <a href="https://blog.blockstream.com/en-bulletproofs-faster-rangeproofs-and-much-more/" target="_blank" rel="noopener">Bulletproofs (Blockstream)</a> · <a href="https://zodl.com/zcash-counterfeiting-vulnerability-successfully-remediated/" target="_blank" rel="noopener">Zcash disclosure</a> · <a href="https://zodl.com/nu5-activates-on-mainnet-eliminating-trusted-setup-and-launching-a-new-era-for-zcash" target="_blank" rel="noopener">NU5</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Tick a box and the table highlights the systems that fit. Tick two and the list shrinks. Tick all three: none are left. That's the point: there's no free lunch, only trade-offs.</span></li><li><b class="say">Say</b><span>The systems in the news are descendants of the idea you've just seen, with two big upgrades: they can prove any program, not just "I know x", and the proof is a single message you can check quickly. The trade-offs are real: some need a ceremony, some make large proofs, some would not survive a quantum computer. You don't need to remember the names; you need to know to ask which trade-offs a product made.</span></li><li><b class="tip">Check</b><span>Sourced facts: Groth16 proofs are three group elements (the paper); PLONK is a "universal SNARK construction" with fully succinct verification (abstract); a 64-bit Bulletproofs range proof is 674 bytes, logarithmic growth, no trusted setup (Blockstream); STARKs are transparent, with "post-quantum secure" in the paper's title. Not sourced to a primary page: that PLONK's setup is also updatable, PLONK's and STARK's exact sizes (the table says "hundreds of bytes" and "tens of KB or more": treat as rough), and the claim that provers cost much more than plain computation. A Schnorr signature is about 512 bits per Boneh and Shoup. Zcash: Ariel Gabizon found the flaw on 1 March 2018; Zcash disclosed it privately to Horizen and Komodo on 13 November 2018; public on 5 February 2019 as CVE-2019-7167; Sapling activated 28 October 2018; the post says "we have found no evidence" of counterfeiting.</span></li><li><b class="next">Next</b><span>"So where is this actually used?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="uses" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// REAL-WORLD ZK 06</p><h2>Where it's used, and where it's just a label</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-2x2">
+      <div class="card"><b>Private payments</b><span>Zcash launched on 28 October 2016 with shielded transactions that hide sender, receiver and amount using zk-SNARKs. Its NU5 upgrade (31 May 2022) added Halo 2, which needs no trusted setup.</span></div>
+      <div class="card"><b>Rollups</b><span>ZK-rollups run transactions off-chain and post a validity proof. Ethereum checks the proof before it accepts the new state, so no one has to re-run the transactions.</span></div>
+      <div class="card"><b>Age and credential checks</b><span>Google open-sourced Longfellow ZK (3 July 2025). The EU's age-verification blueprint (14 July 2025) is designed to work with the EU Digital Identity Wallets due by the end of 2026. Its text says age-verification apps <i>should</i> use zero-knowledge proofs, which critics point out is optional.</span></div>
+      <div class="card"><b>Anonymous signals</b><span>Semaphore lets a group member vote or endorse as a provable member without revealing which one, with a mechanism that prevents double-signalling.</span></div>
+    </div>
+    <p class="callout"><b>A LABEL, NOT ALWAYS A PROOF</b> "Zero-knowledge" on a product page is sometimes used for a different idea: the provider can't read your data, because it's encrypted end to end with keys only you hold (some password managers describe themselves this way). That's a good design, but it isn't a zero-knowledge proof. Ask what exactly is being proved, and to whom.</p>
+    <p class="src">Sources: <a href="https://zodl.com/nu5-activates-on-mainnet-eliminating-trusted-setup-and-launching-a-new-era-for-zcash" target="_blank" rel="noopener">Zcash NU5</a> · <a href="https://zcash.readthedocs.io/en/latest/rtd_pages/basics.html" target="_blank" rel="noopener">Zcash basics</a> · <a href="https://ethereum.org/en/developers/docs/scaling/zk-rollups/" target="_blank" rel="noopener">ethereum.org: ZK-rollups</a> · <a href="https://blog.google/technology/safety-security/opening-up-zero-knowledge-proof-technology-to-promote-privacy-in-age-assurance/" target="_blank" rel="noopener">Google</a> · <a href="https://digital-strategy.ec.europa.eu/en/policies/eu-age-verification" target="_blank" rel="noopener">European Commission</a> · <a href="https://edri.org/our-work/eu-age-verification-tool-does-not-solve-privacy-concerns/" target="_blank" rel="noopener">EDRi</a> · <a href="https://docs.semaphore.pse.dev/" target="_blank" rel="noopener">Semaphore</a> · <a href="https://bitwarden.com/blog/end-to-end-encryption-and-zero-knowledge/" target="_blank" rel="noopener">Bitwarden</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Four places this exists today, and one warning. Private payments were the first big deployment. Rollups use proofs to check a pile of computation cheaply. Age checks are the one most people will meet: your phone proves "over 18" to a website. Anonymous signals are the plain membership proof from two slides ago. And the warning: marketing sometimes uses the phrase for end-to-end encryption, which is a different thing.</span></li><li><b class="ask">Ask</b><span>Which of these would you trust with a real decision, and what would you want to check first? <em>(Who audited it, what the trusted setup was, whether the statement being proved is the one that matters. The last slide is a checklist for exactly this.)</em></span></li><li><b class="tip">Check</b><span>Zcash launch on 28 October 2016: Electric Coin Co announcement and Zcash docs. NU5 activated 31 May 2022 (Electric Coin Co post, now hosted at zodl.com). Ethereum.org (updated 5 November 2026): "L2 transactions are finalized only if the L1 contract accepts the validity proof". Google post: 3 July 2025; it does not say Google Wallet uses the library. Commission page: blueprint made available 14 July 2025, "feature ready" on 15 April 2026, wallets by the end of 2026, "prove they are over 18 without sharing any other personal information"; the page doesn't mention zero-knowledge proofs by name. EDRi (7 September 2026) quotes the blueprint's "SHOULD implement the Zero-Knowledge Proof mechanism" and warns that mandatory ZKPs wouldn't by themselves guarantee privacy; it's an advocacy group's reading of the blueprint, not the Commission's. Bitwarden's post describes "zero-knowledge encryption" as end-to-end encrypted vaults whose keys only users hold. Researchers at ETH Zurich and USI Lugano have questioned whether password-manager providers truly can't see vaults (reported by Techzine); that's a separate claim I did not verify here.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>How could you prove you're over 18 without revealing your birth date?</p><details><summary>Hint</summary><p>What if an authority had signed a statement about your age?</p></details><details class="answer"><summary>Answer</summary><p>Hold a credential signed by an issuer. With salted digests you can reveal just the "over 18" claim; with a zero-knowledge proof you prove "a valid credential says I'm over 18" without revealing the credential or its signature, so shops can't link your visits.</p></details></li>
+      <li><p>Why does the graph-colouring prover rename the colours every round?</p><details><summary>Hint</summary><p>What would the verifier learn after seeing many edges with the same colour names?</p></details><details class="answer"><summary>Answer</summary><p>Otherwise the opened pairs would gradually reveal the real colouring. Fresh random names make each opened pair just two different colours in random order.</p></details></li>
+      <li><p>A website says it uses "zero-knowledge" security. What would you ask?</p><details><summary>Hint</summary><p>What is the statement, and who is the verifier?</p></details><details class="answer"><summary>Answer</summary><p>What exactly is being proved, to whom, with which proof system and setup, who checked it, and whether it is a proof at all or "just" end-to-end encryption.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>Question 3 sets up the closing checklist.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="limits" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>What a proof does not tell you</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="mini-label">DOES A VALID PROOF GUARANTEE THIS?</p>
+      <div class="lm-quiz" id="lm-quiz"></div>
+      <p class="cmp-sum" id="lm-score"></p>
+      <p class="why" id="lm-why"></p>
+      <p class="comment" id="lm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>A proof is a tool for one job:</b> convincing someone a particular statement is true, revealing nothing more.</li>
+        <li><b>Everything around the statement is on you:</b> that it's the right statement, that its inputs were honest, that the program or circuit encoding it is correct, that the setup was clean, and that what leaks around the proof (network address, timing, list size) is acceptable.</li>
+        <li><b>The weak points in real incidents were rarely the core maths.</b> Frozen Heart was a hashing slip around the maths, and Zcash's 2018 flaw was in the setup parameters.</li>
+      </ul>
+      <p class="callout"><b>GARBAGE IN, PROOF OUT</b> A proof that a computation ran correctly says nothing about whether the data fed in was true. A proof of "over 18" says nothing about whether the person presenting it is the person it describes.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Let the room answer each statement before pressing. The answers: 1 Yes (up to the proof system's tiny error), 2 No, 3 No, 4 No, 5 No, 6 Depends.</span></li><li><b class="say">Say</b><span>The theme of this part: a zero-knowledge proof is strong where it applies and silent about everything else. Most of the damage in real incidents came from the things around the proof: a slip in how the hash was built, extra values in a setup, a statement that didn't say what people thought it said.</span></li><li><b class="ask">Ask</b><span>An app proves it ran a computation correctly. What question should you ask next? <em>(Where did the inputs come from, and who could have lied about them?)</em></span></li><li><b class="tip">Check</b><span>On "quantum": discrete-log and pairing-based systems fall to a large quantum computer; hash-based STARKs are believed to resist (the paper's title says "post-quantum secure"). That's the state of knowledge, not a guarantee. Circuit bugs ("under-constrained" statements that accept too much) are a known class of problem in proof systems; I describe the class, and cite no specific incident beyond the two on this slide.</span></li><li><b class="next">Next</b><span>"A checklist to take away."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ask" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>Eight questions to ask when someone says "zero-knowledge"</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="ask-list" id="ask-list"></ul>
+      <p class="cmp-sum" id="ask-count"></p>
+      <p class="comment" id="ask-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Prefer standard, reviewed building blocks.</b> The IETF's research group on cryptography (CFRG) is writing drafts for sigma protocols and for the Fiat-Shamir transform, partly to stop each team from making its own mistakes. They were still drafts in March 2026.</li>
+        <li><b>Ask for the statement in plain words.</b> If nobody can write it as one sentence, nobody can check it.</li>
+        <li><b>Ticks are saved in this browser only.</b> Nothing is sent anywhere.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-sigma-protocols/" target="_blank" rel="noopener">draft-irtf-cfrg-sigma-protocols</a> · <a href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-fiat-shamir/" target="_blank" rel="noopener">draft-irtf-cfrg-fiat-shamir</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Eight questions, one for each place things have gone wrong in this talk. You don't need to follow the maths to ask them. Tick the ones you'd ask; the ticks stay in your browser.</span></li><li><b class="tip">Check</b><span>The two CFRG drafts were at revision 02 in March 2026, with expiry dates in September 2026; whether newer revisions exist, or either has been adopted or expired, was not confirmed. Check the datatracker pages before telling an audience what their status is.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">The cave is the picture to keep. Ask about anything: the maths, the simulator trick, the age check, or whether a product's "zero-knowledge" claim holds up.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>Every demo stays live and runs offline once loaded.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../crypto-101/">Crypto 101</a><span>The elliptic curves and signatures used here, and the ECDSA nonce slide.</span></li>
+        <li><a href="../modern-messaging/">Modern Messaging Protocols</a><span>More real cryptography you can poke: key agreement and ratchets.</span></li>
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>Why you use a reviewed library instead of writing your own.</span></li>
+        <li><a href="../pki-in-depth/">Public Key Infrastructure in Depth</a><span>Another Merkle tree in the wild: Certificate Transparency.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The demos use real elliptic-curve arithmetic, SHA-256 hashing and an ECDSA signature in teaching code, never for real secrets; the zero-knowledge proofs on slides 16 and 17 are stand-ins and say so. Nothing you type is sent anywhere. General information, not advice for a particular situation. Facts checked 9 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. Good prompts if it's quiet: where would you want a proof instead of handing something over? What would you check before trusting a product that claims one? What surprised you in the simulator?</span></li><li><b class="tip">Tip</b><span>If someone asks "can I use this for real?": use a reviewed library and a standard, not the teaching code, and have the statement and the setup reviewed.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="zk.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>

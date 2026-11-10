@@ -1,0 +1,152 @@
+/* talk.css: styles for "Zero-Knowledge Proofs". The shared theme is in ../../shared/deck.css. */
+
+.roadmap-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.title-copy h1 .pre { font-size: min(1.9em, 9.4cqi); white-space: nowrap; }
+code { font: .9em var(--mono); color: var(--yellow); overflow-wrap: anywhere; }
+.prompt #hero-in { max-width: 100%; }
+.src { font: .62em/1.5 var(--mono); letter-spacing: .06em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; margin: 0; }
+.src a { color: var(--cyan); }
+h3 { font-size: 1.05em; color: var(--cyan); }
+.seg-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seg-pick button { font: 600 .68em var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 7px 10px; background: none; color: var(--muted); border: 1px solid var(--line); cursor: pointer; }
+.seg-pick button:hover { color: var(--cyan); border-color: var(--cyan); }
+.seg-pick button[aria-pressed="true"] { color: var(--void); background: var(--cyan); border-color: var(--cyan); }
+.seg-pick > span { font: .68em var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.verdict { font: 700 .95em var(--mono); padding: 10px 14px; border: 1px solid currentColor; margin: 0; }
+.verdict.ok { color: var(--ok); } .verdict.bad { color: var(--bad); }
+.comment.ok { color: var(--ok); } .comment.bad { color: var(--bad); }
+.hero-term .hashout { display: grid; gap: 5px; font-size: .86em; }
+.hero-term .hashout .hl b { color: var(--cyan); display: inline-block; min-width: 16ch; }
+.hero-term .hashout .hl.del { color: var(--muted); } .hero-term .hashout .hl.del b { color: var(--pink); }
+.ok { color: var(--ok); } .bad { color: var(--bad); } .mid { color: var(--yellow); }
+.pill { display: inline-block; font: 700 .72em var(--mono); letter-spacing: .06em; padding: 2px 7px; border: 1px solid currentColor; text-transform: uppercase; white-space: nowrap; }
+.chk-line { display: flex; align-items: flex-start; gap: 8px; font-size: .8em; line-height: 1.4; color: var(--fg); }
+.chk-line input { margin-top: .25em; flex: none; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+.field { display: grid; gap: 4px; min-width: 0; font: .68em var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.field input { width: 100%; min-width: 0; }
+
+/* compact side text and controls: the slide font is 21px */
+.mode-slides .slide .rules { font-size: .76em; gap: 5px; line-height: 1.36; }
+.mode-slides .slide .callout { font-size: .74em; padding: 8px 12px; line-height: 1.4; }
+.controls { gap: 8px 10px; }
+.mode-slides .slide .slide-body.cols-2 { gap: 18px 28px; }
+.cards-3 .card { align-content: start; }
+.cards-2x2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cards-2x2 .card { align-content: start; }
+.mini-label { font: 700 .66em var(--mono); letter-spacing: .12em; color: var(--muted); margin: 0; }
+.cmp-sum { font: .72em var(--mono); color: var(--muted); margin: 0; overflow-wrap: anywhere; }
+
+/* step tables and little terminals */
+.st-table { table-layout: fixed; width: 100%; }
+.st-table th, .st-table td { font-size: .72em; vertical-align: top; overflow-wrap: anywhere; }
+.st-table thead th { font-size: .64em; }
+.st-table tbody th { white-space: normal; font-weight: 600; color: var(--cyan); }
+.term-sm { font: .64em/1.45 var(--mono); padding: 8px 10px; margin: 0; min-height: 3.4em; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--void); border: 1px solid var(--line); }
+.term-sm .a { color: var(--cyan); } .term-sm .b { color: var(--pink); } .term-sm .s { color: var(--yellow); } .term-sm .ok { color: var(--ok); } .term-sm .bad { color: var(--bad); } .term-sm .mid { color: var(--yellow); }
+.scrolly { max-height: 7.4em; overflow-y: auto; }
+input[type="range"] { width: 100%; }
+.range-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font: .72em var(--mono); color: var(--muted); }
+.range-row output { color: var(--yellow); font-weight: 700; min-width: 3ch; text-align: right; }
+.meter { height: 8px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
+.meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--ok)); transition: width .25s; }
+
+/* the cave */
+.cave-svg { width: 100%; max-height: 13.5em; }
+.cave-svg .tun { fill: none; stroke: var(--line); stroke-width: 28; stroke-linejoin: round; }
+.cave-svg .tun-in { fill: none; stroke: var(--void); stroke-width: 22; stroke-linejoin: round; }
+.cave-svg .door { fill: var(--pink); opacity: .85; }
+.cave-svg .cv-t { font: 11px var(--mono); fill: var(--muted); letter-spacing: .04em; }
+.cave-svg .cv-t.big { font: 700 22px var(--mono); fill: var(--cyan); }
+.cave-svg .cv-q { font: 13px var(--mono); fill: var(--muted); }
+.cave-svg .tok { fill: var(--yellow); stroke: var(--void); stroke-width: 2; }
+
+/* where's waldo */
+.wd-pair { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.wd-col { display: grid; gap: 4px; min-width: 0; }
+.wd-col small { font: .62em var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wd-pic { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; padding: 6px; background: var(--void); border: 1px solid var(--line); transition: filter .2s; }
+.wd-pic.covered { filter: blur(5px) brightness(.55); }
+.wd-c { display: grid; place-items: center; aspect-ratio: 1; font: 700 .7em var(--mono); line-height: 1; }
+.wd-c.waldo { background: repeating-linear-gradient(0deg, #ff3b5c 0 3px, #f4f4f4 3px 6px); color: #07060f; text-shadow: 0 0 2px #fff; }
+.wd-c.big { font-size: 1.5em; width: 2.6em; }
+.wd-card { display: grid; place-items: center; min-height: 6.5em; background: repeating-linear-gradient(45deg, #3a2f1e 0 6px, #43371f 6px 12px); border: 1px solid #6a5632; }
+.wd-hole { display: grid; place-items: center; width: 3.4em; height: 3.4em; background: var(--void); border: 2px solid #1b1608; }
+
+/* properties and limits quizzes */
+.pr-quiz-box { display: grid; gap: 8px; }
+.pr-quiz, .lm-quiz { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.q { display: grid; gap: 6px; align-content: start; padding: 10px 12px; border: 1px solid var(--line); background: rgba(21, 18, 51, .55); min-width: 0; }
+.q p { margin: 0; font-size: .78em; line-height: 1.4; }
+.q .why { font: .66em/1.4 var(--mono); min-height: 1.2em; }
+.why { font: .66em/1.4 var(--mono); margin: 0; min-height: 1.2em; }
+.q .why.ok, .why.ok { color: var(--ok); } .q .why.bad, .why.bad { color: var(--bad); }
+.q.ok { border-left: 3px solid var(--ok); } .q.bad { border-left: 3px solid var(--bad); }
+.lm-quiz { grid-template-columns: 1fr; }
+.mode-slides .lm-quiz { gap: 6px; }
+.mode-slides .lm-quiz .q { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 7px 10px; }
+.mode-slides .lm-quiz .q p { font-size: .72em; }
+.mode-slides .lm-quiz .seg-pick button { padding: 5px 8px; }
+
+/* repeating, Schnorr, simulator tables */
+.rp-table thead th:nth-child(1) { width: 9ch; }
+.sc-table thead th:nth-child(1) { width: 14ch; }
+.sc-table td { line-height: 1.5; }
+.sm-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sm-box { display: grid; gap: 4px; align-content: start; padding: 10px 12px; border: 1px solid var(--line); border-top: 3px solid var(--cyan); background: rgba(21, 18, 51, .7); font-size: .74em; min-height: 11em; min-width: 0; }
+.sm-box code { display: block; color: var(--fg); font-size: .92em; }
+.sm-box b { color: var(--cyan); }
+
+/* graph colouring */
+.gc-svg { width: 100%; max-height: 14em; background: var(--void); border: 1px solid var(--line); }
+.gc-edge { stroke: #4a4670; stroke-width: 2; }
+.gc-edge.on { stroke: var(--ok); stroke-width: 3.5; }
+.gc-edge.bad { stroke: var(--bad); stroke-width: 3.5; }
+.gc-hit { stroke: transparent; stroke-width: 12; cursor: pointer; }
+.gc-hit:hover, .gc-hit:focus { stroke: rgba(0, 240, 255, .22); outline: none; }
+.gc-v { fill: #1d1a3d; stroke: #4a4670; stroke-width: 2; }
+.gc-n { font: 700 11px var(--mono); fill: #cfd6ff; pointer-events: none; }
+
+
+/* membership */
+.mb-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mb-box { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.mb-box > b { color: var(--cyan); font-size: .85em; } .mb-box.zk > b { color: var(--pink); }
+.mb-box > small { font: .6em var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.mb-box .term-sm { min-height: 9.5em; font-size: .6em; }
+
+/* age */
+.ag-age { max-width: 14em; }
+.ag-learn { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: .74em; }
+.ag-learn li { padding: 3px 8px; border-left: 3px solid var(--muted); }
+.ag-learn li.ok { border-left-color: var(--ok); } .ag-learn li.no { border-left-color: var(--pink); color: var(--muted); }
+.ag-learn li b { font: 700 .8em var(--mono); letter-spacing: .06em; text-transform: uppercase; margin-right: 6px; }
+
+/* systems table */
+.sy-table thead th:nth-child(1) { width: 26%; }
+.sy-table tr.hit td, .sy-table tr.hit th { background: rgba(0, 255, 160, .08); }
+.sy-table tr.dim td, .sy-table tr.dim th { opacity: .35; }
+
+/* the questions checklist */
+.ask-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.mode-slides .ask-list { gap: 5px; }
+
+/* small screens */
+@media (max-width: 899px) {
+  .wd-pair, .sm-pair, .mb-pair, .pr-quiz, .cards-2x2 { grid-template-columns: minmax(0, 1fr); }
+  .roadmap-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-term .hashout .hl b { min-width: 15ch; }
+}
+.mode-scroll .roadmap-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mode-scroll .wd-pair, .mode-scroll .sm-pair, .mode-scroll .mb-pair, .mode-scroll .pr-quiz, .mode-scroll .cards-2x2 { grid-template-columns: minmax(0, 1fr); }
+.mode-scroll .lm-quiz .q { display: grid; }
+.mode-scroll .prompt #hero-in { display: block; width: 100% !important; }
+
+/* keep the tallest states inside the slide */
+.mode-slides #properties .cards-3 .card span { font-size: .8em; line-height: 1.4; }
+.mode-slides #properties .q { padding: 8px 10px; }
+.mode-slides #properties .q .why { min-height: 0; }
+.mode-scroll .sy-table thead th:nth-child(1) { width: 32%; }
+.mode-scroll .sy-table th, .mode-scroll .sy-table td { overflow-wrap: break-word; }
+.mode-scroll .sy-table td { font-size: .68em; }
+.mode-slides #gc-log { max-height: 5.6em; }
