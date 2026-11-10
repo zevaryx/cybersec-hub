@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Modern Messaging Protocols</title>
+<meta name="description" content="Modern Messaging Protocols: how Signal-style apps start a private chat with someone who is offline, survive a stolen key, and cope with groups, several devices and quantum computers. Live demos with real cryptography that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/modern-messaging/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Modern Messaging Protocols">
+<meta property="og:description" content="How Signal-style apps start a private chat with someone who is offline, survive a stolen key, and cope with groups, several devices and quantum computers.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/modern-messaging/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/modern-messaging/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Modern Messaging Protocols in neon, beside a terminal that shows one chain key producing a new message key for every message.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M6 8h20v12H15l-5 5v-5H6z' fill='none' stroke='%2300f0ff' stroke-width='2'/%3E%3Cpath d='M11 14h10' stroke='%23ff2d78' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "modern-messaging", "title": "Modern Messaging Protocols", "footer": "MSG", "subtitle": "GENERAL TRACK · 08",
+  "parts": [{ "name": "Starting a conversation", "minutes": 25 }, { "name": "Ratchets", "minutes": 30 },
+            { "name": "Groups, devices, metadata", "minutes": 20 }, { "name": "Wrap-up", "minutes": 10 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">MSG<span>PROTOCOLS</span></a>
+  <div class="scroll-parts">
+    <a href="#shared-secret" data-part="1"><b>01</b>Starting</a>
+    <a href="#sym-ratchet" data-part="2"><b>02</b>Ratchets</a>
+    <a href="#groups" data-part="3"><b>03</b>Groups</a>
+    <a href="#limits" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// GENERAL TRACK 08 · INTERMEDIATE · CRYPTO 101 HELPS</p>
+      <h1><span class="pre">Modern Messaging</span> <span class="glitch" data-text="Protocols">Protocols</span></h1>
+      <p class="lede">How Signal-style apps start a private chat with someone who is offline, survive a stolen key, and cope with groups, several devices and the quantum future. Real cryptography, live in your browser.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/modern-messaging/">zevaryx.github.io/cybersec-hub</a></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ send&nbsp;<input id="hero-in" value="see you at six" maxlength="40" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About ninety minutes, four parts, three checkpoints. This is the deepest cryptography talk in the General track, so Crypto 101 helps, but every idea gets a picture or a button first. The big question: how do two people on phones, one of them offline, end up with a conversation that even the server can't read, that survives a stolen key, and that still works in a group?</span></li><li><b class="show">Show</b><span>The terminal on the right. Type a message. One secret chain key produces a different message key for every message, using a real HMAC. The message is really encrypted with the first key (AES-GCM). Keys 1, 2 and 3 are each used once and then forgotten: that single habit is most of what the talk is about.</span></li><li><b class="tip">Eggs</b><span>Type: nothing (an empty message still gets a key and a tag), <code>knock knock</code>, <code>ratchet</code>, <code>forward secrecy</code>, <code>meet at noon</code> (the message from "Using Crypto Correctly in Code"), <code>alice</code>, <code>bob</code>, <code>eve</code> or <code>mallory</code> (cryptography's cast list), <code>signal</code>, <code>whatsapp</code> or <code>imessage</code>. Elsewhere: press "Pick secrets" ten times on slide 4; finish a handshake with no one-time prekeys on slide 5, or tick "a dishonest server swaps in its own prekey"; run both handshakes through the quantum step on slide 6; try each case on slide 7; send ten messages, or press Start over and then steal the keys, on slide 9; heal a stolen key on slide 10; drag the slider to the first and last message on slide 11; try a skipped-key flood on slide 12; slide the group size to 2 or 1000 on slide 14; link five devices on slide 15; visit every place on slide 18, open every filter on slide 19, and tick all ten boxes on slide 20. Also open the browser console.</span></li><li><b class="next">Next</b><span>"First, why the world needed these protocols."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#shared-secret"><small>PART 1 · 25 MIN</small><b>Starting a conversation</b></a><span>Two people, one secret</span><span>Starting when one is offline</span><span>The post-quantum extra</span><span>Safety numbers</span></li>
+      <li><a href="#sym-ratchet"><small>PART 2 · 30 MIN</small><b>Ratchets</b></a><span>Hash forward, delete the key</span><span>Fresh Diffie-Hellman: healing</span><span>The Double Ratchet</span><span>Out-of-order messages</span></li>
+      <li><a href="#groups"><small>PART 3 · 20 MIN</small><b>Groups, devices, metadata</b></a><span>Pairwise, sender keys, MLS</span><span>Several devices</span><span>Who talks to whom</span></li>
+      <li><a href="#limits"><small>PART 4 · 10 MIN</small><b>Wrap-up</b></a><span>What encryption doesn't protect</span><span>A timeline, shipped or not</span><span>Choosing and using a messenger</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour. Everything runs in your browser and the cryptography is real (X25519, HMAC, HKDF, AES-GCM), but it's teaching code, never for real messages. Nothing you type leaves this page.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is the hard bit: starting a secure chat when the other person isn't there, and checking you're talking to the right person. Part 2 is the clever bit: ratchets, which are why a stolen key doesn't unlock your history. Part 3 is what gets harder at scale: groups, several devices, and the data about the conversation that isn't the conversation. Part 4 is the honest bit: what all of this still doesn't protect.</span></li><li><b class="next">Next</b><span>"A little history first."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>The server carries everything, so it must see nothing</h2></header>
+  <div class="slide-body stack">
+    <p class="big-lede">An app's servers handle every message you send. End-to-end protocols are why they can't read them, and why a leaked key doesn't have to unlock your whole history.</p>
+    <div class="cards-3">
+      <div class="card"><b>2004: stop keeping one key for everything</b><span>Borisov, Goldberg and Brewer's "Off-the-Record Communication, or, Why Not To Use PGP" argued for short-lived Diffie-Hellman keys that are thrown away, and for message authentication codes instead of signatures, so a transcript can't prove who said what.</span></div>
+      <div class="card"><b>5 April 2016: a billion people</b><span>Signal announced that its protocol was fully integrated into WhatsApp: chats, group chats, attachments, voice notes and calls, for "over a billion monthly active users".</span></div>
+      <div class="card"><b>2023 to 2026: it keeps moving</b><span>Post-quantum handshakes (Signal, 2023), a post-quantum ratchet (Signal, 2025; Apple's iMessage, 2024), a standard for big groups (MLS, 2023) and automatic key checks (Signal, August 2026).</span></div>
+    </div>
+    <p class="src">Sources: <a href="https://www.cs.uwaterloo.ca/~iang/pubs/otr-wpes.pdf" target="_blank" rel="noopener">Borisov, Goldberg, Brewer (2004)</a> · <a href="https://signal.org/blog/whatsapp-complete/" target="_blank" rel="noopener">Signal: WhatsApp integration complete</a> · <a href="https://signal.org/blog/pqxdh/" target="_blank" rel="noopener">PQXDH</a> · <a href="https://signal.org/blog/spqr/" target="_blank" rel="noopener">SPQR</a> · <a href="https://security.apple.com/blog/imessage-pq3/" target="_blank" rel="noopener">Apple PQ3</a> · <a href="https://www.rfc-editor.org/rfc/rfc9420" target="_blank" rel="noopener">RFC 9420</a> · <a href="https://signal.org/blog/automatic-key-verification/" target="_blank" rel="noopener">Signal: automatic key verification</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three dates, one idea each. In 2004 researchers pointed out that an encryption key you keep for years is a single point of failure: leak it once and every old message opens. In 2016 the ideas had grown into a protocol that a billion people used without knowing it. And the work isn't finished: the same protocols are still being extended to survive quantum computers and to check that the server hasn't handed you the wrong key.</span></li><li><b class="ask">Ask</b><span>Which apps on your phone do you think are end-to-end encrypted? Keep the answers; we come back to them on the last slide. <em>(Answers vary; the point is that "encrypted" can mean very different things.)</em></span></li><li><b class="tip">Check</b><span>The OTR claims are from the paper's own abstract and summaries (the PDF is the 2004 workshop paper; an earlier draft dates from 2002). The WhatsApp figures are from Signal's post of 5 April 2016, not from today's WhatsApp. Say "named examples, not recommendations" if asked about brands.</span></li><li><b class="next">Next</b><span>"Let's start with the simplest piece: how two people agree on a secret in public."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="shared-secret" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// STARTING A CONVERSATION 01</p><h2>Recap: two people, one secret, in public</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="ss-pick">1 · Pick secrets</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ss-swap" disabled>2 · Swap public keys</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ss-send" disabled>3 · Send a message</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ss-reset">Start over</button>
+      </div>
+      <label class="field">Message<input id="ss-msg" class="mono" maxlength="40" value="Meet at the café at six" spellcheck="false" autocomplete="off"></label>
+      <div class="table-wrap"><table class="grid-table st-table ss-table"><thead><tr><th></th><th>Alice</th><th>Anyone listening</th><th>Bob</th></tr></thead><tbody id="ss-rows"></tbody></table></div>
+      <p class="comment" id="ss-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Each person makes a secret number</b> (the private key) and a matching public key, and sends only the public one.</li>
+        <li><b>Combine your private key with their public key</b> and you both get the same shared secret. Someone who only sees the public keys can't compute it.</li>
+        <li><b>A shared secret isn't yet a message key:</b> it goes through a key-derivation function (HKDF) first.</li>
+        <li><b>Two gaps remain:</b> nothing says who is on the other end (slide 7), and both people had to be online (next slide).</li>
+      </ul>
+      <p class="callout"><b>REAL MATHS, TEACHING CODE</b> X25519 as in RFC 7748 (the curve Signal's protocols use), HKDF-SHA-256 and AES-128-GCM, all running in this page. Real apps use audited libraries.</p>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc7748" target="_blank" rel="noopener">RFC 7748: X25519</a> · <a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener">Double Ratchet spec (primitives)</a> · <a href="../crypto-101/#key-exchange-idea">Crypto 101: the key-swap idea</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press "Pick secrets": each side makes a private and public key. Press "Swap public keys": the middle column, "anyone listening", sees only public keys, but both ends compute the same shared secret (the matching row lights up). Press "Send a message": a message key comes out of the shared secret through HKDF, the message is encrypted with AES-GCM, and the listener sees only ciphertext. Press "Start over" and pick again: new keys, a different secret.</span></li><li><b class="say">Say</b><span>This is the key-swap trick from Crypto 101, on a modern curve. The only thing that crosses the network is public. If you saw the earlier talk, this is a two-minute recap; if you didn't, the one-line version is that combining your private number with their public number gives you both the same secret, and getting a private number back from a public one is the hard problem.</span></li><li><b class="ask">Ask</b><span>If the listener sees both public keys, why can't they compute the secret? <em>Answer: they'd need one of the private keys, and recovering a private key from a public key is the discrete-logarithm problem.</em></span></li><li><b class="tip">Check</b><span>X25519 is verified against the RFC 7748 test vectors in this talk's own tests. The Double Ratchet specification recommends AES-256-based encryption; this deck uses AES-128-GCM because that's what the shared teaching code implements.</span></li><li><b class="next">Next</b><span>"Now the hard part: what if Bob's phone is off?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="prekeys" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// STARTING A CONVERSATION 02</p><h2>Bob is offline: prekeys, and X3DH</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="opts">
+        <label class="chk-line"><input type="checkbox" id="px-opk" checked> Bob has one-time prekeys left</label>
+        <label class="chk-line"><input type="checkbox" id="px-evil"> A dishonest server swaps in its own prekey</label>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="px-1">1 · Bob uploads</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="px-2" disabled>2 · Alice starts</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="px-3" disabled>3 · Bob returns</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="px-reset">Start over</button>
+      </div>
+      <label class="field">Alice's first message<input id="px-msg" class="mono" maxlength="40" value="Hi Bob! Free tomorrow?" spellcheck="false" autocomplete="off"></label>
+      <pre class="term-sm" id="px-log" aria-live="polite"></pre>
+      <p class="comment" id="px-note"></p>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table st-table px-table"><thead><tr><th>Mix</th><th>Alice computes</th><th>Bob computes later</th></tr></thead><tbody id="px-rows"></tbody></table></div>
+      <ul class="rules">
+        <li><b>The server only stores public keys:</b> Bob's identity key, a signed prekey, and some one-time prekeys. It hands one out (and deletes it) for each new chat.</li>
+        <li><b>Two mixes prove who is who, two give forward secrecy.</b> If the one-time prekeys run out, three mixes are used and a replayed first message could be accepted; the ratchet that follows limits the damage.</li>
+        <li><b>The signature on the signed prekey</b> stops the server swapping it for its own.</li>
+      </ul>
+      <p class="callout"><b>A SHORTCUT</b> Real Signal signs the prekey with XEdDSA using the identity key itself. Here a separate ECDSA P-256 key (from this deck's shared code) does the signing.</p>
+      <p class="src">Source: <a href="https://signal.org/docs/specifications/x3dh/" target="_blank" rel="noopener">Signal: the X3DH key agreement protocol (revision 1, 2016)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Press 1: Bob's phone uploads a bundle (identity key, a signed prekey with its signature, three one-time prekeys) and goes offline. Press 2: Alice fetches the bundle, checks the signature, makes a throwaway ephemeral key, mixes four Diffie-Hellman results into a secret, and sends a first message that only Bob can open. Press 3: Bob comes back, repeats the same four mixes from his side, gets the same secret, and reads the message. The right-hand table shows both sides agreeing on every row. Then start over, untick "one-time prekeys left": only three mixes, and a note about replay. Start over again, tick "a dishonest server swaps in its own prekey": the signature check fails and Alice's app stops.</span></li><li><b class="say">Say</b><span>Bob never had to be online. Everything Alice needed was public and waiting. The four mixes have jobs: two tie the secret to both identity keys (authentication), two bring in fresh keys (forward secrecy). The signature matters because the server is exactly the party who could cheat.</span></li><li><b class="ask">Ask</b><span>What could a dishonest server still do that the signature doesn't stop? <em>Answer: give Alice a completely different identity key for Bob, signed by itself. That is why safety numbers (slide 7) exist.</em></span></li><li><b class="tip">Check</b><span>The mixes follow the specification: DH1 = DH(IK_A, SPK_B), DH2 = DH(EK_A, IK_B), DH3 = DH(EK_A, SPK_B), DH4 = DH(EK_A, OPK_B), then a key-derivation step. The spec attributes mutual authentication to DH1 and DH2 and forward secrecy to DH3 and DH4, and lists replay without a one-time prekey as a known caveat. The signature scheme here is a teaching shortcut (see the callout).</span></li><li><b class="next">Next</b><span>"Now the quantum problem."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pqxdh" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// STARTING A CONVERSATION 03</p><h2>Harvest now, decrypt later: add a second secret</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="pq-mode" role="group" aria-label="Kind of handshake"><span>Handshake</span><button type="button" data-v="classic" aria-pressed="true">Curve only</button><button type="button" data-v="hybrid" aria-pressed="false">Curve + post-quantum</button></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="pq-1">1 · Alice starts a chat (recorded)</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="pq-2" disabled>2 · Years later: quantum break</button>
+      </div>
+      <div class="pq-out" id="pq-out"></div>
+      <p class="comment" id="pq-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>A recorded handshake can wait years in an archive.</b> If a large quantum computer can one day undo the curve maths, today's recordings could be opened. That's "harvest now, decrypt later".</li>
+        <li><b>The fix:</b> add one more secret from a post-quantum key-encapsulation mechanism (Kyber, standardised by NIST as ML-KEM) next to the curve secrets. An attacker has to break both. Signal added this to its handshake as PQXDH in September 2023.</li>
+        <li><b>Why not replace the curve?</b> The new maths is younger. Keeping both means a flaw in either one alone isn't enough.</li>
+        <li><b>The limits, in Signal's own specification:</b> authentication in PQXDH isn't quantum-secure, and it isn't designed to stop an attacker with a quantum computer <i>today</i>. It protects recorded traffic.</li>
+      </ul>
+      <p class="callout"><b>NOT A REAL KEM</b> There is no Kyber or ML-KEM in this page. A random secret stands in for what a KEM would deliver, so you can see what the hybrid changes. The "quantum" step simply hands the attacker every private key behind the recorded public keys.</p>
+      <p class="src">Sources: <a href="https://signal.org/blog/pqxdh/" target="_blank" rel="noopener">Signal: quantum resistance and the Signal Protocol</a> · <a href="https://signal.org/docs/specifications/pqxdh/" target="_blank" rel="noopener">PQXDH specification (revision 3)</a> · <a href="https://csrc.nist.gov/pubs/fips/203/final" target="_blank" rel="noopener">NIST FIPS 203 (ML-KEM)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Leave "Curve only" selected and press 1, then 2: the attacker rebuilds the secret from the recording and reads the message (real AES-GCM opens it). Now pick "Curve + post-quantum", press 1 and 2 again: the attacker gets every curve secret but is missing the extra one, so the tag check fails and nothing is read.</span></li><li><b class="say">Say</b><span>The attack needs patience, not a quantum computer today: record everything now, wait. The defence has to be in place <i>before</i> the recording happens, which is why messengers added it to the handshake first. Notice what the demo does not claim: this protects recordings, not a live quantum attacker, and it doesn't fix who-is-on-the-other-end.</span></li><li><b class="ask">Ask</b><span>Which data would you not want opened in 15 years? <em>(Messages about health, legal matters, relationships, sources.)</em></span></li><li><b class="tip">Check</b><span>From the PQXDH specification (revision 3, 2023-05-24, updated 2024-01-23): it computes the key from the curve secrets plus the KEM secret; "Authentication in PQXDH is not quantum-secure" and "PQXDH is not designed to provide protection against active quantum attackers". The specification's example KEM is Crystals-Kyber-1024. NIST's FIPS 203 (ML-KEM) was published on 13 August 2024. The September 2023 date is from Signal's announcement post.</span></li><li><b class="next">Next</b><span>"All of this still trusts the server to give out the right keys. How do you check?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="safety" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// STARTING A CONVERSATION 04</p><h2>Safety numbers: check the keys, not the server</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="sf-case" role="group" aria-label="What happened"><span>What's going on</span><button type="button" data-v="none" aria-pressed="true">Nothing unusual</button><button type="button" data-v="mitm" aria-pressed="false">Mallory swaps the keys</button><button type="button" data-v="newphone" aria-pressed="false">Bob got a new phone</button></div>
+      <div class="phones" id="sf-phones"></div>
+      <p class="verdict" id="sf-verdict"></p>
+      <p class="comment" id="sf-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The risk:</b> a dishonest or hacked server could give Alice its own key in place of Bob's.</li>
+        <li><b>The check:</b> each phone shows a fingerprint of both identity keys: 60 digits, in 12 groups of five. If both hold the right keys, both show the same number. Compare in person, on a call, or scan the QR code.</li>
+        <li><b>A changed number</b> most often means a new phone or a reinstall. It's a prompt to check, not proof of an attack.</li>
+        <li><b>Newer:</b> Signal's automatic key verification (August 2026) checks a public, audited key log, so you can catch a swapped key without meeting. It needs your contact's phone number and doesn't prove who controls an account. Apple's iMessage Contact Key Verification (announced October 2023) is a similar idea.</li>
+      </ul>
+      <p class="callout"><b>SIMPLIFIED</b> Signal's real number comes from an iterated hash and account identifiers. This one uses SHA-256 and the same layout: two 30-digit halves, sorted so both phones agree.</p>
+      <p class="src">Sources: <a href="https://signal.org/blog/safety-number-updates/" target="_blank" rel="noopener">Signal: safety number updates (2016)</a> · <a href="https://signal.org/blog/automatic-key-verification/" target="_blank" rel="noopener">Signal: automatic key verification (11 Aug 2026)</a> · <a href="https://security.apple.com/blog/imessage-contact-key-verification/" target="_blank" rel="noopener">Apple: Contact Key Verification</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>"Nothing unusual": both phones show the same 60 digits and the verdict is green. "Mallory swaps the keys": Mallory sits in the server's place and gives each side her own key; each phone now fingerprints a different pair of keys, the numbers differ (the differing groups turn red), and the verdict is red. "Bob got a new phone": Alice's phone still holds Bob's old key, so the numbers differ for an innocent reason.</span></li><li><b class="say">Say</b><span>Encryption is only as good as the key you encrypted to. A safety number checks, outside the server's reach, that you hold the keys the other person holds. Most people never compare, and that is okay for most chats; it's for the conversation that matters. A changed number isn't an alarm by itself: phones get replaced. What you do next depends on what's at stake.</span></li><li><b class="ask">Ask</b><span>Why compare the numbers over a call or in person rather than in the same chat? <em>Answer: a man in the middle could alter the chat too.</em></span></li><li><b class="tip">Check</b><span>Signal's 2016 post describes the number as a sorted concatenation of two 30-digit fingerprints, shown as 12 groups of five digits. Signal's support page (which blocked automated reading) is the source for "scan the QR code ideally in person" and for the usual causes of a change; re-check it before giving exact steps. Signal's August 2026 post states that automatic key verification needs the contact's phone number, "does not verify the identity of the user who controls a particular phone number or username", and can be turned off under Privacy &gt; Advanced; Cloudflare and Trail of Bits are its auditors. Apple's post is dated 27 October 2023 (iOS 17.2).</span></li><li><b class="next">Next</b><span>"Checkpoint time."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your friend's phone has been off all day. How can you still start an encrypted chat with them?</p><details><summary>Hint</summary><p>What did their phone leave on the server earlier?</p></details><details class="answer"><summary>Answer</summary><p>Their app uploaded a bundle of public keys in advance: an identity key, a signed prekey and one-time prekeys. You fetch it, mix several Diffie-Hellman results into a shared secret, and send a first message they can open when they're back online.</p></details></li>
+      <li><p>A safety number changes in a chat. What are the likely explanations, and what do you do?</p><details><summary>Hint</summary><p>Think of the most ordinary reason first.</p></details><details class="answer"><summary>Answer</summary><p>Most often your contact reinstalled the app or got a new phone. It could also be someone swapping a key. For anything sensitive, check again in person or over a call, using the QR code or the digits.</p></details></li>
+      <li><p>Why does a post-quantum handshake add a second secret instead of replacing the curve?</p><details><summary>Hint</summary><p>What does the attacker have to do now?</p></details><details class="answer"><summary>Answer</summary><p>To stop "harvest now, decrypt later" without betting everything on newer maths. The attacker has to break both the proven curve and the post-quantum scheme, so a flaw in either one alone isn't enough.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="sym-ratchet" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// RATCHETS 01</p><h2>Forward secrecy: hash forward, delete the key</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" id="sr-mode" role="group" aria-label="Design"><span>Design</span><button type="button" data-v="static" aria-pressed="false">One key forever</button><button type="button" data-v="chain" aria-pressed="true">Hash chain (a symmetric ratchet)</button></div>
+      <div class="controls">
+        <input id="sr-msg" class="mono grow" maxlength="30" value="see you at six" aria-label="Message to send" spellcheck="false" autocomplete="off">
+        <button type="button" class="btn btn-sm" id="sr-send">Send</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sr-steal">Steal the keys now</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="sr-reset">Start over</button>
+      </div>
+      <div class="table-wrap scrolly"><table class="grid-table rt-table sr-table"><thead><tr><th>#</th><th>Message key</th><th>After the theft</th></tr></thead><tbody id="sr-rows"></tbody></table></div>
+      <p class="comment" id="sr-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Forward secrecy:</b> if today's keys leak, yesterday's messages stay unreadable.</li>
+        <li><b>How:</b> a chain key makes each message key, and the next chain key: <code>message key = HMAC(chain key, 0x01)</code>, <code>next chain key = HMAC(chain key, 0x02)</code>. Then the old keys are deleted.</li>
+        <li><b>HMAC only runs one way:</b> from today's chain key you can compute tomorrow's, never yesterday's.</li>
+        <li><b>But not enough alone:</b> steal the chain key and you can follow the chain forward for ever. The next slide fixes that.</li>
+      </ul>
+      <p class="callout"><b>REAL HMAC, REAL AES-GCM</b> The constants 0x01 and 0x02 are the ones in the Double Ratchet specification. "After the theft" is an actual attempt to decrypt with only the stolen chain key.</p>
+      <p class="src">Source: <a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener">Signal: the Double Ratchet algorithm (revision 4, 4 Nov 2025)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Start on "Hash chain". Three messages are already sent; press Send a couple more: each has its own key, and the key is struck out as "deleted" once used. Now press "Steal the keys now": the thief copies the current chain key. The three old messages say "can't read: key deleted". Send three more: each one is now read by the thief, because the chain just keeps hashing forward. Switch to "One key forever" and repeat: the thief reads everything, past and future.</span></li><li><b class="say">Say</b><span>The ratchet is a one-way staircase. Each message key is used once and forgotten, so a leak only exposes what hasn't been deleted yet. That's forward secrecy: the past is safe. But look at the other half: with only a hash chain, once the thief has the key they stay in for ever. Good news and bad news: we need something that lets the conversation recover.</span></li><li><b class="ask">Ask</b><span>Why can't the thief run the chain backwards? <em>Answer: HMAC is a one-way function: you can't compute its input from its output.</em></span></li><li><b class="tip">Check</b><span>The specification (revision 4, 2025-11-04) says to use HMAC-SHA-256 or SHA-512 with the chain key as the key, the single byte 0x01 to produce the message key and 0x02 to produce the next chain key. It defines "forward security" (output keys from the past appear random to an adversary who learns the KDF key) and "break-in recovery" for the other direction. This deck's message encryption (AES-128-GCM with a key and nonce derived by HKDF) is a simplification of the specification's recommended AES-256 constructions.</span></li><li><b class="next">Next</b><span>"What lets the conversation heal? Fresh secrets from the other person."</span></li></ul></div>
+</section>
+
+<section class="slide" id="dh-ratchet" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// RATCHETS 02</p><h2>Healing: a fresh Diffie-Hellman with every reply</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <input id="dr-msg" class="mono grow" maxlength="30" value="on my way" aria-label="Message to send" spellcheck="false" autocomplete="off">
+        <button type="button" class="btn btn-sm" id="dr-a">Alice sends</button>
+        <button type="button" class="btn btn-sm" id="dr-b">Bob sends</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dr-steal">Copy Alice's keys now</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dr-reset">Start over</button>
+      </div>
+      <div class="state" id="dr-state"></div>
+      <div class="table-wrap scrolly"><table class="grid-table rt-table dr-table"><thead><tr><th>#</th><th>From</th><th>Ratchet key</th><th>n</th><th>Thief</th></tr></thead><tbody id="dr-rows"></tbody></table></div>
+      <p class="comment" id="dr-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Each reply can carry a fresh public key.</b> Mixing a new Diffie-Hellman result into the root key starts a new chain of message keys.</li>
+        <li><b>A thief who copied the keys falls behind:</b> the next step uses a private key generated <i>after</i> the copy, which they never saw.</li>
+        <li><b>The thief gets a short extra:</b> they can still read Alice's current chain, and Bob's next reply (they hold the key it's mixed with). After Alice replies on a new key, they're locked out.</li>
+        <li><b>The specification calls this "break-in recovery".</b> Papers and Apple's PQ3 post call it post-compromise security.</li>
+      </ul>
+      <p class="callout"><b>REAL RATCHET</b> The root key, chain keys and Diffie-Hellman steps follow the specification; the thief is a genuine attempt to decrypt using only the copied keys and what crosses the wire.</p>
+      <p class="src">Source: <a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener">Signal: the Double Ratchet algorithm</a> · <a href="https://security.apple.com/blog/imessage-pq3/" target="_blank" rel="noopener">Apple: iMessage PQ3</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Alice's first message is already sent. Press "Bob sends", then "Alice sends", a few turns each way: the "Ratchet key" column gets a new badge (A1, B1, A2…) whenever the sender's key changes, and the state cards show new keys appearing. Now press "Copy Alice's keys now". Send a message from Alice on her current key: the thief reads it. Press "Bob sends": the thief reads that too. Now press "Alice sends": her reply uses a brand-new key and the thief can't read it. Keep going: from now on every message is locked to them. The comment line says when the conversation healed.</span></li><li><b class="say">Say</b><span>The trick is that every reply brings a new secret in: a Diffie-Hellman result the thief has no way to compute. It doesn't need the other person to do anything special; it falls out of replying. That's why the conversation heals itself, usually within a round trip or so of replies. The catch for security: if one side never replies, the healing doesn't happen, so a conversation that goes one way for a long time stays exposed longer.</span></li><li><b class="ask">Ask</b><span>What would the thief need to do to keep reading? <em>Answer: copy the keys again after the next exchange, that is, stay compromised.</em></span></li><li><b class="tip">Check</b><span>The specification's own term is "break-in recovery" (future output keys appear random to an adversary who learned the KDF key, as long as future inputs supply enough entropy); it doesn't define "post-compromise security" as a separate term. Apple's post uses "post-compromise security". The thief model here is deliberately simple: a copy of Alice's complete state, plus everything sent on the wire afterwards. Messages sent before the copy are not attempted because the keys were already deleted.</span></li><li><b class="next">Next</b><span>"Put both ideas side by side."</span></li></ul></div>
+</section>
+
+<section class="slide" id="double-ratchet" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// RATCHETS 03</p><h2>The Double Ratchet: two ratchets, three designs</h2></header>
+  <div class="slide-body stack">
+    <div class="range-row"><span>The thief copies Alice's keys after message</span><input type="range" id="cp-k" min="0" max="11" value="4" aria-label="Message after which the keys are copied"><output id="cp-out">5</output></div>
+    <div class="cmp" id="cp-grid"></div>
+    <ul class="cmp-texts" id="cp-texts"></ul>
+    <p class="comment" id="cp-note"></p>
+    <p class="src">The same twelve messages are really encrypted three ways, and the thief really tries to decrypt each one. Sources: <a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener">Signal: the Double Ratchet algorithm</a> · <a href="https://security.apple.com/blog/imessage-pq3/" target="_blank" rel="noopener">Apple: iMessage PQ3</a></p>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Drag the slider: the yellow outline marks the moment the thief copies Alice's keys. Red cells are messages the thief can read; green cells are messages that stay secret. Row 1 (one key for everything): all red, past and future. Row 2 (a hash chain only): the past is green, but everything after the copy is red. Row 3 (the Double Ratchet): the past is green and the future turns green again after a reply or two. Try the extremes: the first message and the last.</span></li><li><b class="say">Say</b><span>Two ratchets, two jobs. The hash chain gives forward secrecy: the past stays safe. The Diffie-Hellman ratchet gives recovery: the future heals. Together they're called the Double Ratchet. Real apps add a third ingredient: a post-quantum ratchet that runs alongside (slide 19).</span></li><li><b class="ask">Ask</b><span>Which design would you want for a conversation that lasts years? <em>(Row 3.)</em> And what's the cost? <em>(Each message carries a public key and the apps must keep state in step; if a phone is cloned or a backup restored, they can fall out of step.)</em></span></li><li><b class="tip">Check</b><span>Row 3 uses the same engine as the previous slide. Row 2 runs two chains (one per direction) that never take in a new Diffie-Hellman secret, which is a simplification for contrast, not a deployed design. The thief copies the sender's complete state and sees the wire.</span></li><li><b class="next">Next</b><span>"Real networks don't deliver in order."</span></li></ul></div>
+</section>
+
+<section class="slide" id="out-of-order" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// RATCHETS 04</p><h2>Out of order: skipped keys, with a limit</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="oo-limit" role="group" aria-label="Skip limit"><span>Skip limit</span><button type="button" data-v="4" aria-pressed="true">4 (demo)</button><button type="button" data-v="1000" aria-pressed="false">1000 (an example in the spec)</button></div>
+      <p class="mq-count" style="margin:0">Alice sent six messages. The network delivers them in whatever order you press:</p>
+      <div class="oo-btns" id="oo-btns"></div>
+      <div class="state" id="oo-state"></div>
+      <ul class="oo-log" id="oo-log" aria-live="polite"></ul>
+      <p class="comment" id="oo-note"></p>
+      <button type="button" class="btn btn-ghost btn-sm" id="oo-reset">Start over</button>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Networks reorder and drop messages.</b> If message 5 arrives first, Bob steps the chain forward and <i>saves</i> the keys for 1 to 4.</li>
+        <li><b>Late messages still open,</b> using the saved key, which is deleted as soon as it's used.</li>
+        <li><b>A limit protects the app:</b> otherwise a forged "message number 4,000,000" would make it compute and store millions of keys. The specification suggests a per-session limit on stored skipped keys, for example 1000.</li>
+        <li><b>A replay fails:</b> the key was deleted after use.</li>
+        <li><b>The trade-off:</b> a saved key is a key that exists, so apps delete skipped keys after a while.</li>
+      </ul>
+      <p class="callout"><b>REAL ENGINE</b> This is the same Double Ratchet code as the last two slides, so a rejected message really failed its authentication tag.</p>
+      <p class="src">Source: <a href="https://signal.org/docs/specifications/doubleratchet/" target="_blank" rel="noopener">Signal: the Double Ratchet algorithm (skipped message keys, MAX_SKIP)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>With the limit on 4: press message 1, then 2, then 3: the state shows no skipped keys. Press Start over and press message 4 first: Bob saves keys for 1, 2 and 3; then press 1 and 2 and 3: each opens with a saved key, which disappears. Now press message 6 first (it skips five): with limit 4 the app refuses. Switch to 1000 and it accepts. Finally press a message that was already delivered ("replay"): rejected.</span></li><li><b class="say">Say</b><span>Real phones go through tunnels. A messenger that couldn't cope with out-of-order messages would drop half your chat. The solution costs a little memory and a little safety, so it has a leash: a maximum number of skipped keys.</span></li><li><b class="ask">Ask</b><span>Why delete a skipped key as soon as it's used? <em>Answer: a key that's kept is a key that could leak; and a second use would be a replay.</em></span></li><li><b class="tip">Check</b><span>The specification stores skipped keys by ratchet public key and message number (MKSKIPPED), defines MAX_SKIP as the most keys that can be skipped in a single chain and raises an error beyond it, and in section 8.4 says parties should set per-session limits on stored skipped keys (e.g. 1000) and delete them after an appropriate interval. It also warns that an attacker who later compromises a recipient can retrieve any skipped keys still stored. The demo's limit of 4 is only to make the refusal easy to see.</span></li><li><b class="next">Next</b><span>"Checkpoint two."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Someone steals today's keys. Which messages can they read: yesterday's, today's, tomorrow's?</p><details><summary>Hint</summary><p>Which way does the hash chain run, and what is the thief missing after the next reply?</p></details><details class="answer"><summary>Answer</summary><p>Not yesterday's: those keys were deleted and can't be rebuilt. Today's, yes. Tomorrow's only until the next fresh Diffie-Hellman step the thief didn't see (in the Double Ratchet). With a hash chain alone, all of them.</p></details></li>
+      <li><p>Why does a messenger keep "skipped" message keys, and why is there a limit?</p><details><summary>Hint</summary><p>Think of a message that arrives late.</p></details><details class="answer"><summary>Answer</summary><p>So late messages can still be decrypted. The limit stops a forged huge message number from forcing the app to compute and store endless keys.</p></details></li>
+      <li><p>Does forward secrecy protect you if someone gets hold of your unlocked phone?</p><details><summary>Hint</summary><p>Where do the old messages live?</p></details><details class="answer"><summary>Answer</summary><p>No. Forward secrecy protects old messages from a leaked <i>key</i>. Messages that are still sitting readable in the app are another matter, which is why the last part of the talk is about what encryption doesn't cover.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="groups" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// GROUPS, DEVICES, METADATA 01</p><h2>Group chats: pairwise, sender keys, or a tree</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="range-row"><span>Group size</span><input type="range" id="gr-n" min="0" max="8" value="4" aria-label="Group size"><output id="gr-out">16</output></div>
+      <div class="table-wrap"><table class="grid-table gr-table"><thead><tr><th>Design</th><th>Per message</th><th>When someone leaves</th><th>In practice</th></tr></thead><tbody id="gr-rows"></tbody></table></div>
+      <p class="comment" id="gr-note"></p>
+      <p class="src">Per message = encryptions; when someone leaves = key messages to send. Counts are operation counts for this simple model (signatures, welcome messages and server work ignored), not benchmarks. Sources: <a href="https://signal.org/blog/private-groups/" target="_blank" rel="noopener">Signal: private groups (2014)</a> · <a href="https://github.com/signalapp/libsignal/blob/main/rust/protocol/src/group_cipher.rs" target="_blank" rel="noopener">libsignal: group_cipher.rs</a> · <a href="https://gitlab.matrix.org/matrix-org/olm/-/blob/master/docs/megolm.md" target="_blank" rel="noopener">Matrix: Megolm</a> · <a href="https://www.rfc-editor.org/rfc/rfc9420" target="_blank" rel="noopener">RFC 9420: MLS</a> · <a href="https://eprint.iacr.org/2017/713" target="_blank" rel="noopener">Rösler, Mainka, Schwenk</a> · <a href="https://recsi2022.unican.es/wp-content/uploads/2022/11/David-Balbas-Analysis-and-Improvements-of-the-Sender-Keys.pdf" target="_blank" rel="noopener">Balbás, Collins, Gajland (sender keys)</a></p>
+    </div>
+    <div class="stack">
+      <div class="tree-wrap"><svg id="gr-tree" viewBox="0 0 440 170" role="img" aria-label="A binary tree of eight group members. Click a member to see which keys on its path to the root change."></svg><p class="comment" id="gr-tree-note">Click a member: the path to the root is what changes (yellow). Blue nodes are who the new keys are encrypted to.</p></div>
+      <ul class="rules">
+        <li><b>Pairwise:</b> encrypt each message separately for every member. Simple, and cost grows with the group.</li>
+        <li><b>Sender keys:</b> each member has one key for their own messages and hands it to everyone. One encryption per message, but handing out keys after a change is costly and healing is weak.</li>
+        <li><b>A tree (MLS):</b> members share a tree of keys. Changing one member's key touches only the path to the root, about log₂(n) steps.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Slide the group size from 2 to 1000. Pairwise: the cost of every message climbs with the group (n − 1 encryptions). Sender keys: one encryption per message, but the cost when someone leaves explodes (about n²). The tree: one encryption per message and about 10 steps to change a thousand-member group. Then click a member in the tree: the yellow path is the keys that change; the blue nodes are the siblings the new keys are encrypted to. Click another: a different path.</span></li><li><b class="say">Say</b><span>A one-to-one chat has one secret to look after; a group has many people sharing one conversation, members who come and go, and devices that go offline. Signal's original answer (2014) was simply to send a separate encrypted copy to each member. Sender keys, used by WhatsApp and also present in libsignal, make each message cheap but changing the group expensive. MLS, the IETF standard, uses a tree so that updates cost about log n: it's designed for groups "from two to thousands", with forward secrecy and post-compromise security.</span></li><li><b class="ask">Ask</b><span>Someone leaves a group of 1,000. Why does the design matter? <em>Answer: with sender keys everyone must replace their key and tell everyone else; with a tree, one update does it.</em></span></li><li><b class="tip">Check</b><span>The pairwise-copy design is from Signal's 2014 post (it says "we simply deliver a pairwise encrypted message to each member of the group"). libsignal's group_cipher.rs contains a sender-key cipher (a chain key, a signing key, distribution messages); I did not find a Signal document describing which path today's apps use for groups. The sender-keys description (each member's sender key is sent to everyone over existing two-party channels; when someone leaves, everyone deletes their keys, generates fresh ones and starts again, which costs O(n²) communication; it "does not aim for strong PCS in groups") is from Balbás, Collins and Gajland's analysis (RECSI 2022 slides), which extracted the protocol from WhatsApp's whitepaper plus Signal's code; WhatsApp's own current PDF blocked automated reading, so confirm against it before quoting what WhatsApp does today. Matrix's Megolm specification itself says it gives "partial" forward secrecy, no backward secrecy on its own, and shares session keys over a secure channel such as Olm. The RFC 9420 abstract says MLS gives forward secrecy and post-compromise security for groups "from two to thousands" and that update costs scale as the log of the group size. The 2017 analysis (Rösler, Mainka, Schwenk; EuroS&amp;P 2018) found that Signal's future secrecy didn't hold for groups and that message integrity and group management weren't protected end to end in the apps it studied: that was seven years ago and the apps have changed.</span></li><li><b class="next">Next</b><span>"And what about your laptop and your tablet?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="devices" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// GROUPS, DEVICES, METADATA 02</p><h2>Several devices: one copy per device</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <input id="dv-msg" class="mono grow" maxlength="30" value="Running late" aria-label="Message to send" spellcheck="false" autocomplete="off">
+        <button type="button" class="btn btn-sm" id="dv-send">Alice sends</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dv-bob">Bob links a device</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dv-alice">Alice links a device</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dv-reset">Start over</button>
+      </div>
+      <div class="dv" id="dv-people"></div>
+      <div class="table-wrap"><table class="grid-table dv-table"><thead><tr><th>Encrypted for</th><th>What goes out (real AES-GCM)</th></tr></thead><tbody id="dv-rows"></tbody></table></div>
+      <p class="comment" id="dv-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Encryption happens per device.</b> A message "to Bob" is encrypted separately for each of Bob's devices, and Alice's app also sends a copy to her own other devices.</li>
+        <li><b>A new device starts empty:</b> old messages were encrypted to the keys of the devices that existed then, so a newly linked device can't read them.</li>
+        <li><b>History comes from a transfer,</b> not from the server: Signal's optional link-and-sync is end-to-end encrypted, and a linked device is another place your messages can be read.</li>
+        <li><b>Designs differ:</b> the Sesame specification describes both one identity key per user and one per device.</li>
+      </ul>
+      <p class="callout"><b>ILLUSTRATION</b> Each device here has its own random session key; the copies are real AES-GCM ciphertexts, so they really differ. Real apps run a full Double Ratchet session per device pair.</p>
+      <p class="src">Sources: <a href="https://signal.org/docs/specifications/sesame/" target="_blank" rel="noopener">Signal: the Sesame algorithm (revision 2, 2017)</a> · <a href="https://signal.org/blog/linked-devices-and-android-tablets/" target="_blank" rel="noopener">Signal: more linked devices (4 Aug 2026)</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press "Alice sends": the table lists one ciphertext per device (Bob's phone, plus Alice's own laptop). Press "Bob links a device": now one more copy. Press "Alice links a device": and another. Notice every copy is different, though the message is the same. Then watch the comment line: a freshly linked device has no history of earlier messages.</span></li><li><b class="say">Say</b><span>End-to-end encryption is between devices, not between people. That's why linking a laptop or tablet matters for security: each is another endpoint that holds keys and can read your chats. It's also why a new device doesn't see your history: nothing was ever encrypted to it. Apps offer an optional, encrypted transfer for that.</span></li><li><b class="ask">Ask</b><span>When did you last look at the list of devices linked to your messenger? <em>(A good habit: unlink what you don't use.)</em></span></li><li><b class="tip">Check</b><span>The Sesame specification (revision 2, 2017-04-14) says messages are encrypted separately for each recipient device, a device sends a copy of each outbound message to the user's other devices, and it describes both per-user and per-device identity keys as options. Signal's 4 August 2026 post says history transfer is optional (full history plus the last 45 days of saved media) and "fully end-to-end encrypted". Limits on the number of linked devices appear in Signal's support pages with inconsistent wording, so none is stated here.</span></li><li><b class="next">Next</b><span>"The one thing the encryption doesn't hide: who's talking to whom."</span></li></ul></div>
+</section>
+
+<section class="slide" id="metadata" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// GROUPS, DEVICES, METADATA 03</p><h2>Metadata: who, when, how much</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="mt-mode" role="group" aria-label="Design"><span>The envelope</span><button type="button" data-v="e2ee" aria-pressed="true">End-to-end</button><button type="button" data-v="sealed" aria-pressed="false">+ sealed sender</button></div>
+      <div class="table-wrap"><table class="grid-table mt-table"><thead><tr><th>The service sees</th><th>Seen?</th></tr></thead><tbody id="mt-rows"></tbody></table></div>
+      <p class="comment" id="mt-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>End-to-end hides the contents,</b> not the delivery: the service still has to know where to send a message.</li>
+        <li><b>Sealed sender</b> (Signal, 2018) puts the sender's identity inside the encrypted envelope, so the service doesn't see who it came from.</li>
+        <li><b>What's still visible:</b> the recipient, the timing and the network address. Signal itself called this "an incremental step" and said timing and IP-address correlation were ongoing work.</li>
+        <li><b>You can shrink metadata,</b> by choosing apps that keep less, but you can't remove it from a service that delivers your messages. The earlier talk, <a href="../privacy-tools/">Privacy Tools Explained</a>, has the full envelope demo.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://signal.org/blog/sealed-sender/" target="_blank" rel="noopener">Signal: sealed sender (29 Oct 2018)</a> · <a href="https://signal.org/bigbrother/" target="_blank" rel="noopener">Signal: government requests</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Start on "End-to-end": the contents are hidden, but the sender, the recipient, the time and the size are visible to the service. Switch to "sealed sender": the sender row flips to hidden, and the rest is unchanged.</span></li><li><b class="say">Say</b><span>Metadata is the data about the message. It can be revealing on its own: who you talk to, how often, at what hours. Sealed sender is one clever step to reduce it, but a service that delivers your messages always sees something. In 2016 a US grand jury subpoena asked Signal for information about two users; Signal could provide only when each account was created and when it last connected. That is what a service that keeps little looks like.</span></li><li><b class="tip">Check</b><span>The 2018 post is a "technology preview"; the sealed-sender behaviour today may differ, so describe it as a design rather than a promise about any current app. The post says the service "doesn't authenticate" the envelope's sender, uses a short-lived sender certificate inside the encrypted envelope, and lists "traffic correlation via timing attacks and IP addresses" as ongoing development. The 2016 subpoena is from Signal's own government-requests page.</span></li><li><b class="next">Next</b><span>"Checkpoint three."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why are group chats harder to secure than one-to-one chats?</p><details><summary>Hint</summary><p>Think about who holds which key, and what happens when someone leaves.</p></details><details class="answer"><summary>Answer</summary><p>Many people share one conversation, members come and go, and every device's keys must stay in step. Pairwise copies get costly for big groups, sender keys make a departure expensive and heal slowly, and a key tree such as MLS aims to keep each change to about log n steps.</p></details></li>
+      <li><p>You link a new device to your account. Can it read your old chats?</p><details><summary>Hint</summary><p>Who were the old messages encrypted to?</p></details><details class="answer"><summary>Answer</summary><p>Not by default: they were encrypted to the keys of your other devices. Some apps offer an optional, encrypted history transfer between your devices.</p></details></li>
+      <li><p>Sealed sender hides who sent a message from the server. What can the server still see?</p><details><summary>Hint</summary><p>What does it need to know to deliver the message?</p></details><details class="answer"><summary>Answer</summary><p>Who it's for, when it arrived, roughly how big it is, and the network address it came from. Signal itself described timing and IP-address correlation as ongoing work.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="limits" data-part="4" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>What end-to-end encryption doesn't protect</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick lm-nodes" id="lm-nodes" role="group" aria-label="Places a message passes through"></div>
+      <div class="lm-detail" id="lm-detail" aria-live="polite"></div>
+      <p class="comment" id="lm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>It protects the middle of the journey:</b> the network and the company's servers.</li>
+        <li><b>The ends are up to you:</b> an unlocked phone, a backup, a screenshot, a linked laptop, a notification on a lock screen.</li>
+        <li><b>And the person you're talking to:</b> they hold the plaintext and always can copy it. "Disappearing" is good manners, not enforcement.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.cisa.gov/resources-tools/resources/mobile-communications-best-practice-guidance" target="_blank" rel="noopener">CISA: mobile communications best practices</a> · <a href="https://signal.org/blog/disappearing-messages/" target="_blank" rel="noopener">Signal: disappearing messages</a> · <a href="https://signal.org/blog/backup-improvements/" target="_blank" rel="noopener">Signal: secure backups, a year in review</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click each place in turn. For each, the card says what encryption does there, what it doesn't, and one thing to do about it.</span></li><li><b class="say">Say</b><span>Everything in this talk protects a message while it travels. Once it arrives it's text on a screen, in an app, perhaps in a backup, with a person who can show it to anyone. The most common ways private chats actually leak are at the ends, not in the middle. That isn't a flaw in the protocols; it's the edge of what protocols can do.</span></li><li><b class="ask">Ask</b><span>Which of these places is the weakest link in your own setup? <em>(Often: backups, lock-screen previews, or an old linked device.)</em></span></li><li><b class="tip">Check</b><span>The Signal post on disappearing messages (11 October 2016) says the timer starts once each recipient has read a message, that it's for conversations where "all participants want to automate minimalist data hygiene, not for situations where your contact is your adversary", and that a recipient "can always use another camera to take a photo of the screen". CISA's December 2024 guidance names end-to-end encrypted messaging for highly targeted people. Signal's September 2026 post describes Secure Backups as end-to-end encrypted with a recovery key you hold. Other apps' backup behaviour varies: see the earlier talk on privacy tools.</span></li><li><b class="next">Next</b><span>"A quick map of what's shipped and what isn't."</span></li></ul></div>
+</section>
+
+<section class="slide" id="timeline" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>A timeline: shipped, in beta, announced</h2></header>
+  <div class="slide-body stack">
+    <div class="seg-pick" id="tl-filter" role="group" aria-label="Filter the timeline"></div>
+    <div class="table-wrap tl-scroll"><table class="grid-table tl-table"><thead><tr><th>When</th><th>What</th><th>Status</th></tr></thead><tbody id="tl-rows"></tbody></table></div>
+    <p class="comment" id="tl-note"></p>
+    <p class="src">Status as of 9 November 2026, from each project's own announcement where it could be read. Examples, not recommendations.</p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Press each filter: starting a chat, ratchets, groups, post-quantum, verification. Read the status column: "shipped" means the vendor says it is rolled out; "rolling out" and "beta" mean what they say.</span></li><li><b class="say">Say</b><span>Two themes: more of the world is moving to the same few ideas (X3DH-style handshakes, ratchets, MLS for groups), and the newest work is about the future (post-quantum) and about the server (key transparency). Matrix's Olm and Megolm are a separate, openly specified design of the same ideas, used in a different ecosystem.</span></li><li><b class="tip">Check</b><span>Not confirmed as of 9 November 2026: whether Signal's post-quantum ratchet (SPQR) is now enforced for all conversations. Signal's October 2025 post says it's rolling out "slowly and carefully", with enforcement to follow once all clients support it, and its blog index shows no later announcement. Apple's PQ3 was announced in February 2024 (rolling out with iOS 17.4 and replacing the older protocol "this year"); Apple's May 2026 newsroom post about iPhone-to-Android RCS says encryption is "on by default" in a beta and doesn't name the protocol (the GSMA's March 2025 announcement says the RCS specification uses MLS). RFC 9420's page shows only the year, 2023. The OTR date is the 2004 workshop paper.</span></li><li><b class="next">Next</b><span>"How would you choose?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="choose" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 03</p><h2>Choosing and using a messenger</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="plan" id="plan"></div>
+      <p class="comment" id="ck-note"></p>
+    </div>
+    <div class="stack">
+      <h3>Questions to ask any app</h3>
+      <ol class="ask-list">
+        <li><b>Is end-to-end encryption on by default,</b> for one-to-one chats and for groups?</li>
+        <li><b>Who holds the key to my backups?</b></li>
+        <li><b>Is the protocol written down</b> and independently reviewed?</li>
+        <li><b>Can I check keys</b> (safety numbers or key verification)?</li>
+        <li><b>What does the company keep,</b> and what has it handed over before?</li>
+        <li><b>Is it quantum-ready for the handshake,</b> or only announced?</li>
+      </ol>
+      <p class="callout"><b>EXAMPLES, NOT ENDORSEMENTS</b> This talk names protocols and a few widely used apps because they publish their designs. "Best" depends on who you're worried about, and the people you talk to have to use it too.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>A messenger you use carefully beats a perfect one you don't. The boxes are habits, not purchases: updates, a screen lock, previews off, knowing where your backups go, checking the device list, and checking keys for the one conversation that matters. The questions on the right are for judging any app, including ones that don't exist yet.</span></li><li><b class="show">Show</b><span>Tick the boxes you already do. They're saved in this browser only.</span></li><li><b class="ask">Ask</b><span>Back to slide 3: which of the apps you named are end-to-end encrypted by default, and what about their backups?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Which of these ideas surprised you most: the offline start, the ratchet that heals, or how little encryption covers at the ends?</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>Every demo keeps working, and the checklist remembers your ticks.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../crypto-101/">Crypto 101</a><span>Key exchange, AES, signatures and the maths under all of this.</span></li>
+        <li><a href="../privacy-tools/">Privacy Tools Explained</a><span>Who each tool hides you from, and the cloud-backup gap.</span></li>
+        <li><a href="../how-https-works/">How HTTPS Really Works</a><span>The same ideas on the web: handshakes, keys and certificates.</span></li>
+        <li><a href="../pki-in-depth/">Public Key Infrastructure in Depth</a><span>How the web checks keys, and its own version of key transparency.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The demos use real cryptography (X25519, HMAC, HKDF and AES-GCM) in teaching code, never for real messages; the post-quantum secret and the Sesame-style devices are stand-ins. Nothing you type is sent anywhere. Protocols and apps are named as examples, not recommendations. General information, not advice for a particular situation. Facts checked 9 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. If there's a minute left, ask everyone for the one setting they'll check on their own phone tonight.</span></li><li><b class="tip">Tip</b><span>Likely questions: "Is Signal safe?" (It's end-to-end by default, keeps little, and publishes its protocols; no app protects you from someone with your unlocked phone.) "Is WhatsApp the same as Signal?" (It uses the Signal Protocol for message encryption; what it stores, how backups work and who owns it differ: check each.) "Will quantum computers break all this?" (A large enough quantum computer would break today's curve maths; handshakes in Signal and iMessage already add post-quantum protection against recording, and more is rolling out.) "Can I trust the code?" (Public specifications and independent analyses are the best evidence you can get; see the sources on each slide.) "Does MLS replace Signal's protocol?" (It solves a different problem, groups; apps may use both.)</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="ratchet.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
