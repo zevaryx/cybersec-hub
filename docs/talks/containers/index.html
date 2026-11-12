@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Container and Kubernetes Security</title>
+<meta name="description" content="Container and Kubernetes Security: a container is not a security boundary by default. Small images, non-root users, no secrets baked in, and the few Kubernetes settings that change the blast radius, with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/containers/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Container and Kubernetes Security">
+<meta property="og:description" content="Small images, non-root users, no secrets in layers, and the Kubernetes settings that decide how far a compromised pod can get, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/containers/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/containers/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Container and Kubernetes Security in neon, beside a terminal that grades a Docker base image reference.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M16 4l10 5.5v11L16 26 6 20.500v-11z' fill='none' stroke='%2300f0ff' stroke-width='2.500'/%3E%3Cpath d='M6 9.500l10 5.500 10-5.500M16 15v11' fill='none' stroke='%23ff2e88' stroke-width='2.500'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "containers", "title": "Container and Kubernetes Security", "footer": "CONTAINERS", "subtitle": "DEVELOPER TRACK · 10",
+  "parts": [{ "name": "Building images", "minutes": 34 }, { "name": "Shipping and running", "minutes": 50 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">CONTAINERS<span>K8S</span></a>
+  <div class="scroll-parts">
+    <a href="#what" data-part="1"><b>01</b>Building images</a>
+    <a href="#scanning" data-part="2"><b>02</b>Shipping and running</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 10 · FOR DEVELOPERS WHO WRITE DOCKERFILES OR DEPLOY TO KUBERNETES · INTERMEDIATE</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Container and Kubernetes Security">Container and Kubernetes Security</span></h1>
+      <p class="lede">A container is a process with walls, not a vault. Small images, non-root users, no secrets baked in, and the few Kubernetes settings that decide how far a compromised pod can get.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/containers/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ grade "FROM&nbsp;<input id="hero-in" value="debian:latest" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 85 minutes with two checkpoints, for anyone who writes a Dockerfile or deploys to Kubernetes. Nothing here touches a real cluster: every demo is a small simulation in this page.</span></li><li><b class="show">Show</b><span>The terminal grades a base-image reference: is it pinned, is it a full operating system, is it a moving tag? Try <code>alpine:3.20</code> and then <code>latest</code> to see the difference. It is the whole talk in miniature: small, specific, repeatable.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try <code>scratch</code>, <code>latest</code>, <code>ubuntu:24.04</code>, a <code>distroless</code> image, a full <code>@sha256:</code> digest (the Dockerfile grader's good preset has one), or an empty input; in the shared-kernel quiz, get all six right; in the digest demo, push the tag three times; in the Dockerfile grader, run the <code>scratch</code> preset or add <code>chmod 777</code>; in the flags slide, open all six; in the memory demo, run it with no limit; in the blast-radius demo, switch everything to the hardened setting; in the Secrets demo, change the value to <code>hunter2</code>; in the manifest review, find all nine; and tick all twelve boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-2">
+      <li><a href="#what"><small>PART 1 · 34 MIN</small><b>Building images</b></a><span>What a container really is</span><span>Base images and digests</span><span>Multi-stage builds, non-root, read-only</span><span>Secrets in layers, and a Dockerfile grader</span></li>
+      <li><a href="#scanning"><small>PART 2 · 50 MIN</small><b>Shipping and running</b></a><span>Scanning and signing</span><span>Flags that end isolation</span><span>Kubernetes security context, limits and network policies</span><span>Service accounts, Secrets, and a manifest to review</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after each part: 5 minutes to discuss with a neighbour. We finish with a checklist you can take home.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one is about the thing you build: the image. What goes in it, what mustn't, and how to make building it repeatable. Part two is about what happens after: checking images, then the settings in Kubernetes that decide how much damage one broken pod can do.</span></li><li><b class="next">Next</b><span>"Why this talk?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Containers are convenient, and defaults are generous</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stat-row stat-row-3">
+        <div class="stat"><b>10,456</b><span>public Docker Hub images pushed in November 2025 contained at least one exposed secret (Flare).</span></div>
+        <div class="stat"><b>42%</b><span>of those images held five or more sensitive values each.</span></div>
+        <div class="stat"><b>3</b><span>runc container-escape bugs disclosed on 5 November 2025.</span></div>
+      </div>
+      <ul class="rules">
+        <li>A container shares the host's kernel. <b>Its walls are settings, and the defaults favour convenience.</b></li>
+        <li>Most real problems are ordinary: <b>a secret in a layer, a root user, a privileged flag, a flat network.</b> They are all ours to fix.</li>
+        <li>So the plan is simple: <b>smaller images, fewer rights, and a smaller blast radius</b> when something goes wrong.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://flare.io/learn/resources/docker-hub-secrets-exposed" target="_blank" rel="noopener">Flare, Docker Hub secrets research</a> · <a href="https://sysdig.com/blog/runc-container-escape-vulnerabilities" target="_blank" rel="noopener">Sysdig on the runc bugs</a> · <a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/" target="_blank" rel="noopener">Kubernetes network policies</a> · <a href="https://kubernetes.io/docs/concepts/configuration/secret/" target="_blank" rel="noopener">Kubernetes Secrets</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Docker Hub, November 2025 · secrets in public images</b><span>Flare scanned images pushed to Docker Hub in November 2025 and found 10,456 with exposed keys. Many were <code>.env</code> files copied in by <code>COPY . .</code>. Flare says about a quarter of developers removed a leaked secret within one or two days, and most of those never revoked the credential.</span></div>
+      <div class="card"><b>runc, November 2025 · the wall has bugs too</b><span>Three bugs in runc, the low-level runtime behind Docker and Kubernetes, could let a container reach the host. They needed the ability to start a container with custom mounts; untrusted images are the likely route. Fixed in runc 1.2.8, 1.3.3 and 1.4.0-rc.3.</span></div>
+      <div class="card"><b>Kubernetes defaults · open until you close them</b><span>With no NetworkPolicy, every pod can reach every pod and send traffic anywhere. Secrets are stored unencrypted in etcd by default. Neither is a bug: it's how the defaults ship.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three different things with one shape: the safe version needs a setting somebody has to turn on. The image story is the most human one: <code>COPY . .</code> is how a developer's <code>.env</code> file ends up on a public registry.</span></li><li><b class="tip">Tip</b><span>Flare's write-up (published 10 December 2025): 10,456 images with one or more exposed keys, scanned 1 to 30 November 2025; 205 namespaces after filtering to High and Critical severity, 101 tied to identifiable companies; about 42% of the leaked images held five or more sensitive values; almost 4,000 AI keys. Flare reports that about 25% of developers removed the leaked secret within one to two days but that most never revoked it ("75% failed to revoke or rotate"). The runc facts are from Sysdig's write-up (6 November 2025): disclosed 5 November 2025 (CVE-2025-31133, CVE-2025-52565, CVE-2025-52881), the attacker must be able to start containers with custom mount configurations, fixed in runc 1.2.8, 1.3.3 and 1.4.0-rc.3; Red Hat's tracker mentions a later regression fix in 1.3.4. The Kubernetes statements are quotes from its docs.</span></li><li><b class="tip">Check</b><span>Flare is a security vendor; the counts are theirs. Check your own platform's runc version and any later advisories.</span></li><li><b class="next">Next</b><span>"First, what a container actually is."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="what" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 01</p><h2>What a container is, and what it shares</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A container is a normal process with a restricted view of the machine. For each item, is it <b>its own</b> or <b>shared with the host</b>?</p>
+      <ul class="qz-grid" id="qz-grid"></ul>
+      <p class="comment" id="qz-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Containers are <b>processes plus limits</b>: namespaces change what a process can see, cgroups limit what it can use, capabilities and seccomp limit what it can ask the kernel to do.</li>
+        <li>A virtual machine has its own kernel. A container <b>doesn't</b>, so the kernel and the runtime are part of your attack surface.</li>
+        <li>That's why the rest of the talk is about <b>giving the process less</b>: fewer files, fewer rights, fewer paths out.</li>
+      </ul>
+      <div class="card"><b>"Isolated" is a description, not a guarantee</b><span>Docker's own security page says containers are quite secure by default, especially when processes run as non-privileged users. The words "especially when" are doing a lot of work.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Let people answer before you click: for each row pick Own or Shared, and the answer appears. Two surprises usually land: CPU and memory are shared unless you set limits, and root inside a container is UID 0 on the host too.</span></li><li><b class="say">Say</b><span>A container is not a small VM. Think of it as a process wearing blinkers. The blinkers (namespaces) change what it sees; the leash (cgroups) limits what it uses; the rulebook (capabilities, seccomp) limits what it can ask the kernel to do. All of it is configuration, which means all of it can be loosened by accident.</span></li><li><b class="tip">Tip</b><span>Docker's engine security docs: user namespaces (which can map the container's root to a non-root host user) are supported but not enabled by default; root inside a container has far fewer privileges than host root, because Docker starts containers with a restricted capability list. Kubernetes and containerd follow similar defaults but differ in detail.</span></li><li><b class="tip">Check</b><span>Whether user namespaces are available and enabled on your own platform. Managed Kubernetes services differ.</span></li><li><b class="next">Next</b><span>"So let's start with what goes into the image: the base."</span></li></ul></div>
+</section>
+
+<section class="slide" id="bases" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 02</p><h2>Start small: pick the smallest base that works</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">What is inside the floor your app stands on?</p>
+      <div class="seg-pick" role="group" aria-label="Base image" id="bs-pick">
+        <button type="button" data-b="debian" aria-pressed="true">Debian (full)</button>
+        <button type="button" data-b="alpine" aria-pressed="false">Alpine</button>
+        <button type="button" data-b="distroless" aria-pressed="false">Distroless static</button>
+        <button type="button" data-b="scratch" aria-pressed="false">scratch</button>
+      </div>
+      <p class="bs-ref" id="bs-ref"></p>
+      <table class="bs-table"><tbody id="bs-body"></tbody></table>
+      <p class="bs-note" id="bs-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Everything in the image is <b>something to patch</b> and, if someone gets in, <b>something they can use</b>.</li>
+        <li>Small bases cut both. Their cost is <b>debugging comfort</b>: use a debug tag or an ephemeral debug container instead of putting a shell in production.</li>
+        <li>Prefer <b>maintained</b> minimal images over hand-made ones, and check how often they are rebuilt.</li>
+      </ul>
+      <p class="comment" id="bs-egg"></p>
+      <p class="src">Sizes are from the <a href="https://github.com/GoogleContainerTools/distroless" target="_blank" rel="noopener">distroless README</a>'s own comparison; yours will differ with the exact tag.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click through the four. Debian has everything, which is the comfort and the cost. Alpine is tiny and has a shell and a package manager. Distroless static has no shell and no package manager: that's the point. scratch is literally empty.</span></li><li><b class="say">Say</b><span>People pick a big base so that debugging is easy and the build "just works". Then production inherits every tool an intruder might want. Go for the smallest thing your program can actually run on, and build the habit of debugging from outside the container.</span></li><li><b class="ask">Ask</b><span>When did your team last remove something from a base image rather than add something?</span></li><li><b class="tip">Tip</b><span>Distroless README: images contain only an application and its runtime dependencies, with no package managers or shells; the smallest, <code>static</code>, is around 2 MiB, against about 5 MiB for alpine and 124 MiB for debian; tags include <code>nonroot</code> and <code>debug</code> (adds a busybox shell); all images are signed with cosign keyless. Alpine uses musl instead of glibc; a few programs behave differently. Docker's best-practice guide: choose a minimal base image that matches your requirements.</span></li><li><b class="tip">Check</b><span>The table is a simplified comparison, and the contents of each image vary by tag: check the exact tag you use. Chainguard, Docker and others also publish hardened minimal catalogues: look at them, and at how fast they patch, rather than picking by logo.</span></li><li><b class="next">Next</b><span>"Small isn't enough if it keeps changing under you: tags versus digests."</span></li></ul></div>
+</section>
+
+<section class="slide" id="digest" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 03</p><h2>A tag is a label. A digest is a fingerprint.</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Your Dockerfile says <code>FROM registry.example.com/shop/api:1.4</code>. The publisher fixes something and pushes again under the same tag.</p>
+      <div class="dg-two">
+        <div class="dg-box" id="dg-tagbox"><small>BY TAG · shop/api:1.4 today resolves to</small><code id="dg-tag"></code></div>
+        <div class="dg-box" id="dg-pinbox"><small>BY DIGEST · your pinned line resolves to</small><code id="dg-pin"></code></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-sm" id="dg-push">Publisher pushes 1.4 again</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="dg-bump">Update bot moves the pin</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="dg-reset">Reset</button>
+      </div>
+      <p class="verdict" id="dg-verdict"></p>
+      <p class="comment" id="dg-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A tag is a <b>pointer the publisher can move</b>. The same Dockerfile can build different images on different days.</li>
+        <li>A digest is the <b>SHA-256 of the image manifest</b>: change a byte and it changes. Pinning it gives <b>repeatable builds</b>, and defeats a swap at the registry.</li>
+        <li>The catch: a pinned digest <b>never updates itself</b>. Pair it with a bot (Dependabot, Renovate) that opens a pull request, so the update is reviewed and rebuilt, not silent.</li>
+      </ul>
+      <pre class="term">FROM registry.example.com/shop/api:1.4@sha256:3f9a…</pre>
+      <p class="m">Keep the tag for humans and the digest for the machine.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Push the tag once: the "by tag" box changes and the pinned one doesn't. The digests are real SHA-256 values computed in your browser from a made-up manifest. Then let the bot move the pin: the update arrives on purpose.</span></li><li><b class="say">Say</b><span>Pinning trades silent updates for repeatability. That is a good trade only if something is watching for updates, because an image pinned in 2024 and never touched is a collection of unpatched bugs with a certificate of authenticity.</span></li><li><b class="ask">Ask</b><span>Who would notice if your base image changed overnight? Who would notice if it never changed for a year?</span></li><li><b class="tip">Tip</b><span>Docker's build best practices: to fully secure your supply chain integrity, pin the image version to a specific digest; the trade-off is that you opt out of automatic security fixes, so use something like Dependabot to update pinned digests. The manifest in the demo is invented; real manifests list layer digests and config.</span></li><li><b class="tip">Check</b><span>Which update bots handle digest pins for the Dockerfiles you use. Both Dependabot and Renovate advertise Docker support; confirm digest handling and the pull-request cadence in your set-up.</span></li><li><b class="next">Next</b><span>"Next: what we leave out of the final image."</span></li></ul></div>
+</section>
+
+<section class="slide" id="multistage" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 04</p><h2>Build in one stage, ship from another</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Build style" id="ms-pick">
+        <button type="button" data-m="single" aria-pressed="true">Single stage</button>
+        <button type="button" data-m="multi" aria-pressed="false">Multi-stage</button>
+      </div>
+      <small class="lr-label">Dockerfile</small>
+      <pre class="term df-view" id="ms-df"></pre>
+      <p class="ms-count" id="ms-count"></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What is in the image you ship</small>
+      <ul class="ms-list" id="ms-list"></ul>
+      <p class="comment" id="ms-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Toggle between the two. In the single-stage image, the compiler, package manager, source, tests and Git history all ship. In the multi-stage one, only the program and the small base remain. The green-edged items are needed to run; the red-edged ones are there because of how the image was built.</span></li><li><b class="say">Say</b><span>The build environment needs lots of things the running service doesn't. A second <code>FROM</code> starts a fresh image and <code>COPY --from</code> takes only the result. Smaller is faster to pull, but the real win is fewer things for an intruder to use and for a scanner to complain about.</span></li><li><b class="tip">Tip</b><span>Docker's guide: multi-stage builds let you reduce the size of your final image. The list in the demo is illustrative, not a measured image; the Dockerfile uses the <code>golang</code> base and a distroless <code>nonroot</code> base as examples (check the current tags you want).</span></li><li><b class="next">Next</b><span>"Now what the process is allowed to do once it's running."</span></li></ul></div>
+</section>
+
+<section class="slide" id="nonroot" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 05</p><h2>If code gets in, what can it do?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack in-groups">
+      <p class="m">Assume an attacker is running code in your container. Change the settings and watch what's left.</p>
+      <div><small class="lr-label">User</small><div class="seg-pick" id="nr-user" role="group" aria-label="User"><button type="button" data-v="root" aria-pressed="true">root (the default)</button><button type="button" data-v="nonroot" aria-pressed="false">non-root (10001)</button></div></div>
+      <div><small class="lr-label">Root filesystem</small><div class="seg-pick" id="nr-fs" role="group" aria-label="Filesystem"><button type="button" data-v="rw" aria-pressed="true">read-write</button><button type="button" data-v="ro" aria-pressed="false">read-only</button></div></div>
+      <div><small class="lr-label">Capabilities</small><div class="seg-pick" id="nr-caps" role="group" aria-label="Capabilities"><button type="button" data-v="default" aria-pressed="true">runtime default</button><button type="button" data-v="none" aria-pressed="false">drop ALL</button></div></div>
+      <div><small class="lr-label">Gaining privileges</small><div class="seg-pick" id="nr-nnp" role="group" aria-label="Privilege escalation"><button type="button" data-v="allow" aria-pressed="true">allowed</button><button type="button" data-v="block" aria-pressed="false">blocked (no new privileges)</button></div></div>
+      <pre class="term df-view" id="nr-cfg"></pre>
+    </div>
+    <div class="stack">
+      <table class="in-table"><tbody id="in-body"></tbody></table>
+      <p class="verdict" id="in-verdict"></p>
+      <p class="comment" id="in-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start with the defaults: most things work for the attacker. Switch to non-root and about half the list closes. Add a read-only filesystem, drop all capabilities and block privilege gain, and almost nothing is left. Each setting is one line in a Dockerfile or a manifest.</span></li><li><b class="say">Say</b><span>"The container is isolated anyway" is the sentence behind a lot of root containers. Isolation is the second layer. If the first layer, the process's own rights, is "everything", then one bug turns into a lot more. Also notice that non-root is the cheapest of these: a <code>USER</code> line.</span></li><li><b class="ask">Ask</b><span>Which of these would break your app? Usually the answer is "write to one folder", which is a mounted volume, not a reason for a writable root.</span></li><li><b class="tip">Tip</b><span>Docker's run reference lists the default capabilities it keeps (14, including NET_RAW and NET_BIND_SERVICE) and says containers started with <code>--privileged</code> get all capabilities. The table is a model of typical behaviour, not a test of a real image: the setuid row assumes the image ships a setuid program (full OS images do; distroless ones usually don't), and "non-root gets no effective capabilities" is the usual behaviour for processes that start as a non-root user.</span></li><li><b class="tip">Check</b><span>Run <code>docker run --rm --user 10001 --read-only --cap-drop ALL --security-opt no-new-privileges</code> against your own image to see what breaks. Behaviour of ports below 1024 differs by runtime, so the demo leaves it out.</span></li><li><b class="next">Next</b><span>"There's one more thing that lives in the image forever: secrets."</span></li></ul></div>
+</section>
+
+<section class="slide" id="layers" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 06</p><h2>Deleting a file in a later layer doesn't remove it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="How the secret was handled" id="ly-pick">
+        <button type="button" data-m="rm" aria-pressed="true">COPY .env, then rm it</button>
+        <button type="button" data-m="multi" aria-pressed="false">Multi-stage, copy only the app</button>
+        <button type="button" data-m="mount" aria-pressed="false">Build secret mount</button>
+      </div>
+      <p class="m">Click a layer to open it. The image is the layers stacked in order.</p>
+      <ul class="ly-stack" id="ly-stack"></ul>
+      <div class="btn-row"><button type="button" class="btn btn-sm btn-ghost" id="ly-union">Show what a running container sees</button></div>
+    </div>
+    <div class="stack">
+      <small class="lr-label" id="ly-title">Pick a layer</small>
+      <pre class="term ly-pane" id="ly-pane"></pre>
+      <p class="verdict" id="ly-verdict"></p>
+      <p class="comment" id="ly-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>In the first mode, open layer 2: the <code>.env</code> file is right there, with the (made-up) key. Open layer 4 (<code>RUN rm</code>): it doesn't contain a deletion of the file's bytes, it contains a small marker file named <code>.wh..env</code> that says "hide this in the layers below". The running container's view (the button) hides the file, but anyone who pulls the image can open layer 2 on its own. Then try the other two modes: the secret never becomes part of a layer that ships.</span></li><li><b class="say">Say</b><span>Layers only add. Deletion is another layer on top that hides the file. The secret is still in the one beneath, and the whole image is copied to registries, caches, laptops and customers. If a secret ever got in an image: <b>revoke it</b>. Rebuilding is cleanup, not a fix.</span></li><li><b class="tip">Tip</b><span>OCI image spec (layer.md): a whiteout is an empty file named <code>.wh.</code> plus the deleted name; whiteouts apply only to resources in lower layers; <code>.wh..wh..opq</code> hides a directory's contents. Docker's build docs: build arguments and environment variables are inappropriate for passing secrets because they persist in the final image; use <code>RUN --mount=type=secret,id=…</code>, which mounts the secret at <code>/run/secrets/&lt;id&gt;</code> for that one instruction and is supplied with <code>docker build --secret</code>. Docker's best-practice guide also notes that even if you unset an <code>ENV</code> in a later layer, its value persists in the earlier layer and can be dumped. In the multi-stage mode, the earlier stage's layers stay in your local build cache and CI cache but are not in the image you push: clean those caches too, and still revoke.</span></li><li><b class="tip">Check</b><span>The layer contents and secret are invented for the demo. A real tool such as <code>docker save</code> plus <code>tar</code>, or a layer-inspection tool, shows the same structure.</span></li><li><b class="next">Next</b><span>"Let's put it all together: grade a Dockerfile."</span></li></ul></div>
+</section>
+
+<section class="slide" id="grader" data-part="1" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// BUILDING IMAGES 07</p><h2>Grade a Dockerfile</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Examples" id="gr-pick">
+        <button type="button" data-p="bad" aria-pressed="true">A typical first draft</button>
+        <button type="button" data-p="better" aria-pressed="false">Fixed</button>
+        <button type="button" data-p="scratch" aria-pressed="false">FROM scratch</button>
+      </div>
+      <label class="lr-label" for="gr-in">Dockerfile (edit it, or paste your own)</label>
+      <textarea id="gr-in" class="dg-in" spellcheck="false" autocomplete="off" aria-label="Dockerfile"></textarea>
+    </div>
+    <div class="stack">
+      <p class="gr-tally" id="gr-tally"></p>
+      <ul class="sc-list gr-list" id="gr-list"></ul>
+      <p class="comment" id="gr-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>The first example is a believable first draft: latest tag, root, a password in <code>ENV</code>, <code>curl | bash</code>, <code>COPY .env</code>, <code>chmod -R 777</code>. The grader lists each problem with a short reason. Then flip to "Fixed" and to the <code>scratch</code> one. Edit the text yourself: add a line, remove one, watch the list change.</span></li><li><b class="say">Say</b><span>These are simple pattern checks, the same kind a linter runs: they catch the obvious and miss the clever. A real tool (Docker's own build checks, Hadolint, a policy engine) does more, and still doesn't replace thinking about what ends up in the image. Nothing you type leaves the page.</span></li><li><b class="ask">Ask</b><span>Which of these would a code review catch, and which would sail through because the diff looks like one harmless line?</span></li><li><b class="tip">Tip</b><span>The grader's rules in this page: unpinned or <code>latest</code> base, digest or not, full OS image as the runtime base, missing or root <code>USER</code>, secret-looking <code>ENV</code>/<code>ARG</code> names, secret-looking files copied in, <code>COPY . …</code>, <code>ADD</code> from a URL, <code>curl | sh</code>, <code>chmod 777</code>, <code>sshd</code>, untrimmed <code>apt-get install</code>, single-stage builds with build tools. The digest in the "Fixed" example is made up.</span></li><li><b class="tip">Check</b><span>A real linter for your own pipeline: check Docker's build checks and Hadolint's current rule sets before presenting. The grader is a teaching tool, not a scanner.</span></li><li><b class="next">Next</b><span>Checkpoint.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>You copied an API key into an image, then deleted it on the very next line. Is the key gone?</p><details><summary>Hint</summary><p>Where does the file live after the <code>rm</code> layer is added, and who can pull the image?</p></details><details class="answer"><summary>Answer</summary><p>No. The earlier layer still contains it, and anyone who can pull the image can read that layer. Revoke and replace the key first; then fix the build with a secret mount or a multi-stage build so it never lands in a shipped layer.</p></details></li>
+      <li><p>Why run as non-root inside a container if the container is isolated anyway?</p><details><summary>Hint</summary><p>What is shared with the host, and what does root hold inside?</p></details><details class="answer"><summary>Answer</summary><p>Isolation is made of settings and a shared kernel, and bugs happen. A non-root user gives a second layer: an attacker who gets code running has fewer rights, can't change the app's files, and needs another bug to go further.</p></details></li>
+      <li><p>Your Dockerfile says <code>FROM python:3</code>. What could change between two builds, and how do you make builds repeatable without freezing forever?</p><details><summary>Hint</summary><p>What moves, and what can't?</p></details><details class="answer"><summary>Answer</summary><p>The tag moves: the Python version, the OS underneath and its packages can all change. Pin a specific version and its digest for repeatable builds, and let an update bot open reviewed pull requests so the pin keeps moving forward.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="scanning" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 01</p><h2>Scanning: from a wall of findings to a to-do list</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="m">A scan of one image reports ten findings. Narrow them down the way you would on a busy Tuesday.</p>
+      <div class="rv-list" id="tr-opts" style="grid-template-columns:minmax(0,1fr)">
+        <label><input type="checkbox" id="tr-final"> Only what ships in the final image</label>
+        <label><input type="checkbox" id="tr-fix"> Only findings with a fix available</label>
+        <label><input type="checkbox" id="tr-high"> Only high or critical</label>
+        <label><input type="checkbox" id="tr-rebuilt"> Rebuild on the latest base image</label>
+      </div>
+      <p class="tr-count" id="tr-count"></p>
+      <p class="comment" id="tr-note"></p>
+    </div>
+    <div class="stack">
+      <table class="tr-table"><thead><tr><th>ID</th><th>Package</th><th>Severity</th><th>Where</th><th>Fix?</th></tr></thead><tbody id="tr-body"></tbody></table>
+      <ul class="rules">
+        <li>A scanner matches <b>package versions to advisory lists</b>. It can't tell if the code is reachable.</li>
+        <li>The cheapest fix is often <b>rebuilding on a fresh base</b>, on a schedule. Keep an <b>SBOM</b> too.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Tick the boxes in turn. "Only what ships" removes the findings that live only in the build stage. "Has a fix" and "high or above" cut more. "Rebuild on the latest base" removes the ones the base update already fixes. Ten findings become one or two actions.</span></li><li><b class="say">Say</b><span>The scanner's number is a starting point, not a grade. What decides your order is where the package is (final image or build only), whether a fix exists, how severe and how reachable it is. And the most boring fix is the best: rebuild on a current base on a schedule, because that quietly clears the long tail.</span></li><li><b class="ask">Ask</b><span>Who owns rebuilding the base image of a service nobody has touched in a year?</span></li><li><b class="tip">Tip</b><span>The ten findings are invented, with made-up IDs (EX-0001 and so on) and made-up packages; the ordering logic is the real lesson. Docker's guide: to keep your images up to date and secure, rebuild your images regularly with updated dependencies. Related ideas worth a mention without a demo: SBOMs, and VEX statements that say a vulnerable package is present but not exploitable in this product.</span></li><li><b class="tip">Check</b><span>Name the scanner you actually use and its database sources before presenting; tools differ in how they treat distro-patched versions and unfixed findings.</span></li><li><b class="next">Next</b><span>"Scanning looks at the image. Signing proves where it came from."</span></li></ul></div>
+</section>
+
+<section class="slide" id="signing" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 02</p><h2>Sign images, and let the cluster check</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="m">An admission policy decides which pods may start. Switch the rules on one at a time.</p>
+      <div class="rv-list" id="ad-opts" style="grid-template-columns:minmax(0,1fr)">
+        <label><input type="checkbox" id="ad-reg"> Image must come from our registry</label>
+        <label><input type="checkbox" id="ad-dig"> Image must be referenced by digest</label>
+        <label><input type="checkbox" id="ad-sig"> Signature must verify against our CI key</label>
+      </div>
+      <p class="tr-count" id="ad-tally"></p>
+      <p class="comment" id="ad-note"></p>
+      <p class="src">Signatures here are real ECDSA P-256 over each image digest, made in your browser with throwaway keys.</p>
+    </div>
+    <div class="stack">
+      <ul class="ad-pods" id="ad-pods"></ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>With no rules, everything is admitted, including a random public image. The registry rule alone stops that, but lets a laptop build and a tampered image through. The signature rule stops those two, because the signature covers one specific digest made by one specific key. The digest rule closes the "by tag" gap.</span></li><li><b class="say">Say</b><span>A signature answers "who built this, and is it the same thing they built?" It does not answer "is it free of bugs?" That's what scanning is for. And a signature is only useful if something checks it: the cluster must refuse unsigned images, or it's decoration. Our other talk on dependencies and CI covers signing releases in more depth.</span></li><li><b class="tip">Tip</b><span>Tools to name: cosign (Sigstore), which signs images and can do "keyless" signing tied to an OIDC identity; Notation (Notary Project); and admission controllers that verify at deploy time, such as Kyverno and the Sigstore policy-controller. Docker retired Docker Content Trust (Notary v1) starting with Docker Official Images in 2025: Docker's blog (29 July 2025) says its oldest signing certificates began expiring on 8 August 2025 and recommends Sigstore or Notation.</span></li><li><b class="tip">Check</b><span>Cosign 3 makes the Sigstore bundle format the default (a v2 verifier may need <code>--new-bundle-format=false</code> on the signing side), and Kyverno and policy-controller support for bundles arrived in different versions; confirm the combination you run. The demo is a model of the decision, not of any product's configuration. The slide shows a tag-referenced image failing the digest rule even though its signature is fine: real admission controllers often resolve a tag to a digest before checking.</span></li><li><b class="next">Next</b><span>"Next, a few settings that quietly hand the host to the container."</span></li></ul></div>
+</section>
+
+<section class="slide" id="thin" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 03</p><h2>Settings that end the isolation</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Open each one and ask: <b>does a workload of ours use it, and is there a written reason?</b></p>
+      <ul class="th-grid" id="th-grid"></ul>
+      <p class="th-count" id="th-count"></p>
+    </div>
+    <div class="stack">
+      <div class="th-detail" id="th-detail"><b>Pick a setting</b><span>Six places where "just to make it work" can hand a container the keys to the node.</span></div>
+      <p class="comment" id="th-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Every one of these has a real use, and every one is usually added to solve a small problem: "my build tool needs the Docker socket", "I couldn't get it to start without privileged". The cost is invisible until the day it isn't. The rule: allow them only with a written reason and an owner, and never in an ordinary application pod.</span></li><li><b class="ask">Ask</b><span>Do you know which pods in your cluster run privileged right now? Could you find out in one command?</span></li><li><b class="tip">Tip</b><span>Docker's run reference says <code>--privileged</code> gives all capabilities and access to all devices on the host, and that <code>--cap-add</code> is the finer-grained alternative. Docker's engine security page says only trusted users should control the daemon, because it can share host directories (a container could mount the host's <code>/</code>). Kubernetes's baseline Pod Security Standard disallows privileged containers, host namespaces, host ports and hostPath volumes. Runtime bugs: runc CVE-2024-21626 ("Leaky Vessels", disclosed 31 January 2024, fixed in runc 1.1.12; exploitable by running a malicious image or building from a malicious Dockerfile or base image) and the three runc bugs of 5 November 2025 (fixed in 1.2.8, 1.3.3, 1.4.0-rc.3 and later; Sysdig recommends enabling user namespaces and rootless containers where possible). For hostile code, consider a sandboxed runtime (gVisor, Kata Containers) as a stronger wall.</span></li><li><b class="tip">Check</b><span>Your platform may have shipped these runtime fixes already: check your runtime version and your distribution's advisory, which may use a different version number from upstream.</span></li><li><b class="next">Next</b><span>"Kubernetes can enforce all of this for you."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pss" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 04</p><h2>Security context and Pod Security Standards</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="pc-form" id="pc-form">
+        <label class="chk"><input type="checkbox" id="pc-priv"><span>privileged: true</span></label>
+        <label class="chk"><input type="checkbox" id="pc-hostnet"><span>hostNetwork: true</span></label>
+        <label class="chk"><input type="checkbox" id="pc-hostpid"><span>hostPID: true</span></label>
+        <label class="chk"><input type="checkbox" id="pc-hostpath"><span>a hostPath volume (/)</span></label>
+        <label class="chk"><input type="checkbox" id="pc-nonroot"><span>runAsNonRoot: true</span></label>
+        <label><span>runAsUser</span><select id="pc-uid"><option value="">(not set)</option><option value="0">0 (root)</option><option value="10001">10001</option></select></label>
+        <label><span>allowPrivilegeEscalation</span><select id="pc-ape"><option value="">(not set)</option><option value="true">true</option><option value="false">false</option></select></label>
+        <label><span>seccompProfile.type</span><select id="pc-seccomp"><option value="">(not set)</option><option value="Unconfined">Unconfined</option><option value="RuntimeDefault">RuntimeDefault</option></select></label>
+        <label><span>capabilities.drop</span><select id="pc-drop"><option value="">(none)</option><option value="ALL">ALL</option></select></label>
+        <label><span>capabilities.add</span><select id="pc-add"><option value="">(none)</option><option value="NET_BIND_SERVICE">NET_BIND_SERVICE</option><option value="SYS_ADMIN">SYS_ADMIN</option></select></label>
+        <label class="chk"><input type="checkbox" id="pc-ro"><span>readOnlyRootFilesystem: true</span></label>
+      </div>
+      <div class="btn-row"><button type="button" class="btn btn-sm btn-ghost" id="pc-reset">Reset</button><button type="button" class="btn btn-sm" id="pc-fix">Apply the restricted set</button></div>
+    </div>
+    <div class="stack">
+      <pre class="term pc-yaml" id="pc-yaml"></pre>
+      <p class="pc-level" id="pc-level"></p>
+      <ul class="sc-list" id="pc-why"></ul>
+      <p class="comment" id="pc-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with nothing set (the default). That scores <i>baseline</i>: not terrible, but several things aren't locked down. Tick <code>privileged</code> and it falls to <i>privileged</i>. Press "Apply the restricted set" and every line turns green. Then take one setting away at a time to see which check it satisfied.</span></li><li><b class="say">Say</b><span>The Pod Security Standards are three ready-made policies: <b>privileged</b> (anything goes), <b>baseline</b> (blocks the known dangerous things) and <b>restricted</b> (current hardening best practice). A namespace label turns one on: <code>pod-security.kubernetes.io/enforce: restricted</code>. Use <code>warn</code> and <code>audit</code> first to see what would break. Four lines in a container's securityContext get you most of the way: non-root, no privilege escalation, drop all capabilities and the runtime's default seccomp profile.</span></li><li><b class="tip">Tip</b><span>Kubernetes's Pod Security Standards page: baseline disallows privileged containers, host namespaces, hostPath volumes, host ports, capabilities outside an allowlist and an Unconfined seccomp profile (plus AppArmor, SELinux and /proc rules); restricted adds: volumes limited to configMap, csi, downwardAPI, emptyDir, ephemeral, persistentVolumeClaim, projected and secret; <code>allowPrivilegeEscalation: false</code>; <code>runAsNonRoot: true</code> and no <code>runAsUser: 0</code>; seccomp <code>RuntimeDefault</code> or <code>Localhost</code>; and drop <code>ALL</code> capabilities, adding back only <code>NET_BIND_SERVICE</code>. Pod Security Admission is stable since 1.25, configured with namespace labels <code>pod-security.kubernetes.io/&lt;mode&gt;: &lt;level&gt;</code>, with modes enforce, audit and warn; for Deployments and Jobs only audit and warn apply, and enforce applies to the resulting Pods. It replaced PodSecurityPolicy, removed in 1.25. A pod with no seccomp profile runs Unconfined unless the kubelet is set to default to RuntimeDefault (<code>--seccomp-default</code>, stable since 1.27 but still a per-node setting).</span></li><li><b class="tip">Check</b><span>The demo checks a subset of the standards (not AppArmor, SELinux, /proc mount, sysctls or Windows rules) against the fields as documented for Kubernetes 1.37, the newest release listed on kubernetes.io on 11 November 2026. <code>readOnlyRootFilesystem</code> is good practice but isn't part of the standards. The Unconfined default and the <code>--seccomp-default</code> status (stable in 1.27) come from the KEP and a search, not a full read of the seccomp page. Confirm the details against the version of Kubernetes you run.</span></li><li><b class="next">Next</b><span>"Rights are one half. The other half is resources."</span></li></ul></div>
+</section>
+
+<section class="slide" id="limits" data-part="2" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 05</p><h2>Limits: the leaky pod and its neighbours</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A node has 8 GiB. Four pods use 5 GiB. A fifth, a worker with a memory leak, grows by half a GiB every step. Set its memory limit and run it.</p>
+      <div class="seg-pick" role="group" aria-label="Memory limit for the worker" id="lm-pick">
+        <button type="button" data-l="0" aria-pressed="true">no limit</button>
+        <button type="button" data-l="1" aria-pressed="false">1 GiB</button>
+        <button type="button" data-l="2" aria-pressed="false">2 GiB</button>
+        <button type="button" data-l="4" aria-pressed="false">4 GiB</button>
+      </div>
+      <button type="button" class="btn btn-sm" id="lm-run">Run the leak</button>
+      <div class="lm-node"><div class="lm-bar" id="lm-bar" role="img" aria-label="Node memory use"></div><p class="lm-legend">cyan = four healthy pods · pink = the worker · red = over capacity · 8 GiB node</p></div>
+    </div>
+    <div class="stack">
+      <pre class="term lm-log" id="lm-log"></pre>
+      <p class="verdict" id="lm-verdict"></p>
+      <ul class="rules">
+        <li><b>Requests</b> are what the scheduler reserves; <b>limits</b> are the ceiling. A memory limit means an out-of-memory kill, a CPU limit means throttling.</li>
+        <li>Set both. Without limits, <b>one mistake becomes everyone's outage</b>.</li>
+      </ul>
+      <p class="comment" id="lm-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Run with no limit: the node runs out of memory and the message says a neighbour may be the victim. Then 1 GiB: only the leaky worker is killed. Then try 4 GiB: more than the free space, so the limit doesn't save the node. A limit helps only if it is realistic and the total of limits fits.</span></li><li><b class="say">Say</b><span>This is a security topic because availability is part of security, and because a compromised pod mining coins looks exactly like a leaky one. Limits turn "the node falls over" into "one pod restarts and an alert fires".</span></li><li><b class="tip">Tip</b><span>Kubernetes docs (managing resources for containers): the kube-scheduler uses requests to place a Pod; a CPU limit is a hard limit the kernel enforces by throttling; a memory limit is enforced reactively: the container may be terminated when the kernel detects memory pressure; if you set a limit but no request, the limit is copied as the request. The simulation is simplified: real victim selection depends on the pod's quality-of-service class, priority and node pressure, which this model doesn't try to reproduce. The numbers are invented.</span></li><li><b class="tip">Check</b><span>Whether your namespaces have LimitRange or ResourceQuota defaults so that pods without limits aren't the norm.</span></li><li><b class="next">Next</b><span>"Now the network, and the account a pod carries."</span></li></ul></div>
+</section>
+
+<section class="slide" id="blast" data-part="2" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 06</p><h2>Blast radius: one compromised pod</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack in-groups">
+      <p class="m">The <b>web</b> pod has been taken over. What can it reach?</p>
+      <div><small class="lr-label">Network policy</small><div class="seg-pick" id="bl-net" role="group" aria-label="Network policy"><button type="button" data-v="open" aria-pressed="true">none (default: all open)</button><button type="button" data-v="deny" aria-pressed="false">default deny, web → api only</button></div></div>
+      <div><small class="lr-label">Service account</small><div class="seg-pick" id="bl-sa" role="group" aria-label="Service account"><button type="button" data-v="default" aria-pressed="true">default, token mounted</button><button type="button" data-v="broad" aria-pressed="false">broad role</button><button type="button" data-v="none" aria-pressed="false">no token mounted</button></div></div>
+      <div><small class="lr-label">Pod settings</small><div class="seg-pick" id="bl-pod" role="group" aria-label="Pod settings"><button type="button" data-v="loose" aria-pressed="true">privileged + hostPath</button><button type="button" data-v="restricted" aria-pressed="false">restricted</button></div></div>
+      <p class="bl-tally" id="bl-tally"></p>
+      <p class="comment" id="bl-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="bl-list" id="bl-list"></ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with the defaults: nearly everything is reachable. Turn on default deny and the network targets close. Remove the token (or the broad role) and the Kubernetes API closes. Set the pod to restricted and the node is out of reach. Notice that no single setting is enough: the picture changes only when you do all three.</span></li><li><b class="say">Say</b><span>You can't prevent every compromise. You can decide what a compromise is worth. This is the "defence in depth" slide: each setting assumes the previous one failed. Practical order: restricted settings in the namespace, a default-deny network policy per namespace (then allow exactly what's needed, including DNS), and a dedicated service account with only the permissions the pod needs, with the token not mounted if it doesn't call the API.</span></li><li><b class="ask">Ask</b><span>If your web pod was compromised today, which of the seven targets would be open? How would you find out without running an attack?</span></li><li><b class="tip">Tip</b><span>Kubernetes docs: with no NetworkPolicy, pods are non-isolated and all traffic is allowed in both directions; a NetworkPolicy has no effect unless the cluster's network plugin enforces it (the API server accepts the object either way, so test enforcement); policies are additive. A pod with no service account specified gets the <code>default</code> account in its namespace, and its token is mounted automatically unless <code>automountServiceAccountToken: false</code> is set on the account or the pod (the pod's setting wins). Cloud metadata endpoints and their protections vary by provider; where a provider lets you limit pod access to node credentials, do so.</span></li><li><b class="tip">Check</b><span>This is a model of reachability, not a scan: real results depend on your network plugin, your roles and your cloud. The statement about the <code>default</code> account having next to no rights holds for a clean cluster; verify yours for stray role bindings. Bound, time-limited service-account tokens are the modern default (I did not re-read the version details), and the demo doesn't depend on them.</span></li><li><b class="next">Next</b><span>"One more thing people think is protected: Kubernetes Secrets."</span></li></ul></div>
+</section>
+
+<section class="slide" id="k8s-secrets" data-part="2" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 07</p><h2>A Kubernetes "Secret" is not a safe</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack in-groups">
+      <div class="b64-row">
+        <label class="lr-label" for="ks-in">A secret value</label>
+        <input id="ks-in" class="mono" value="prod-db-password" spellcheck="false" autocomplete="off">
+        <small class="lr-label">what goes in the manifest's <code>data:</code> field</small><code id="ks-b64"></code>
+        <small class="lr-label">and what anyone who sees the manifest reads back</small><code id="ks-back"></code>
+      </div>
+      <div><small class="lr-label">Encryption at rest for etcd</small><div class="seg-pick" id="ks-enc" role="group" aria-label="Encryption at rest"><button type="button" data-v="off" aria-pressed="true">off (default)</button><button type="button" data-v="on" aria-pressed="false">on</button></div></div>
+      <div><small class="lr-label">RBAC on Secrets</small><div class="seg-pick" id="ks-rbac" role="group" aria-label="RBAC"><button type="button" data-v="broad" aria-pressed="true">broad roles</button><button type="button" data-v="least" aria-pressed="false">least privilege</button></div></div>
+      <div><small class="lr-label">Who can create pods in the namespace</small><div class="seg-pick" id="ks-create" role="group" aria-label="Pod creation"><button type="button" data-v="anyone" aria-pressed="true">the whole team</button><button type="button" data-v="few" aria-pressed="false">a pipeline and a few reviewers</button></div></div>
+    </div>
+    <div class="stack">
+      <ul class="bl-list" id="ks-list"></ul>
+      <p class="bl-tally" id="ks-tally"></p>
+      <p class="comment" id="ks-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Type any value: base64 is just a different alphabet, and the second line decodes it instantly (it is not a cipher). Then change the three settings and watch the list of who can read it. Turning on encryption at rest only closes the first row. The rows that remain are about who has API rights, and who can create a pod.</span></li><li><b class="say">Say</b><span>Kubernetes's own documentation is blunt: Secrets are stored unencrypted in etcd by default; anyone with API access can retrieve or modify a Secret, so can anyone with access to etcd, and anyone authorised to create a Pod in a namespace can read any Secret in that namespace, including indirectly through a Deployment. The four steps it recommends: enable encryption at rest, least-privilege RBAC, restrict Secret access to specific containers, and consider external secret stores. Then link back to the secrets-management talk: the best secret is the one a workload never stores; short-lived credentials come from an identity, not a file.</span></li><li><b class="ask">Ask</b><span>Who on your team can create a pod in the production namespace? Does that match who you would trust with every secret in it?</span></li><li><b class="tip">Tip</b><span>Quotes and the four steps are from the Kubernetes Secrets concept page. The reader list is a model: exactly which rows apply depends on your cluster. An external secret store (for example one synced by an operator or mounted with a CSI driver) moves the master copy and the audit trail, but the value still reaches the pod, and in some set-ups it is turned back into a Kubernetes Secret.</span></li><li><b class="tip">Check</b><span>Whether encryption at rest on your cluster uses a KMS provider or only a local key, and whether your managed service enables it by default.</span></li><li><b class="next">Next</b><span>"Let's practise on a manifest."</span></li></ul></div>
+</section>
+
+<section class="slide" id="spot" data-part="2" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 08</p><h2>Review this Deployment</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Click every line you'd flag in a review, then press Check. Nine lines have a problem.</p>
+      <ul class="sp-lines" id="sp-lines"></ul>
+      <div class="btn-row"><button type="button" class="btn btn-sm" id="sp-check">Check</button><button type="button" class="btn btn-sm btn-ghost" id="sp-reset">Reset</button></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="sp-verdict"></p>
+      <ul class="sp-why" id="sp-why"></ul>
+      <p class="comment" id="sp-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Give people a couple of minutes in pairs to pick lines, then press Check. Green means you found a real problem; yellow means a line that was fine; red means one you missed. The explanations appear on the right. A few lines are deliberately innocent: replicas, the port, the apiVersion.</span></li><li><b class="say">Say</b><span>This is what a review looks like when you know the list: the real change usually looks like one harmless line, and none of these are exotic. Every problem has an earlier slide behind it. A policy engine or Pod Security Admission can make the machine do this review for you, every time.</span></li><li><b class="ask">Ask</b><span>Which two would be the first to fix if you could only fix two? (A reasonable answer: the privileged flag and the engine socket, since together they hand over the node.)</span></li><li><b class="tip">Tip</b><span>The manifest is invented and compressed on purpose (flow-style YAML to keep lines short); a real one would be longer. The nine problems: host networking, a <code>latest</code> tag from the default registry, a password in an environment variable, privileged, running as root, the engine socket mounted (two lines), no resource limits, and an over-powerful service account. Nothing you click is sent anywhere.</span></li><li><b class="next">Next</b><span>Checkpoint.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A scan of your image reports 300 findings. Where do you start?</p><details><summary>Hint</summary><p>Where is the package, can it be fixed, and how severe is it?</p></details><details class="answer"><summary>Answer</summary><p>Narrow to what ships in the final image, has a fix, and is high or critical. Rebuild on a fresh base first, since that clears many at once. Then deal with what's left by reachability, and set up a regular rebuild so the pile doesn't regrow.</p></details></li>
+      <li><p>A Kubernetes Secret's value is base64. Is it encrypted? Who can read it?</p><details><summary>Hint</summary><p>Think: etcd, the API, and who can create pods.</p></details><details class="answer"><summary>Answer</summary><p>No. Base64 is an encoding anyone can reverse. By default it's stored unencrypted in etcd; anyone with API access to Secrets can read it, and so can anyone allowed to create a pod in the namespace. Encrypt at rest, use least-privilege RBAC, limit pod creation, and prefer short-lived credentials from an identity.</p></details></li>
+      <li><p>A pod is compromised. Name three settings that decide how far the attacker gets.</p><details><summary>Hint</summary><p>The pod, the network and the account.</p></details><details class="answer"><summary>Answer</summary><p>Its security context (non-root, no privilege escalation, dropped capabilities, no host access), network policies (default deny), and its service account (minimal rights, and no token if it doesn't need one). Resource limits and patched nodes and runtimes also matter.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="2" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// SHIPPING AND RUNNING 09</p><h2>A container security checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="base"> Base images are minimal, pinned by version and digest, and updated by a bot with reviewed pull requests</label>
+      <label><input type="checkbox" data-k="multi"> Multi-stage builds: no compilers, package managers, source or .git in the images we ship</label>
+      <label><input type="checkbox" data-k="user"> Images run as a numeric non-root user, with a read-only root filesystem where possible</label>
+      <label><input type="checkbox" data-k="secrets"> No secrets in ENV, ARG, copied files or layers; build secrets use mounts; .dockerignore covers .env, keys and .git</label>
+      <label><input type="checkbox" data-k="scan"> Images are scanned in CI and the registry, and rebuilt on a schedule when the base moves</label>
+      <label><input type="checkbox" data-k="sign"> Images are signed, and the cluster checks signatures and registries at admission</label>
+      <label><input type="checkbox" data-k="psa"> Namespaces enforce Pod Security Standards, restricted wherever possible</label>
+      <label><input type="checkbox" data-k="ctx"> Pods drop ALL capabilities, disallow privilege escalation and use the runtime's default seccomp profile</label>
+      <label><input type="checkbox" data-k="host"> No privileged pods, host namespaces, hostPath or engine sockets without a written reason</label>
+      <label><input type="checkbox" data-k="limits"> Every workload has resource requests and limits</label>
+      <label><input type="checkbox" data-k="net"> Default-deny network policies, and minimal service accounts with tokens only where needed</label>
+      <label><input type="checkbox" data-k="k8s"> Secrets are encrypted at rest with least-privilege RBAC, and the runtime and nodes are patched routinely</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The talk on one page. Tick what your team does today; each unticked box is a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box would have shortened your last incident the most?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="2" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a Dockerfile or manifest you're not sure about. (Describe it, don't paste secrets.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/" target="_blank" rel="noopener">Kubernetes Pod Security Standards</a><span>The three policies, field by field.</span></li>
+        <li><a href="https://docs.docker.com/build/building/best-practices/" target="_blank" rel="noopener">Docker build best practices</a><span>Pinning, multi-stage builds and keeping images fresh.</span></li>
+        <li><a href="../secrets-management/">Secrets Management</a><span>Where secrets should live, and rotation.</span></li>
+        <li><a href="../dependencies-and-ci/">Securing Dependencies and CI/CD</a><span>Signing, pinning and build pipelines.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no Docker, no cluster, no real keys, and nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li><li><b class="tip">Check</b><span>The link to the dependencies-and-ci talk assumes the sibling talk is published at that path when you present this one.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="containers.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
