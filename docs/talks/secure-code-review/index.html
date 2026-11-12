@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Secure Code Review Workshop</title>
+<meta name="description" content="A two-hour workshop on reviewing a diff for security: follow data from sources to sinks, practise on ten invented pull requests with their fixes, write comments that help, and leave with a one-page checklist. Everything runs in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/secure-code-review/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Secure Code Review Workshop">
+<meta property="og:description" content="Most security bugs are visible in a diff, if you know where to look. A repeatable method, ten invented pull requests and a one-page checklist.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/secure-code-review/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/secure-code-review/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "secure-code-review", "title": "Secure Code Review Workshop", "footer": "CODE REVIEW", "subtitle": "DEVELOPER TRACK · 13",
+  "parts": [{ "name": "A method", "minutes": 25 }, { "name": "Four rounds", "minutes": 70 }, { "name": "Making it stick", "minutes": 20 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Secure Code Review Workshop</a>
+  <div class="scroll-parts">
+    <a href="#method" data-part="1"><b>01</b>A method</a>
+    <a href="#round-1" data-part="2"><b>02</b>Four rounds</a>
+    <a href="#comments" data-part="3"><b>03</b>Making it stick</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 13 · A WORKSHOP FOR DEVELOPERS AND TECH LEADS · ADVANCED</p>
+      <h1><span class="pre">A workshop on</span> <span class="glitch" data-text="Secure Code Review">Secure Code Review</span></h1>
+      <p class="lede">Most security bugs are visible in the diff, if you know where to look. A repeatable way to review a change, practised on ten invented pull requests, each with its fix.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/secure-code-review/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>review a line</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">+ <input id="hero-in" value='q("SELECT * FROM t WHERE a=" + a)' spellcheck="false" autocomplete="off" aria-label="One line of code to review"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. This is a workshop: about two hours, mostly exercises, for people who review other people's code. Every sample is invented, deliberately flawed, and comes with its fix and a model review comment. We are practising seeing and fixing patterns, never exploiting them. Pair up with a neighbour if you can.</span></li><li><b class="show">Show</b><span>The box is a toy line-checker: it matches a handful of well-known risky patterns in one line of text. It never runs or parses anything. Try a few lines of your own, then notice how little it can see: it has no idea who owns an order, or whether a token ever expires. That gap is what the workshop is for.</span></li><li><b class="tip">Eggs</b><span>On the title slide try <code>// TODO: security</code>, <code>LGTM</code>, <code>goto fail;</code>, <code>eval(</code>, a line with <code>hunter2</code> in it, or an empty line. In round 2's first diff, flag the TODO comment on line 1 and press Check. On any diff with a planted bug, press "Looks good to me" for a sad trombone. Flag every single line of a diff. Find every planted flaw in all ten diffs for the "Eagle Eye" badge on the scoreboard. Press "Looks good to me" on the clean diff. In the comment builder, write the perfect comment (7 of 7), or aim it at the person. Tick all ten boxes of the checklist. And there's a console message.</span></li><li><b class="show">Check</b><span>The <code>goto fail;</code> egg is the 2014 Apple bug, from Apple's iOS 7.0.6 advisory (21 February 2014) and Adam Langley's write-up; see the next slide. The "LGTM" expansion is an old joke, not a standard.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#method"><small>PART 1 · 25 MIN</small><b>A method</b></a><span>Sources, sinks and trust boundaries</span><span>What to read first in a diff</span><span>Questions for every change</span><span>How the rounds work</span></li>
+      <li><a href="#round-1"><small>PART 2 · 70 MIN</small><b>Four rounds</b></a><span>1 · Data treated as code</span><span>2 · Authorization</span><span>3 · Secrets and crypto</span><span>4 · Configuration and errors</span><span>Scoreboard and a checkpoint</span></li>
+      <li><a href="#comments"><small>PART 3 · 20 MIN</small><b>Making it stick</b></a><span>Writing comments that help</span><span>What to automate</span><span>A one-page team checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>TWO RULES</b> Find first, fix second. And every comment is about the code, never the person.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>A short method first, because a method is what makes you faster than a clever eye. Then four rounds of practice, ten minutes in pairs and then the reveal with the fix and a model comment. We finish with the part that decides whether any of this survives next week: how you write the comment, what you hand to machines, and a checklist short enough to use.</span></li><li><b class="tip">Tip</b><span>Timing: 5 minutes of intro, then 25 / 70 / 20. If you're short, skip the third tab in rounds 1, 3 and 4 (each round has two or three diffs), or skip the probes on the "ask" slide.</span></li><li><b class="next">Next</b><span>"Why review for security at all?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS WORKSHOP</p><h2>The bug is often right there in the diff</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stat-row stat-row-3">
+        <div class="stat"><b>A01</b><span>Broken Access Control, first in OWASP's Top 10:2025.</span></div>
+        <div class="stat"><b>A05</b><span>Injection, fifth. A02 is Security Misconfiguration and A04 Cryptographic Failures.</span></div>
+        <div class="stat"><b>4</b><span>rounds today, one for each of those four categories.</span></div>
+      </div>
+      <ul class="rules">
+        <li>A diff shows <b>what changed and nothing else</b>, so the first skill is asking what it connects to.</li>
+        <li>Tools find patterns. People find the <b>missing check</b>: the one thing that isn't in the diff at all.</li>
+        <li>The goal is not to catch everything. It's a <b>habit you repeat</b> on every change that touches input, permissions, secrets or config.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://top10.owasp.org/2025" target="_blank" rel="noopener">OWASP Top 10:2025</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Secure Code Review Cheat Sheet</a> · <a href="https://www.imperialviolet.org/2014/02/22/applebug.html" target="_blank" rel="noopener">Adam Langley on Apple's bug</a> · <a href="https://support.apple.com/en-in/103608" target="_blank" rel="noopener">Apple, iOS 7.0.6</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>"goto fail", February 2014 · one line, doubled</b><span>Apple's iOS 7.0.6 advisory says Secure Transport failed to validate the authenticity of a connection. Analyses trace it to a duplicated <code>goto fail;</code> that skipped the signature check. A change this small is easy to read past, and easy to see once someone asks "what does this line skip?"</span></div>
+      <pre class="term gf" aria-label="A paraphrase of the code, not Apple's source">if ((err = HashUpdate(...)) != 0)
+    goto fail;
+    goto fail;          <i>// the duplicate: always runs</i>
+if ((err = VerifySignature(...)) != 0)   <i>// never reached</i>
+    goto fail;</pre>
+      <div class="card"><b>What people do best, per OWASP</b><span>Its cheat sheet says manual review is best at business-logic flaws, authorization logic, race conditions, cryptographic misuse and design problems, and tools help with triage.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>OWASP's Top 10:2025 puts Broken Access Control first, Security Misconfiguration second, Cryptographic Failures fourth and Injection fifth. Those four are today's four rounds. The goto fail story is the shape of every bug we'll meet: a small, local, plausible change whose damage is in what it skips. The code on the slide is a paraphrase to show the shape, not Apple's source.</span></li><li><b class="ask">Ask</b><span>When did a review last stop a bug for you, and what did the reviewer notice? <em>Often: something that was missing, not something that was wrong.</em></span></li><li><b class="tip">Tip</b><span>Sources: top10.owasp.org/2025 lists A01 Broken Access Control, A02 Security Misconfiguration, A03 Software Supply Chain Failures, A04 Cryptographic Failures, A05 Injection, A06 Insecure Design, A07 Authentication Failures, A08 Software or Data Integrity Failures, A09 Security Logging and Alerting Failures, A10 Mishandling of Exceptional Conditions. OWASP's Secure Code Review Cheat Sheet separates baseline reviews (a whole codebase) from diff-based reviews (a pull request), and for diffs asks about impact on existing controls, new attack vectors, trust boundaries and regressions; it names data-flow tracing from sources to sinks as a technique and manual review as best for business logic, authorization logic, race conditions, cryptographic misuse and architecture-level design flaws. Apple's advisory 2014-02-21-2 for iOS 7.0.6 describes Secure Transport failing to validate the connection's authenticity ("restoring missing validation steps"); the CVE is CVE-2014-1266; the duplicated line and function name (SSLVerifySignedServerKeyExchange) are from Adam Langley's analysis.</span></li><li><b class="show">Check</b><span>I did not read Apple's source file itself, so the excerpt is marked as a paraphrase and no line numbers are given. The OWASP page gives no exact release date, so the slide says "Top 10:2025" without one.</span></li><li><b class="next">Next</b><span>"Part 1: a method."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="method" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// A METHOD 01</p><h2>Follow the data: sources, sinks and trust boundaries</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A <b>source</b> is where outside data enters (a query string, a body, a header). A <b>sink</b> is where it does something (a query, HTML, a shell, a file path, a redirect). Click a variable to follow it.</p>
+      <pre class="term code-list" id="tr-code" aria-label="A short invented handler"></pre>
+      <div class="seg-pick" role="group" aria-label="Variables to follow" id="tr-vars"></div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Where it comes from</small>
+      <p class="tr-line" id="tr-origin"></p>
+      <small class="lr-label">Lines that use it</small>
+      <p class="tr-line" id="tr-uses"></p>
+      <small class="lr-label">Sinks it reaches</small>
+      <ul class="tr-sinks" id="tr-sinks"></ul>
+      <p class="verdict" id="tr-verdict"></p>
+      <p class="comment" id="tr-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~9 min</p><ul><li><b class="say">Say</b><span>Every injection, traversal, XSS and redirect bug has the same skeleton: a value from outside travels, unchanged, to somewhere that treats it as more than data. So the whole method is to find where outside data enters, follow it, and ask what happens at each place it lands. A trust boundary is any point where data crosses from something you don't control to something you do: the request, a file upload, a webhook, another service, even a database row that someone else wrote.</span></li><li><b class="show">Show</b><span>Click <code>term</code>: it comes from the query string, is copied into <code>like</code>, then into <code>sql</code>, and ends in a query and in the page. Two sinks from one variable. Click <code>page</code>: it is wrapped in <code>Number()</code>, so it is cleaned on the way and reaching the query is fine. Click <code>sort</code>: it reaches the query too, and nothing cleans it, even though it's a column name and parameters can't fix that: it needs an allow-list. Click <code>rows</code>: this is data from the database, not from the request, but it lands in HTML, so ask where it came from. The tracer is a text matcher for one invented snippet, not a real analyser.</span></li><li><b class="ask">Ask</b><span>Which of these variables would a placeholder fix, and which needs a different fix? <em>term and like: placeholders. sort: an allow-list of column names. page: already a number.</em></span></li><li><b class="tip">Tip</b><span>Real tools do this (taint analysis in static analysers like CodeQL and Semgrep), with the same vocabulary: sources, sinks, sanitizers. The OWASP cheat sheet lists data-flow tracing from sources to sinks as a review technique. Reviewers do it by hand with the editor's "find all references".</span></li><li><b class="next">Next</b><span>"Where in the diff do I start?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="readfirst" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// A METHOD 02</p><h2>What to read first in a diff</h2></header>
+  <div class="slide-body stack">
+    <ol class="rf-list">
+      <li><b>New entry points</b><span>A new route, handler, job, webhook or message consumer is a new front door. Who can call it? What does it return?</span></li>
+      <li><b>Permission and role changes</b><span>Anything that adds, removes or moves a check. <em>A deleted line can be the bug.</em></span></li>
+      <li><b>Parsing and building things</b><span>Queries, paths, commands, HTML, URLs, deserialisation: places where text turns into something that acts.</span></li>
+      <li><b>Crypto, tokens and secrets</b><span>Keys, hashes, random numbers, sessions, anything named token or secret, and anything new in config or tests.</span></li>
+      <li><b>Config and defaults</b><span>New flags, CORS, debug, timeouts, error handlers. Defaults ship to everyone.</span></li>
+      <li><b>Everything else, last</b><span>Renames, formatting and refactors rarely change who can do what, but check they don't quietly drop a check.</span></li>
+    </ol>
+    <p class="callout"><b>TIP</b> Read the tests first. A test for "someone else's id returns 404" tells you the author thought about it. Its absence tells you where to look.</p>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>You can't read every line with the same energy, so spend it where permissions and parsing happen. Start with entry points because everything else hangs off them. Look at deleted lines on purpose: removing a check or a validation is the quietest way to introduce a bug, and diff tools make deletions easy to skim. And read the tests: they tell you what the author was afraid of.</span></li><li><b class="ask">Ask</b><span>What would you open first in a pull request that "just updates the config"? <em>The defaults it changes, and who they apply to.</em></span></li><li><b class="tip">Tip</b><span>This order follows the diff-based review focus in OWASP's Secure Code Review Cheat Sheet (impact on existing controls, new attack vectors, trust boundaries, regressions) turned into a reading order; the ordering is a suggestion, not a standard. Review small changes: big pull requests hide things.</span></li><li><b class="next">Next</b><span>"Questions for every change."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ask" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// A METHOD 03</p><h2>Questions to ask every change</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="q-cards">
+        <li><b>Who can call this?</b><span>And what stops everyone else?</span></li>
+        <li><b>Whose record is it?</b><span>Is that in the query, or only in the UI?</span></li>
+        <li><b>Where does the input go?</b><span>Follow it to every sink.</span></li>
+        <li><b>What if it's empty, huge or hostile?</b><span>Try the probes on the right.</span></li>
+        <li><b>What does the caller see?</b><span>Response, error, log line: only what they should.</span></li>
+        <li><b>What happens when it fails?</b><span>Closed or open, and who is told what?</span></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Pick what the change accepts, then try these values in your head</small>
+      <div class="seg-pick" role="group" aria-label="What the code accepts" id="pb-kind"></div>
+      <ul class="pb-vals" id="pb-vals"></ul>
+      <p class="verdict y" id="pb-ask"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Six questions, asked of every change that touches input, permissions, secrets or config. The fourth one is the cheapest high-value habit in this talk: take the thing the code accepts and picture an empty value, an enormous one and a hostile one. The probes on the right are a prompt for that picture, not a test suite.</span></li><li><b class="show">Show</b><span>Pick "An id in the URL": somebody else's id, an id that doesn't exist, and the same two cases both need to look identical to the caller, or the difference leaks which records exist. Pick "An uploaded file": size, type by content, and never using the name in a path.</span></li><li><b class="ask">Ask</b><span>Which question would have caught the last security bug you had to fix? <em>Often "whose record is it?"</em></span></li><li><b class="tip">Tip</b><span>The probe values are illustrative prompts, not payload lists, and every one is harmless text. They're there to make you ask about limits, types and ownership. Whether 2147483648 matters depends on the language and the column type.</span></li><li><b class="next">Next</b><span>"How the rounds work."</span></li></ul></div>
+</section>
+
+<section class="slide" id="format" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// A METHOD 04</p><h2>How the rounds work</h2></header>
+  <div class="slide-body stack">
+    <div class="take-grid">
+      <div><b>1 · Flag (about 10 min)</b><span>In pairs, click the lines of the diff you'd comment on. One of you drives, one challenges. Don't fix yet: find first.</span></div>
+      <div><b>2 · Check</b><span>"Check my flags" tells you how many findings you hit and which flags were noise. It doesn't say where the misses are.</span></div>
+      <div><b>3 · Reveal (about 5 min)</b><span>"Show answers" lists every finding with why it matters, a fix and a model review comment. Score the round.</span></div>
+    </div>
+    <ul class="rules">
+      <li>Every diff is <b>invented and deliberately flawed</b>. Some have decoys: lines that look scary and are fine. One diff is clean, because knowing when to approve is part of the job.</li>
+      <li><b>Flagging everything is the same as flagging nothing.</b> Aim.</li>
+      <li>The scoreboard keeps the tally. There's a badge for finding them all.</li>
+    </ul>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Here's the loop for each round. Pairs flag lines for ten minutes. Press "Check my flags" for a score without spoilers. Then "Show answers" for the full reveal: each finding has a plain explanation, a fix in the same language and a model review comment, so you can compare your wording with a good one. Pairs keep their own tally on the scoreboard slide.</span></li><li><b class="tip">Tip</b><span>For a live room, run the screens on a projector and let pairs use their own laptops or phones: every page runs entirely in the browser. For a virtual room, share the screen and let pairs drive in breakout rooms. If you're short on time, assign one diff per pair and share findings, rather than every pair doing every diff. The third tab in rounds 1, 3 and 4 is a bonus.</span></li><li><b class="next">Next</b><span>"Round 1."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="round-1" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// ROUND 1 · 15 MIN · A05 INJECTION</p><h2>Data treated as code</h2></header>
+  <div class="slide-body"><div class="ex" data-round="1"></div></div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="say">Say</b><span>Round one is the classic: text from outside ends up somewhere that treats it as an instruction. Queries, shell commands, HTML and file paths, plus the redirect that sends people elsewhere. Pairs have ten minutes; use the method: where does the input enter, and where does it land?</span></li><li><b class="show">Show</b><span>At the reveal, walk each finding in the same order: what the code does, what that allows, the fix, and the model comment. Notice that all the fixes share a shape: keep data out of code. Placeholders for queries, an argument array instead of a shell string, escaping or an auto-escaping template for HTML, an id instead of a filename, a local-path check for redirects.</span></li><li><b class="ask">Ask</b><span>Which diffs would a linter likely have caught, and which needed you? <em>The query and the shell call have well-known patterns. The path check and the redirect need you to ask what the value is allowed to be.</em></span></li><li><b class="tip">Tip</b><span>References: Python's sqlite3 docs say to always use placeholders instead of string formatting to avoid SQL injection. Node's child_process docs say never to pass unsanitized user input to <code>exec</code>, and that <code>execFile</code> does not spawn a shell unless the shell option is enabled. CWE numbers shown in the reveal, checked against cwe.mitre.org on 11 November 2026: 89 (SQL injection), 770 (Allocation of Resources Without Limits or Throttling), 78 (OS command injection), 22 (path traversal), 79 (XSS), 601 (URL Redirection to Untrusted Site, "open redirect"). The exercise's fix for the path finding (resolve then check the prefix) is a common pattern; a robust version also considers symlinks.</span></li><li><b class="show">Check</b><span>I didn't re-read Flask's <code>send_from_directory</code> docs fully, so the fixes don't rely on it. The <code>convert</code> command is ImageMagick's; its exact flags don't matter to the exercise.</span></li><li><b class="next">Next</b><span>"Round 2: authorization."</span></li></ul></div>
+</section>
+
+<section class="slide" id="round-2" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// ROUND 2 · 15 MIN · A01 BROKEN ACCESS CONTROL</p><h2>Authorization</h2></header>
+  <div class="slide-body"><div class="ex" data-round="2"></div></div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="say">Say</b><span>Round two is about what isn't in the diff. Both diffs check that you're signed in. Neither checks enough. Authentication says who you are; authorization says what you may do, to which record. The question to carry is "whose record is it, and where is that enforced?"</span></li><li><b class="show">Show</b><span>The orders diff has a comment saying <code>TODO: security</code>: click it for the badge. Then the real findings: any signed-in user can read any order and delete any order. In the profile diff, the update applies every field in the request body (mass assignment), and the admin export is "protected" by hiding a link. Hidden isn't blocked. All three fixes put the rule on the server and make "not yours" look the same as "doesn't exist".</span></li><li><b class="ask">Ask</b><span>Where in your codebase would a new endpoint get its ownership check by default, and where only if someone remembers? <em>The answer is the case for central, deny-by-default checks.</em></span></li><li><b class="tip">Tip</b><span>CWE-639 is "Authorization Bypass Through User-Controlled Key" (the order id). The profile finding is mass assignment (CWE-915); the admin route is a missing function-level check (CWE-862). Developer 5 (Building Secure APIs) covers object-level and function-level authorization in more depth. "Blocking", used in the model comments, is a team convention, not part of any standard.</span></li><li><b class="next">Next</b><span>"Round 3: secrets and crypto."</span></li></ul></div>
+</section>
+
+<section class="slide" id="round-3" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// ROUND 3 · 15 MIN · A04 CRYPTOGRAPHIC FAILURES</p><h2>Secrets and crypto</h2></header>
+  <div class="slide-body"><div class="ex" data-round="3"></div></div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="say">Say</b><span>Round three: the code works and the tests pass, and the design is wrong. You don't need to be a cryptographer to spot these. You need to know three rules: never write secrets in source, use the tool built for the job (a slow password hash for passwords, a secure random source for tokens, an authenticated mode for encryption), and don't invent your own.</span></li><li><b class="show">Show</b><span>In the first diff the keys are in the code (they live in Git history forever), the password is hashed with fast, unsalted MD5, and the card number is encrypted with a fixed key in a mode that shows patterns. The reset-token diff uses Math.random, never checks expiry or one-time use, and stores the token as-is. At the reveal, check the key phrase in each model comment: "Argon2id", "fresh nonce each time", "constant-time compare".</span></li><li><b class="ask">Ask</b><span>If a secret has been committed, is deleting it in the next commit enough? <em>No. It's in history and in every clone. Rotate it.</em></span></li><li><b class="tip">Tip</b><span>OWASP's Password Storage Cheat Sheet recommends Argon2id first (minimum 19 MiB of memory, 2 iterations, 1 degree of parallelism) and says fast hashes such as SHA-256 are unsuitable because they allow large numbers of guesses. MDN's Math.random() page says it is not cryptographically secure and not to use it for anything related to security; Python's secrets docs say the same of the random module and give <code>token_urlsafe</code> and <code>compare_digest</code> (constant-time compare). The sample "payment key" is obviously fake on purpose so scanners don't flag this deck. ECB's weakness (equal blocks encrypt equally) and the case for AES-GCM are standard background, which I didn't re-read a source for here; check NIST SP 800-38A and 800-38D if you quote them.</span></li><li><b class="show">Check</b><span>CWE numbers in the reveal, checked against cwe.mitre.org (CWE 5.0) on 11 November 2026: 798 Use of Hard-coded Credentials, 916 Use of Password Hash With Insufficient Computational Effort, 327 Use of a Broken or Risky Cryptographic Algorithm, 338 Use of Cryptographically Weak PRNG, 640 Weak Password Recovery Mechanism for Forgotten Password (the reset-token lifetime finding; CWE-613 Insufficient Session Expiration, used in an earlier version, is deprecated in CWE 5.0 in favour of 1463 and 1464, which are about sessions), 256 Plaintext Storage of a Password.</span></li><li><b class="next">Next</b><span>"Round 4: configuration and errors."</span></li></ul></div>
+</section>
+
+<section class="slide" id="round-4" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// ROUND 4 · 15 MIN · A02 MISCONFIGURATION · A10 EXCEPTIONAL CONDITIONS</p><h2>Configuration and errors</h2></header>
+  <div class="slide-body"><div class="ex" data-round="4"></div></div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="say">Say</b><span>Round four: the settings and the error paths. Nothing here is a clever bug. It's a default somebody left on, a convenient header, or an error message that says too much. Defaults ship to everyone, so they deserve the same review as logic. The third tab is a clean change: your job is to approve it, and to avoid inventing problems.</span></li><li><b class="show">Show</b><span>The app-setup diff reflects any origin and allows credentials, runs debug on every network interface, and signs sessions with the key "dev". The login handler logs the password and sends the error message and stack trace to the caller. On the clean diff press "Looks good to me": that's the correct answer, and the decoy explanations say why each line is fine.</span></li><li><b class="ask">Ask</b><span>Why can't you just use the * wildcard together with cookies? <em>Browsers refuse it. Echoing back the Origin is the workaround, and it's the bug.</em></span></li><li><b class="tip">Tip</b><span>MDN's CORS guide: for credentialed requests the server must not specify the * wildcard but an explicit origin (the browser blocks the response otherwise), and a dynamic origin from an allow-list should come with <code>Vary: Origin</code>. MDN doesn't discuss reflecting the origin; that warning is general practice. Flask's debugging docs say not to run the development server or the built-in debugger in production, because the debugger allows executing arbitrary Python code from the browser (it is protected by a PIN, which should not be relied on). OWASP's 2025 list has "Mishandling of Exceptional Conditions" as A10 and "Security Logging and Alerting Failures" as A09.</span></li><li><b class="show">Check</b><span>CWE numbers checked against cwe.mitre.org (CWE 5.0) on 11 November 2026: 942 Permissive Cross-domain Security Policy with Untrusted Domains, 489 Active Debug Code, 1188 Initialization of a Resource with an Insecure Default, 532 Insertion of Sensitive Information into Log File, 209 Generation of Error Message Containing Sensitive Information. The SECRET_KEY "dev" detail is Flask-specific: it signs the session cookie.</span></li><li><b class="next">Next</b><span>"The scoreboard."</span></li></ul></div>
+</section>
+
+<section class="slide" id="scoreboard" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// THE SCOREBOARD</p><h2>How many did we find?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="sb-table" id="sb-table"></div>
+      <p class="verdict" id="sb-verdict"></p>
+      <p class="comment" id="sb-note"></p>
+    </div>
+    <div class="stack">
+      <div class="eagle" id="sb-eagle" aria-live="polite"></div>
+      <ul class="rules">
+        <li>The score isn't the point. <b>The misses are.</b> Each one is a pattern to add to your own list.</li>
+        <li>The title-slide checker knows only a few patterns. The rest of the findings needed a person who knew what the code was <em>for</em>.</li>
+        <li>Missing a bug in a review is normal. Stopping to look at the same kind of place each time is the habit.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The board adds up what pairs found in the diffs they checked. Ask for the round where people felt strongest and the one where they felt weakest, then ask what the missed findings had in common. Usually they were about something absent (a check, an expiry, a limit) rather than something present.</span></li><li><b class="show">Show</b><span>The table fills in as diffs are checked on the earlier slides, in this page only (a reload starts fresh). "Eagle Eye" unlocks when every planted flaw in all nine buggy diffs has been found. The clean diff is listed separately: approving it correctly counts too. Nothing is sent anywhere.</span></li><li><b class="ask">Ask</b><span>Which kind of finding did your pair miss most often, and what question would have caught it?</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT · 5 MIN</p><h2>Share your best review comment</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Each pair picks the one comment they're proudest of from today, or one from their own work. Read it to the room.</p>
+    <ol class="checkpoint">
+      <li><p>Does your comment say <b>where</b>, <b>what can go wrong</b> and <b>what you'd do instead</b>?</p><details><summary>Hint</summary><p>Could the author act on it without asking you a follow-up question?</p></details><details class="answer"><summary>Answer</summary><p>If the author would have to ask "which line?", "why does that matter?" or "what should I do?", the comment is missing a part. A good one answers all three in a few sentences and says how much it matters.</p></details></li>
+      <li><p>Is it about the <b>code</b> or the <b>person</b>?</p><details><summary>Hint</summary><p>Try swapping "you" for the name of the function.</p></details><details class="answer"><summary>Answer</summary><p>Google's review guidance gives the example of "Why did you use threads here?" against a comment about the code's concurrency model: comment on the code, not the developer, and explain your reasoning.</p></details></li>
+      <li><p>Which of today's findings would you have to <b>block on</b>, and which would you leave as a note?</p><details><summary>Hint</summary><p>Think about who is hurt if it ships as it is.</p></details><details class="answer"><summary>Answer</summary><p>Anything that lets one user reach another's data or lets outside text act as code blocks the merge. Tidy-ups, optional ideas and for-your-information notes get labels such as Nit, Optional or FYI so the author can tell the difference.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself. Collect two or three comments on the board and look at them together against the next slide's three parts.</span></li><li><b class="show">Check</b><span>The thread example and the "Nit", "Optional" and "FYI" labels are from Google's reviewer guide on writing comments (google.github.io/eng-practices). "Blocking" is a team convention, not Google's label.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="comments" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT STICK 01</p><h2>Write the comment, without the blame</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">The finding: the search query from round 1</small>
+      <div class="cm-parts" id="cm-parts" role="group" aria-label="What to put in the comment">
+        <label><input type="checkbox" data-k="where"><span> Say <b>where</b>: the line and the variable</span></label>
+        <label><input type="checkbox" data-k="risk"><span> Say <b>what can go wrong</b>, concretely</span></label>
+        <label><input type="checkbox" data-k="why"><span> Say <b>why</b>, with a source</span></label>
+        <label><input type="checkbox" data-k="fix"><span> Suggest a <b>fix</b>, as a question</span></label>
+        <label><input type="checkbox" data-k="help"><span> Offer <b>help</b></span></label>
+      </div>
+      <div class="controls">
+        <label>Label<select id="cm-label" aria-label="Comment label"><option value="">(none)</option><option>Blocking</option><option>Nit</option><option>Optional</option><option>FYI</option></select></label>
+        <div class="seg-pick" role="group" aria-label="Who the comment is about" id="cm-tone">
+          <button type="button" data-t="code" aria-pressed="true">About the code</button>
+          <button type="button" data-t="person" aria-pressed="false">About the person</button>
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What the author reads</small>
+      <blockquote class="cm-preview" id="cm-out"></blockquote>
+      <p class="verdict" id="cm-verdict"></p>
+      <ul class="cm-missing" id="cm-missing"></ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>A review comment is a small message to a colleague who can't ask you what you meant. It needs three things to be actionable: where, what can go wrong, and what you'd do. Then two things that make it land: a label that says how hard you're pushing, and aim at the code. Try the person-directed version on the right: it's shorter, it's true, and it makes people defensive instead of fixing the bug.</span></li><li><b class="show">Show</b><span>Start with nothing ticked: the comment is "This query needs another look." Tick where, risk and fix and add a label: the author can act without a follow-up. Add "why" and "help" for the full seven. Then switch to "About the person" and read it aloud: nobody has to be rude to be unhelpful.</span></li><li><b class="ask">Ask</b><span>What's the difference between a Nit and a Blocking comment for the author? <em>One can wait, one can't. Without labels, every comment looks like a demand.</em></span></li><li><b class="tip">Tip</b><span>Google's reviewer guide on comments: be kind and courteous; comment on the code, not the developer; explain your reasoning; balance direction with discussion (point out the problem and let the developer decide, or give direct suggestions when that's more useful); call out what you like as well; label severity with "Nit:", "Optional (or Consider):" and "FYI:"; put explanations in the code, not just the review tool. "Blocking" is not in that list: it's a common team convention and an assumption of this demo. The scoring here is mine, a teaching rule of thumb, not a published measure.</span></li><li><b class="next">Next</b><span>"What should machines review?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="automate" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT STICK 02</p><h2>Automate the easy parts</h2></header>
+  <div class="slide-body stack">
+    <p class="m">So people can review the hard ones. For each item: who should catch it first? A machine on every push, a person in review, or both.</p>
+    <ul class="au-list" id="au-list"></ul>
+    <p class="verdict" id="au-verdict"></p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Machines are better at the boring, repeatable and exhaustive: secret formats, known-vulnerable versions, formatting, familiar code patterns. People are better at the missing, the contextual and the social: who should own this, should we keep this data, will this comment land. If you spend review energy on what a formatter could settle, you have less for the authorization check. Use scanners to clear the ground, and treat their silence as "no known pattern", not "safe".</span></li><li><b class="show">Show</b><span>Choose for each row, then read the reason. Most are clear. The SQL row is "both": static analysis catches the common shape, and a person checks the wrapper or helper the tool doesn't know.</span></li><li><b class="ask">Ask</b><span>Which of these does your pipeline already do, and which does it only do when someone remembers?</span></li><li><b class="tip">Tip</b><span>OWASP's Secure Code Review Cheat Sheet says manual review is a human-led process that complements SAST and DAST, positions tools as aids for triage and pre-review scanning with human judgment validating findings, and lists business logic, authorization logic, race conditions, cryptographic misuse and design flaws as where manual review adds most. The right-hand column's verdicts are a simplification of that: some scanners do check some authorization patterns. Developer 11 (Security Testing in Your Workflow) goes deeper into the tools.</span></li><li><b class="next">Next</b><span>"A checklist to keep."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// MAKING IT STICK 03</p><h2>A one-page team checklist</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list"></div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Ten questions. That's deliberate: a checklist that takes ten minutes to read gets skipped, and one you can hold in your head gets used. Tick what your team already asks today. Treat each unticked box as something to try on the next three pull requests. If you disagree with one, change it: the best checklist is the one your team edits. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which two would you drop to keep this at eight, and which would you add from your own incidents?</span></li><li><b class="tip">Tip</b><span>Keep it as a pull-request template or a pinned note. Review it every few months against real bugs: add a question when a bug slips through, drop one nobody uses. The questions are mine, built from this workshop's rounds and the diff-based review focus areas in OWASP's Secure Code Review Cheat Sheet.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a diff you've been unsure about. Describe the pattern, not real code.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The ten diffs and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Secure Code Review Cheat Sheet</a><span>Where humans add most.</span></li>
+        <li><a href="https://google.github.io/eng-practices/review/reviewer/comments.html" target="_blank" rel="noopener">Google: how to write code review comments</a><span>Kind, clear, labelled.</span></li>
+        <li><a href="https://top10.owasp.org/2025" target="_blank" rel="noopener">OWASP Top 10:2025</a><span>The four rounds' categories.</span></li>
+        <li><a href="../web-app-security/">Web Application Security Essentials</a><span>Injection, XSS, access control.</span></li>
+        <li><a href="../secure-apis/">Building Secure APIs</a><span>Object-level authorization.</span></li>
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>The round 3 mistakes.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. All code is invented and deliberately flawed; nothing is executed, fetched or sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe a pattern from their own reviews (not real code), and walk it through the method: where does the input enter, whose record is it, what does it skip?</span></li><li><b class="show">Check</b><span>Facts checked 11 November 2026: OWASP Top 10:2025 names (top10.owasp.org/2025), OWASP Secure Code Review and Password Storage cheat sheets, Google's comments guide, MDN's Math.random and CORS pages, Python's sqlite3 and secrets docs, Node's child_process docs, Flask's debugging page, every CWE title used in the reveals (cwe.mitre.org, CWE 5.0), and Apple's iOS 7.0.6 advisory page itself (CVE-2014-1266, "Secure Transport failed to validate the authenticity of the connection", fixed by "restoring missing validation steps"). Not read: Apple's source (the excerpt is a paraphrase), Flask's send_from_directory docs and NIST SP 800-38A/D. Open each link before presenting. The linked talks (Web Application Security Essentials, Building Secure APIs, Using Crypto Correctly in Code) are on this hub.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="review.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
