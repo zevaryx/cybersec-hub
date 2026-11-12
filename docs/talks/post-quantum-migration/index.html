@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Post-Quantum Migration</title>
+<meta name="description" content="Post-Quantum Migration: what a quantum computer would and wouldn't break, ML-KEM, ML-DSA and hybrid TLS, and how to build a migration plan you can finish. A talk by zevaryx, with demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/post-quantum-migration/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Post-Quantum Migration">
+<meta property="og:description" content="The threat precisely, the new standards, hybrid TLS today, and a migration plan you can finish: inventory, agility, priorities, testing.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/post-quantum-migration/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/post-quantum-migration/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "post-quantum-migration", "title": "Post-Quantum Migration", "footer": "PQC", "subtitle": "SECURITY TRACK · 08",
+  "parts": [{ "name": "The threat, precisely", "minutes": 26 }, { "name": "The new algorithms", "minutes": 29 },
+            { "name": "Hybrid today", "minutes": 26 }, { "name": "Planning a migration", "minutes": 31 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Post-Quantum Migration</a>
+  <div class="scroll-parts">
+    <a href="#breaks" data-part="1"><b>01</b>Threat</a>
+    <a href="#lattice" data-part="2"><b>02</b>Algorithms</a>
+    <a href="#hybrid" data-part="3"><b>03</b>Hybrid</a>
+    <a href="#inventory" data-part="4"><b>04</b>Planning</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 08 · FOR ARCHITECTS AND LEADS</p>
+      <h1><span class="pre">Planning a</span> <span class="glitch" data-text="Post-Quantum Migration">Post-Quantum Migration</span></h1>
+      <p class="lede">What a quantum computer would and wouldn't break, the standards that exist now, the hybrid key exchange you may already be using, and how to build a migration plan you can finish.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/post-quantum-migration/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>how long do we have?</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ must-start-by --secret-for&nbsp;<input id="hero-in" value="15" spellcheck="false" autocomplete="off"> years</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About two hours, four parts, three checkpoints. This is a planning talk: the maths of lattices gets one slide, and the rest is what to do on Monday. It builds on Crypto 101, on PKI in Depth (certificates and chains) and on Case Studies in Cryptographic Failures (why we like hedges).</span></li><li><b class="show">Show</b><span>The terminal: type how many years some data must stay secret. It adds a five-year migration, says how far ahead the earliest safe date is, and shows what a survey of experts thinks about that horizon. It is a ballpark, not a forecast; slide 7 lets you move every number.</span></li><li><b class="tip">Eggs</b><span>In the terminal try: 0, 1, 10, 30, mosca, shor, grover, harvest, hndl, q-day, y2q, sike, kyber, ml-kem, dilithium, sphincs, falcon, hqc, rsa, aes, 256, 3329, 1216, 4588, 0x11EC, and the years 2029, 2030, 2031 and 2035. Other eggs: the toy lattice with no noise (it falls to ordinary algebra), a hybrid handshake with both halves broken, the harvest planner with nothing exposed, the Mosca planner with every row late, the size explorer with SLH-DSA-256f and three certificates (a quarter of a megabyte), a triage order identical to the model, 8 of 8 or 0 of 8 on agility, 8 of 8 on the claims, all seven roadmap phases ticked, and a console hint.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Four parts, three pauses</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#breaks"><small>PART 1 · 26 MIN</small><b>The threat, precisely</b></a><span>What breaks and what doesn't</span><span>Harvest now, forge later</span><span>The estimates, and Mosca</span><span>The deadlines</span></li>
+      <li><a href="#lattice"><small>PART 2 · 29 MIN</small><b>The new algorithms</b></a><span>Lattices, in one slide</span><span>ML-KEM, ML-DSA, SLH-DSA</span><span>What the sizes cost</span><span>The lesson of SIKE</span></li>
+      <li><a href="#hybrid"><small>PART 3 · 26 MIN</small><b>Hybrid today</b></a><span>Hybrid TLS, live</span><span>SSH, VPNs, messaging</span><span>Why certificates are harder</span><span>Firmware and long-lived signatures</span></li>
+      <li><a href="#inventory"><small>PART 4 · 31 MIN</small><b>Planning a migration</b></a><span>Inventory and triage</span><span>Crypto agility</span><span>Testing and constraints</span><span>A roadmap you can finish</span></li>
+    </ol>
+    <p class="callout"><b>NO HYPE EITHER WAY</b> Nobody knows when a large enough quantum computer will exist. We plan around a range and a lead time. Every number has a source on its slide, and what couldn't be confirmed is in the speaker notes.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is about how to think about the threat, not whether to believe in it. Part 2 is the standards, with sizes, because sizes drive most of the pain. Part 3 is what's deployed today: hybrid key exchange, and why signatures are the harder half. Part 4 is the plan.</span></li><li><b class="tip">Tip</b><span>The General track's Modern Messaging Protocols talk already showed harvest-now-decrypt-later and a hybrid handshake with a stand-in secret. This talk uses real X25519 plus a labelled toy lattice for the hybrid demo, then moves on to the organisational problem.</span></li><li><b class="next">Next</b><span>"First, why now."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY NOW</p><h2>The standards exist, and the deployment has started</h2></header>
+  <div class="slide-body stack">
+    <div class="stats stats-4">
+      <div class="stat"><b>27 Oct 2026</b><span>NIST IR 8547 is final: quantum-vulnerable public-key crypto deprecated after 2030, disallowed after 2035</span></div>
+      <div class="stat"><b>Aug 2026</b><span>RFC 10024 defines three hybrid key-exchange groups for TLS 1.3, including X25519MLKEM768</span></div>
+      <div class="stat"><b>~70%</b><span>of browser traffic to Cloudflare uses hybrid ML-KEM; about 15% of origins do (29 Sep 2026)</span></div>
+      <div class="stat"><b>2029</b><span>Google and Cloudflare each say they aim to be fully post-quantum by then (company targets)</span></div>
+    </div>
+    <div class="cols-2">
+      <ul class="rules">
+        <li><b>Two threats, two clocks.</b> Recorded traffic can be read later; a signature can only be forged once the computer exists. They have different urgency and different fixes.</li>
+        <li><b>The estimates keep falling.</b> Factoring RSA-2048: 20 million noisy qubits in 2019, under 1 million in 2025, and newer designs claim far fewer on different hardware assumptions.</li>
+        <li><b>Nobody has a date.</b> Plan around a range and your own lead time.</li>
+      </ul>
+      <ul class="rules">
+        <li><b>Key exchange is moving.</b> Browsers, CDNs, Apple's OS 26, OpenSSL and OpenSSH already offer hybrid key exchange (slide 16). Your job there is to find what doesn't.</li>
+        <li><b>Signatures and the long tail aren't.</b> Certificates, firmware, hardware, vendors and archives take years. That's where a plan matters.</li>
+        <li><b>The plan is mostly inventory.</b> You can't migrate what you can't find.</li>
+      </ul>
+    </div>
+    <p class="src">SOURCES <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">NIST IR 8547 (final)</a> · <a href="https://www.rfc-editor.org/rfc/rfc10024.html" target="_blank" rel="noopener">RFC 10024</a> · <a href="https://blog.cloudflare.com/post-quantum-visibility/" target="_blank" rel="noopener">Cloudflare, 29 Sep 2026</a> · <a href="https://cloud.google.com/blog/products/identity-security/pqc-in-plaintext-google-clouds-post-quantum-cryptography-roadmap" target="_blank" rel="noopener">Google Cloud</a> · <a href="https://blog.cloudflare.com/post-quantum-roadmap/" target="_blank" rel="noopener">Cloudflare roadmap</a> · <a href="https://arxiv.org/abs/2505.15917" target="_blank" rel="noopener">Gidney 2025</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Two things changed. The standards stopped being proposals: NIST finalised its transition report on 27 October, and the IETF published the hybrid TLS groups as an RFC in August. And deployment is already large: most browser traffic reaching one big CDN is already post-quantum protected on the browser side. The harder problems are the ones that deployment doesn't reach.</span></li><li><b class="ask">Ask</b><span>Who has looked at their TLS configuration since OpenSSL 3.5 shipped? <em>Answer: many servers pick up hybrid groups by default now, and some old stacks break on them (slide 25).</em></span></li><li><b class="tip">Check</b><span>Cloudflare's figures are its own measurements: about 70% of browser-generated traffic on the visitor-to-Cloudflare connection, and just about 15% of origins on the Cloudflare-to-origin connection (post of 29 September 2026). Earlier posts give "over 60%" (February) and "over 65%" (April): the number moves. The 2029 dates are company targets: Cloudflare's post of 7 April 2026, and Google Cloud's roadmap post of 11 August 2026 ("full PQC readiness by 2029"). Gidney's 2019 comparison figure is as restated in his 2025 abstract. RFC 10024 is a Standards Track RFC dated August 2026. All checked 10 November 2026.</span></li><li><b class="next">Next</b><span>"Part 1: what is the threat, exactly?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="breaks" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE THREAT, PRECISELY 01</p><h2>What a quantum computer breaks, and what it doesn't</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Pick a primitive</h3>
+      <div class="chips" id="br-chips" role="group" aria-label="Cryptographic primitives"></div>
+      <div class="detail" id="br-detail" aria-live="polite"></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Shor's algorithm</b> (1994) solves factoring and discrete logarithms in polynomial time. That is RSA, finite-field Diffie-Hellman, elliptic curves, and every signature built on them.</li>
+        <li><b>Grover's algorithm</b> (1996) speeds up searching by a square root. That halves the exponent in the best case, so a 128-bit symmetric key keeps a respectable margin and a 256-bit one a large one.</li>
+        <li>So the target is <b>public-key crypto</b>. Symmetric crypto and hashes need sizes checked, not replacing.</li>
+      </ul>
+      <div class="table-wrap"><table class="grid-table slim" aria-label="NIST security categories">
+        <thead><tr><th>Category</th><th>Equivalent attack</th></tr></thead>
+        <tbody>
+          <tr><th>1</th><td>Key search on AES-128</td></tr>
+          <tr><th>2</th><td>Collision search on SHA-256</td></tr>
+          <tr><th>3</th><td>Key search on AES-192</td></tr>
+          <tr><th>4</th><td>Collision search on SHA3-384</td></tr>
+          <tr><th>5</th><td>Key search on AES-256</td></tr>
+        </tbody></table></div>
+      <p class="src">SOURCES <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">NIST IR 8547, Table 1 and section 2.1.3</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Be precise, because both kinds of hype are costly. "Quantum breaks encryption" is wrong: it breaks one family of encryption, the public-key family. And "AES is fine, so we're fine" is also wrong: the public-key part is how you agreed on the AES key.</span></li><li><b class="show">Show</b><span>Click through the chips. Every public-key primitive lands in the same bucket. The five NIST categories on the right are the yardstick the post-quantum standards use: they're defined by the cost of breaking AES or SHA, which is why AES-128 is the floor.</span></li><li><b class="ask">Ask</b><span>Someone says "we use AES-256, so we're covered." What's the weak link? <em>Answer: how the key got there. If it was agreed with ECDH or wrapped with RSA, a recording of that exchange gives the key later.</em></span></li><li><b class="tip">Check</b><span>The statement that approved symmetric primitives at 128 bits or more are believed to meet at least Category 1 is from IR 8547 (October 2026), section 2.1.3, and the category table is its Table 1. ChaCha20 isn't a NIST-approved primitive; the slide says so. Shor 1994 and Grover 1996 are the standard references.</span></li><li><b class="next">Next</b><span>"When does it matter? That depends on whether you're protecting a secret or a signature."</span></li></ul></div>
+</section>
+
+<section class="slide" id="hndl" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE THREAT, PRECISELY 02</p><h2>Harvest now, decrypt later: and forge later</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Confidentiality</b> gives the attacker a head start: record now, decrypt later. The damage is fixed <i>now</i>.</li>
+        <li><b>Authenticity</b> has none: a forgery needs the computer at forging time, and only works while people still trust the key.</li>
+        <li>So <b>key exchange</b> first and <b>signatures</b> second, except for signatures that must last decades or sit in hardware.</li>
+      </ul>
+      <div class="controls controls-col">
+        <label>Earliest plausible quantum computer: <output id="hn-crqc-out">2034</output><input type="range" id="hn-crqc" min="2028" max="2055" value="2034"></label>
+        <label>Our key exchange is post-quantum from: <output id="hn-kex-out">2029</output><input type="range" id="hn-kex" min="2026" max="2040" value="2029"></label>
+        <label>Our signing keys and verifiers are post-quantum from: <output id="hn-sig-out">2032</output><input type="range" id="hn-sig" min="2026" max="2040" value="2032"></label>
+        <label class="check"><input type="checkbox" id="hn-resign"> We re-sign or timestamp our archives before then</label>
+      </div>
+    </div>
+    <div class="stack">
+      <h3>What's exposed?</h3>
+      <ul class="hn-list" id="hn-list" aria-live="polite"></ul>
+      <p class="verdict" id="hn-verdict" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three sliders and a checkbox. Start with the first confidentiality row and move the key-exchange year: once your key exchange is post-quantum, nothing recorded after that date is useful to a later attacker. Then watch the signature rows: they depend on when the verifiers and keys change, not on what was recorded. The contract row is the odd one: an archive is relied on for decades, so it needs re-signing or timestamping on its own timeline.</span></li><li><b class="show">Show</b><span>At the defaults (computer in 2034, our key exchange post-quantum from 2029), the 10-year customer session and the 15-year VPN designs are exposed, because they were recorded before 2029 and are still sensitive in 2034. Move the key-exchange year to 2026 and both clear: recording stops being useful. That is why key exchange is the first migration. Then try the signature rows: the update row only turns red if you push the signing year past the computer's date.</span></li><li><b class="ask">Ask</b><span>Why does the 200-day certificate never light up? <em>Answer: it expires long before any computer exists, and there is nothing recorded to harvest.</em></span></li><li><b class="tip">Check</b><span>The items and dates are invented examples. The framing of harvest-now-decrypt-later as the main reason for urgency is NIST's (IR 8547, October 2026). The distinction between confidentiality and forgery is the usual one in the migration guidance.</span></li><li><b class="next">Next</b><span>"When is the date? The honest answer is a range."</span></li></ul></div>
+</section>
+
+<section class="slide" id="estimates" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// THE THREAT, PRECISELY 03</p><h2>When? The honest answer is a range</h2></header>
+  <div class="slide-body stack">
+    <div class="controls"><span class="mini-label">Show</span><span class="seg-pick" id="es-filter" role="group" aria-label="Filter estimates"></span></div>
+    <div class="table-wrap"><table class="grid-table est stack-rows" aria-label="Published resource estimates">
+      <thead><tr><th>When</th><th>Who</th><th>Target</th><th>Hardware needed</th><th>Time</th><th>Assumes</th></tr></thead>
+      <tbody id="es-rows"></tbody>
+    </table></div>
+    <div class="cols-2">
+      <ul class="rules">
+        <li>Each rests on <b>hardware that isn't built yet</b>, so they are not comparable with each other.</li>
+        <li>The direction is down. Plan for <b>the earlier end</b> of a range.</li>
+      </ul>
+      <div class="card"><b>What the experts say</b><span>Global Risk Institute survey, 2025 edition (26 experts): a computer that breaks today's public-key crypto within <b>10 years</b> is "quite possible" (28-49%); within <b>15 years</b>, "likely" (51-70%). Informed opinion, not a calculation.</span></div>
+    </div>
+    <p class="src">SOURCES <a href="https://arxiv.org/abs/2505.15917" target="_blank" rel="noopener">arXiv:2505.15917</a> · <a href="https://arxiv.org/abs/2602.11457" target="_blank" rel="noopener">arXiv:2602.11457</a> · <a href="https://arxiv.org/abs/2603.28846" target="_blank" rel="noopener">arXiv:2603.28846</a> · <a href="https://eprint.iacr.org/2026/2665" target="_blank" rel="noopener">ePrint 2026/2665</a> · <a href="https://globalriskinstitute.org/publication/quantum-threat-timeline-report-2025b/" target="_blank" rel="noopener">Global Risk Institute</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>I'm not going to give you a date, and neither should anyone else. What I can give you is the direction: each estimate gets smaller, and each rests on hardware that doesn't exist yet. The right response isn't to pick the middle. It's to plan for the early end and to make your lead time shorter.</span></li><li><b class="show">Show</b><span>Filter to RSA-2048, then to elliptic curves. Read the "Assumes" column aloud for two rows: that's where the argument is. Then the survey box: two ranges and two words.</span></li><li><b class="tip">Check</b><span>Gidney (21 May 2025): under one million noisy qubits, under a week, 0.1% gate error, 1 µs cycle, 10 µs reaction time (abstract). Webster et al. (Feb 2026, v2 May 2026): under 100,000 physical qubits with quantum LDPC codes under the same error, cycle and reaction-time figures; the runtime in the notes comes from secondary reports (about a month for the smallest configuration, about a week for a larger one), so the slide doesn't state one. Babbush et al. (Google, 30 March 2026, revised 15 April): 256-bit elliptic-curve discrete log, under 1,200 or 1,450 logical qubits, under half a million physical, minutes; the abstract says they use a zero-knowledge proof to validate the results without disclosing attack vectors. Pappalardo et al. (IACR ePrint 2026/2665, received 28 October 2026): about 23,000 cat qubits and 3.14 days, no bit-flips assumed, about 45,000 if relaxed. Survey: GRI "Quantum Threat Timeline Report 2025" page, dated 9 March 2026, 26 experts; the page doesn't explain how ranges were aggregated. Other sources describe the survey differently; use the GRI page's wording.</span></li><li><b class="next">Next</b><span>"So how do we plan with a range? One inequality."</span></li></ul></div>
+</section>
+
+<section class="slide" id="mosca" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// THE THREAT, PRECISELY 04</p><h2>Mosca's inequality: shelf life + migration time</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="big-lede">If <b>how long it must stay secret</b> + <b>how long migrating takes</b> is more than <b>the years until the computer</b>, you are already late.</p>
+      <div class="controls controls-col">
+        <label>Earliest plausible year: <output id="mo-early-out">2033</output><input type="range" id="mo-early" min="2028" max="2050" value="2033"></label>
+        <label>Latest plausible year: <output id="mo-late-out">2045</output><input type="range" id="mo-late" min="2030" max="2060" value="2045"></label>
+        <label>How hard is your migration, compared with these estimates? <output id="mo-mult-out">×1.0</output><input type="range" id="mo-mult" min="5" max="30" value="10"></label>
+      </div>
+      <p class="verdict" id="mo-summary" aria-live="polite"></p>
+    </div>
+    <div class="table-wrap"><table class="grid-table mosca stack-rows" aria-label="Mosca planner">
+      <thead><tr><th>What you protect</th><th>Shelf life</th><th>Migration</th><th>Start by</th><th>Earliest</th><th>Latest</th></tr></thead>
+      <tbody id="mo-rows"></tbody>
+    </table></div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Three numbers: how many years the data must stay secret, how many years the migration takes, and how many years until the computer. The authors who popularised this wrote the letters differently in different papers, so I'll name the terms instead of the letters. If the first two add up to more than the third, you're late.</span></li><li><b class="show">Show</b><span>Leave the multiplier at ×1.0 and read the "Earliest" column (2033): every row with a shelf life of ten years or more is already late; only the short-lived ones are fine. Now read the "Latest" column (2045): ten-year personal data clears, but health records, designs, diplomatic data, archives and firmware are late even on the optimistic date. Then slide the multiplier to ×2.5: card data flips on the early date and personal data goes tight on the late one. A harder migration pushes more rows over the line, which is the argument for starting with the inventory and for making change cheaper.</span></li><li><b class="ask">Ask</b><span>The firmware row has the biggest migration number. Why? <em>Answer: the verifier may be in read-only memory, and the product has to be redesigned to change it.</em></span></li><li><b class="tip">Check</b><span>The planner is Mosca's idea ("Cybersecurity in an era with quantum computers: will we be ready?", IACR ePrint 2015/1075; IEEE Security &amp; Privacy, 2018), and the Global Risk Institute reports reuse it. The data classes, shelf lives and migration years are invented illustrations, not benchmarks. "Tight" means a margin of three years or less.</span></li><li><b class="next">Next</b><span>"Governments have picked dates. Which ones apply to you?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="timelines" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// THE THREAT, PRECISELY 05</p><h2>The deadlines, and which ones are yours</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Who are you?</h3>
+      <div class="seg-col" id="tl-pick" role="group" aria-label="Choose your situation"></div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="tl-first">–</b><span>first date that applies</span></div>
+        <div class="stat"><b id="tl-years">–</b><span>years from now (2026)</span></div>
+        <div class="stat"><b id="tl-last">–</b><span>everything done</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card" id="tl-card" aria-live="polite"></div>
+      <p class="fine" id="tl-src"></p>
+      <p class="fine">NIST also says its 2030 to 2035 window "does not alter" the earlier federal deadlines, and that deprecated algorithms may still be used with risk assessment during the window.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>There is no single global deadline. Pick your row. The common thread is 2035 as the finish line and a much earlier date for the most sensitive systems. If no deadline binds you, borrow one: customers and insurers will ask.</span></li><li><b class="show">Show</b><span>Click each row. Notice how few of them have a date before 2030, and how many have a date in 2030 or 2031 for the highest-priority systems.</span></li><li><b class="tip">Check</b><span>NIST IR 8547 (final, October 2026) says NIST will deprecate quantum-vulnerable public-key cryptography after 2030 and disallow it after 2035 (RSA and ECDSA at 112 bits or more, EdDSA at 128 or more, and the Diffie-Hellman and MQV schemes), and quotes Executive Order 14412 and OMB Memorandum M-26-15: high value assets and high-impact systems must use post-quantum key establishment by 31 December 2030 and signatures by 31 December 2031, with TLS 1.3 supported by 2 January 2030; NSM-10 sets 2035. The UK NCSC page (version 1.0, 20 March 2025): 2028 discovery and plan, 2031 highest-priority migrations, 2035 complete. The EU roadmap (PDF dated 11 June 2025, Commission page 23 June 2025): by 31 December 2026 first steps and national roadmaps, by 31 December 2030 high-risk use cases and software and firmware updates on by default, by 31 December 2035 medium-risk and, as far as feasible, low-risk. CNSA 2.0: NSA's FAQ PDF returned HTTP 403 to automated downloads here, so those dates (software and firmware signing exclusive by 2030; browsers, servers and cloud by 2033; all national security systems by 2035) are from secondary summaries: confirm against NSA's own copy before quoting. The private-company row's milestone years are my assumption, as the slide says.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is encrypted traffic recorded today at risk, while a signature made today mostly isn't?</p><details><summary>Hint</summary><p>When does the attacker need the quantum computer in each case?</p></details><details class="answer"><summary>Answer</summary><p>A recording can be made now and decrypted later, so the damage is fixed today. A forgery needs the computer at the time of forging, and only works if the key is still trusted, so migrating keys and verifiers before then avoids it. The exceptions are signatures that must last decades and hardware you can't update.</p></details></li>
+      <li><p>Your health records must stay secret for 30 years and a migration would take 4. The earliest plausible computer is 25 years away. What is your verdict, and which lever do you have?</p><details><summary>Hint</summary><p>Add the first two numbers and compare with the third.</p></details><details class="answer"><summary>Answer</summary><p>30 + 4 = 34 years against 25: exposed by 9 years. The levers are a shorter migration (start with the key exchange that protects the records in transit and the keys wrapping them at rest), a shorter retention period (delete what you don't need), and protecting the data with more than one layer meanwhile.</p></details></li>
+      <li><p>Which of AES-128, SHA-256, RSA-3072, ECDSA P-256 and ChaCha20 are on the "quantum-vulnerable" list?</p><details><summary>Hint</summary><p>Which ones rest on factoring or discrete logarithms?</p></details><details class="answer"><summary>Answer</summary><p>RSA-3072 and ECDSA P-256. The others are symmetric or hash functions, where the question is key and output size, not replacement.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The first question is the plan's first checkpoint question; the second uses the planner from slide 7.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="lattice" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// THE NEW ALGORITHMS 01</p><h2>Lattices in one slide: a puzzle that needs noise</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>The puzzle:</b> publish many equations <code>b = A·s + e (mod q)</code>, where <code>s</code> is the secret and <code>e</code> is small random noise. Without the noise it's school algebra. With it, finding <code>s</code> is the <b>learning-with-errors</b> problem, believed hard even for quantum computers.</li>
+        <li><b>Encrypt a bit</b> by adding up a random subset of the equations. <b>Decrypt</b> by subtracting what the secret predicts: what's left is small for a 0 and about half of <code>q</code> for a 1.</li>
+        <li><b>ML-KEM</b> uses a structured version (Module-LWE) with <code>n = 256</code>, <code>q = 3329</code> and 2, 3 or 4 modules. This toy uses <code>q = 97</code> and 6 unknowns: far too small to be safe.</li>
+      </ul>
+      <p class="fine">Teaching toy. It is not ML-KEM and not secure; it shows why the noise is there.</p>
+    </div>
+    <div class="stack">
+      <div class="controls controls-col">
+        <label>Noise: each error is between −E and +E. E = <output id="la-noise-out">1</output><input type="range" id="la-noise" min="0" max="30" value="1"></label>
+        <div class="btn-row"><button type="button" class="btn btn-sm" id="la-key">New key</button><button type="button" class="btn btn-sm" id="la-enc">Encrypt a bit and decrypt</button><button type="button" class="btn btn-sm" id="la-solve">Try to solve for the secret</button></div>
+      </div>
+      <pre class="term term-small" id="la-out" aria-live="polite"></pre>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="la-fail">–</b><span>of 300 random bits decrypt wrongly at this noise</span></div>
+        <div class="stat"><b id="la-eqs">–</b><span>public equations for 6 unknowns</span></div>
+        <div class="stat"><b id="la-margin">–</b><span>the noise must stay below q/4 = 24 for decryption</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>You don't need to follow the maths: you need two ideas. First, the security is a puzzle that is easy to state and believed hard to solve, even for a quantum computer. Second, it only works because of the noise: too little and it's school algebra, too much and honest users can't decrypt either.</span></li><li><b class="show">Show</b><span>Set E to 0 and press "Try to solve": 16 equations in 6 unknowns, no noise, and the solver recovers the secret instantly (the egg). Set E to 1 and try again: the equations now contradict each other, so there is no exact solution to find. Then slide E up to 10 and watch the failure count climb: honest decryption starts to fail. At 30 it fails a lot. Real schemes pick parameters so that failure is astronomically unlikely and the attack is hopelessly hard; this toy can't have both.</span></li><li><b class="ask">Ask</b><span>Why can't we just make the noise huge for safety? <em>Answer: then the legitimate decryption can't tell a 0 from a 1.</em></span></li><li><b class="tip">Check</b><span>FIPS 203 (13 August 2024), Table 2: n = 256, q = 3329, k = 2, 3, 4 for ML-KEM-512, -768 and -1024. The toy's parameters (q = 97, n = 6, 16 equations) are from the Crypto 101 lattice demo and are far below any secure size; the solver is plain Gaussian elimination modulo 97. The failure counts are measured live over 300 random bits and keys.</span></li><li><b class="next">Next</b><span>"From a puzzle to a key-exchange tool: a KEM."</span></li></ul></div>
+</section>
+
+<section class="slide" id="kem" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// THE NEW ALGORITHMS 02</p><h2>ML-KEM: key encapsulation, and what it costs</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>A KEM has three steps: <b>KeyGen</b> makes a key pair; <b>Encaps</b>(public key) gives a shared secret <i>and</i> a ciphertext; <b>Decaps</b>(secret key, ciphertext) gives the same secret back.</li>
+        <li>It replaces Diffie-Hellman's "both sides contribute" with "one side encapsulates to the other". Same result: a shared key.</li>
+        <li>NIST recommends <b>ML-KEM-768</b> as the default parameter set.</li>
+      </ul>
+      <div class="controls"><span class="mini-label">Parameter set</span><span class="seg-pick" id="km-seg" role="group" aria-label="ML-KEM parameter set"></span></div>
+      <div class="table-wrap"><table class="grid-table slim" aria-label="ML-KEM sizes in bytes">
+        <thead><tr><th></th><th>Public key</th><th>Ciphertext</th><th>Secret</th></tr></thead>
+        <tbody id="km-rows"></tbody>
+      </table></div>
+      <p class="src">SOURCES <a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf" target="_blank" rel="noopener">FIPS 203, Table 3</a> · <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">IR 8547, section 4.1.2</a></p>
+    </div>
+    <div class="stack">
+      <h3>Run the toy KEM</h3>
+      <div class="btn-row"><button type="button" class="btn btn-sm" id="km-run">KeyGen, Encaps, Decaps</button></div>
+      <pre class="term term-small" id="km-out" aria-live="polite"></pre>
+      <p class="fine">Built from the toy puzzle on the last slide: one noisy encryption per bit of a random 128-bit message. It has no chosen-ciphertext protection and is not ML-KEM.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The shape matters more than the maths. With Diffie-Hellman both sides send a public value. With a KEM, one side sends a public key and the other sends back a ciphertext, and both end up with the same secret. The public key is about the size of a small certificate: 1,184 bytes for ML-KEM-768, against 32 for X25519. That one number explains most of the deployment story.</span></li><li><b class="show">Show</b><span>Click the three parameter sets: they scale sizes and security, and map onto NIST's categories 1, 3 and 5. Then press the toy button a few times: the secrets match on both sides, and the toy's ciphertext is almost as big as the real one (that's an accident of toy parameters).</span></li><li><b class="tip">Check</b><span>Sizes in bytes from FIPS 203, Table 3: ML-KEM-512 800 / 768 (encapsulation key and ciphertext), 768: 1,184 / 1,088, 1024: 1,568 / 1,568; shared secret 32 bytes in all. The decapsulation keys are 1,632, 2,400 and 3,168. IR 8547 (October 2026) says to use ML-KEM-768 as the default parameter set and that HQC "was selected for standardization" as an alternative, with its FIPS "under development" (it also lists no other KEM plans). Security categories are NIST's, from FIPS 203. The toy KEM hashes the random message and the ciphertext into the shared secret and does no re-encryption check.</span></li><li><b class="next">Next</b><span>"Signatures: three families, with very different sizes."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sigs" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// THE NEW ALGORITHMS 03</p><h2>Signatures: three families, and one still coming</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table slim" aria-label="Signature sizes in bytes">
+        <thead><tr><th>Scheme</th><th>Public key</th><th>Signature</th></tr></thead>
+        <tbody>
+          <tr><th>ECDSA P-256 (today)</th><td>65</td><td>~72</td></tr>
+          <tr><th>RSA-2048 (today)</th><td>256</td><td>256</td></tr>
+          <tr><th>ML-DSA-44 / 65 / 87</th><td>1,312 / 1,952 / 2,592</td><td>2,420 / 3,309 / 4,627</td></tr>
+          <tr><th>SLH-DSA-128s / 128f</th><td>32</td><td>7,856 / 17,088</td></tr>
+          <tr><th>SLH-DSA-256s / 256f</th><td>64</td><td>29,792 / 49,856</td></tr>
+          <tr><th>LMS / XMSS</th><td colspan="2">stateful, hash-based: sizes depend on the tree (SP 800-208)</td></tr>
+          <tr><th>FN-DSA (Falcon)</th><td colspan="2">FIPS under development (IR 8547, October 2026)</td></tr>
+        </tbody></table></div>
+      <p class="src">SOURCES <a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf" target="_blank" rel="noopener">FIPS 204</a> · <a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.205.pdf" target="_blank" rel="noopener">FIPS 205</a> · <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">IR 8547</a></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>ML-DSA</b> (lattices, FIPS 204): the general-purpose choice. Signatures of 2 to 5 KB.</li>
+        <li><b>SLH-DSA</b> (hashes only, FIPS 205): the conservative choice, resting only on hash security, with large and slow signatures.</li>
+        <li><b>LMS and XMSS</b> (SP 800-208): hash-based and stateful. Never reuse a one-time key, so the signer must track state. Intended for things like firmware, not general use.</li>
+      </ul>
+      <h3>Which for what?</h3>
+      <div class="seg-pick" id="sg-use" role="group" aria-label="Use case"></div>
+      <div class="card" id="sg-rec" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The key point is the sizes. A classical signature is 64 to 256 bytes. The new ones are 2.4 KB to 50 KB. Where you sign rarely and verify often (firmware, certificates) that's tolerable. Where every connection carries several signatures (TLS), it's a real cost, which is the next slide.</span></li><li><b class="show">Show</b><span>Click the four use cases. Notice the answers differ: certificates follow the browsers and CAs; firmware can use the stateful schemes; archives need timestamps; constrained devices have to ask a vendor.</span></li><li><b class="tip">Check</b><span>Sizes in bytes: FIPS 204, Table 2 (ML-DSA-44: public key 1,312, signature 2,420; -65: 1,952 and 3,309; -87: 2,592 and 4,627; private keys 2,560, 4,032 and 4,896) and FIPS 205, Table 2 (public keys 32, 48 and 64 bytes; signatures 7,856, 17,088, 16,224, 35,664, 29,792 and 49,856). ECDSA's 72 bytes is the DER upper bound; a raw r||s signature is 64. RSA's 256 bytes is the 2048-bit modulus. IR 8547 describes LMS and XMSS as "not intended for general use" because of the state rule, useful for software and firmware signing, and says a FIPS for an algorithm derived from FALCON is under development. The CNSA 2.0 firmware recommendation (LMS) is from secondary summaries; NSA's own PDF wouldn't download here.</span></li><li><b class="next">Next</b><span>"What do those sizes cost in a real handshake?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sizes" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// THE NEW ALGORITHMS 04</p><h2>What the sizes cost in a TLS handshake</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls"><span class="mini-label">Preset</span><span class="seg-pick" id="sz-preset" role="group" aria-label="Handshake preset"></span></div>
+      <div class="controls">
+        <label>Key exchange <select id="sz-kex" aria-label="Key exchange"></select></label>
+        <label>Leaf key <select id="sz-leaf" aria-label="Leaf certificate key"></select></label>
+        <label>CA signatures <select id="sz-chain" aria-label="Chain signature algorithm"></select></label>
+      </div>
+      <div class="controls">
+        <label>Certificates sent <select id="sz-certs" aria-label="Certificates sent"><option>1</option><option selected>2</option><option>3</option></select></label>
+        <label>CT proofs (SCTs) <select id="sz-scts" aria-label="Signed certificate timestamps"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
+        <label>Link <select id="sz-link" aria-label="Link"></select></label>
+        <label class="check"><input type="checkbox" id="sz-plain"> also send a plain X25519 share</label>
+      </div>
+      <p class="fine">Assumed: ClientHello 300 bytes before key shares; 250 bytes of other server messages; 600 bytes of fields per certificate; the same algorithm for every signature. A simple model, not a measurement.</p>
+    </div>
+    <div class="stack">
+      <div class="stats stats-4 stats-sm">
+        <div class="stat"><b id="sz-client">–</b><span>ClientHello bytes</span></div>
+        <div class="stat"><b id="sz-server">–</b><span>server flight bytes</span></div>
+        <div class="stat"><b id="sz-sigs">–</b><span>signatures · public keys</span></div>
+        <div class="stat"><b id="sz-rtt">–</b><span>extra round trips (TCP)</span></div>
+      </div>
+      <div class="bar-wrap" aria-hidden="true"><div class="bar" id="sz-bar"><i id="sz-bar-fill"></i><u id="sz-mark-iw" title="initial TCP window"></u><u id="sz-mark-base" title="today's handshake"></u></div><div class="bar-key"><span>log scale · 1 KB to 300 KB</span><span class="k-iw">▮ initial window 14,600 B</span><span class="k-base">▮ today's handshake</span></div></div>
+      <p class="verdict" id="sz-verdict" aria-live="polite"></p>
+      <p class="src">SOURCES <a href="https://www.rfc-editor.org/rfc/rfc10024.html" target="_blank" rel="noopener">RFC 10024</a> · <a href="https://www.rfc-editor.org/rfc/rfc6928.html" target="_blank" rel="noopener">RFC 6928</a> · <a href="https://www.rfc-editor.org/rfc/rfc9000.html" target="_blank" rel="noopener">RFC 9000, 8.1 and 14.1</a> · <a href="https://blog.cloudflare.com/pq-ca-with-mtcs/" target="_blank" rel="noopener">Cloudflare</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A classical TLS handshake carries five signatures and two public keys: the leaf and intermediate certificates' signatures, two certificate-transparency proofs, and the server's own signature, plus the two keys in the chain. Swap each for a post-quantum one and the server's first flight grows from about 2 KB to over 20 KB. That crosses TCP's initial window, so it costs a round trip. Key exchange alone is a different story: the hybrid share adds about 1 KB.</span></li><li><b class="show">Show</b><span>Start on the "Today" preset, then "Hybrid key exchange only": the server flight barely moves and the ClientHello crosses the 1,500-byte packet line. Then "Hybrid + ML-DSA-44" and "-65": the server flight explodes and the extra round trip appears. Then SLH-DSA-128s. Change the link to satellite or the constrained radio to see what a round trip costs there.</span></li><li><b class="ask">Ask</b><span>Which part of the handshake would you shrink first? <em>Answer: the signatures. That is why Merkle Tree Certificates exist (slide 18).</em></span></li><li><b class="tip">Check</b><span>All sizes are real: FIPS 203, 204 and 205 tables and RFC 10024 (client share 1,216 bytes, server share 1,120 bytes). The handshake model is mine and deliberately simple: the TCP initial window is 10 segments (RFC 6928); a QUIC server may send at most three times what it has received before it has validated the client's address (RFC 9000, section 8.1), and the client's first datagram is at least 1,200 bytes (section 14.1). "Five signatures and two keys" matches Cloudflare's description of a classical handshake. The 300, 250 and 600-byte overheads are assumed round numbers; real values vary.</span></li><li><b class="next">Next</b><span>"A cautionary tale about new assumptions."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sike" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// THE NEW ALGORITHMS 05</p><h2>The lesson of SIKE: why hybrids exist</h2></header>
+  <div class="slide-body stack">
+    <ol class="timeline">
+      <li><b>By mid-2022</b><span>SIKE, built on isogenies between elliptic curves, has advanced to the fourth round of NIST's process.</span></li>
+      <li><b>July 2022</b><span>Castryck and Decru publish a key-recovery attack on SIDH, the basis of SIKE, and break the level-1 parameters.</span></li>
+      <li><b>On what</b><span>An ordinary computer: about an hour on a single core in the first version of the paper, about ten minutes in the final one.</span></li>
+      <li><b>After</b><span>The attack was published at EUROCRYPT 2023. The schemes NIST went on to standardise rest on lattices and hashes, not isogenies.</span></li>
+    </ol>
+    <div class="cols-2">
+      <ul class="rules">
+        <li><b>Nothing quantum was needed.</b> A classical break of a post-quantum candidate, found by mathematicians after it had survived years of attention.</li>
+        <li>A new hardness assumption is only as good as the analysis it has had. Standardisation is a milestone, not a proof.</li>
+      </ul>
+      <ul class="rules">
+        <li><b>Hybrids are the hedge.</b> Combine the new algorithm with a classical one: the key is safe if <i>either</i> holds. You pay some bytes and some complexity.</li>
+        <li>NIST says hybrids are allowed, add complexity, and are "typically expected to be temporary measures that lead to a second transition".</li>
+      </ul>
+    </div>
+    <p class="src">SOURCES <a href="https://eprint.iacr.org/2022/975" target="_blank" rel="noopener">Castryck and Decru, ePrint 2022/975</a> · <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">NIST IR 8547, section 3.2</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the most useful story in the talk for planners. A candidate that had passed the screening was broken in an afternoon by an ordinary laptop. It wasn't a quantum attack and it didn't touch the lattice schemes, but it's why nobody serious wants to rely on a single new assumption yet. The hybrid costs about a kilobyte, and it buys you insurance against a lattice surprise.</span></li><li><b class="ask">Ask</b><span>If hybrids are "temporary", what does that imply for your plans? <em>Answer: a second migration later. So the agility you build now is worth more than any single algorithm choice.</em></span></li><li><b class="tip">Check</b><span>The ePrint abstract (final version, last revision 15 May 2023; received 30 July 2022) says the attack breaks SIKEp434 "in about ten minutes on a single core", and calls SIKE the instantiation that "recently advanced to the fourth round of NIST's standardization effort". The one-hour figure for the first version comes from secondary summaries and a NIST pqc-forum post, so it's worded as "about an hour in the first version". Published at EUROCRYPT 2023 (per the ePrint record). IR 8547 (October 2026), section 3.2, is the source of the hybrid quotes. I did not verify the date SIKE was formally dropped from NIST's process.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why combine a classical and a post-quantum algorithm instead of switching outright?</p><details><summary>Hint</summary><p>Think of SIKE.</p></details><details class="answer"><summary>Answer</summary><p>Because the new assumptions haven't had decades of analysis. If either half holds, the session key stays safe: a break of the new algorithm doesn't expose today's traffic, and a quantum computer doesn't either. The cost is some bytes and more complexity, and NIST expects hybrids to be a temporary stage.</p></details></li>
+      <li><p>A server's first flight grows from about 2 KB to about 23 KB when you move every signature in the chain to ML-DSA-65. What breaks or slows, and what is the main fix being worked on?</p><details><summary>Hint</summary><p>The initial TCP window is 10 segments, about 14.6 KB.</p></details><details class="answer"><summary>Answer</summary><p>The flight no longer fits in the first window, so it needs an extra round trip; QUIC's anti-amplification limit and constrained links hurt too. The work is on shrinking what's sent: Merkle Tree Certificates replace most signatures with a short inclusion proof.</p></details></li>
+      <li><p>Which post-quantum algorithms are final standards today, and which are still being written?</p><details><summary>Hint</summary><p>Three FIPS were published in August 2024.</p></details><details class="answer"><summary>Answer</summary><p>Final: ML-KEM (FIPS 203), ML-DSA (FIPS 204) and SLH-DSA (FIPS 205), plus the stateful LMS and XMSS in SP 800-208. Still under development as of October 2026 per IR 8547: a FIPS for FN-DSA (Falcon) and one for HQC.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The first question is the plan's second checkpoint question. The 23 KB figure is what the size explorer gives for the ML-DSA-65 preset under its simple assumptions.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="hybrid" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// HYBRID TODAY 01</p><h2>Hybrid key exchange in TLS 1.3, live</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>X25519MLKEM768</b> (RFC 10024, code point 0x11EC): the client sends an ML-KEM-768 encapsulation key <i>and</i> an X25519 share (1,216 bytes); the server replies with a ciphertext and its X25519 share (1,120 bytes). The two secrets are joined, ML-KEM first (64 bytes), and go into the normal TLS key schedule.</li>
+        <li>The key is safe if <b>either</b> half holds.</li>
+      </ul>
+      <div class="table-wrap"><table class="grid-table slim" aria-label="Where hybrid key exchange is deployed">
+        <thead><tr><th>Where</th><th>What's documented</th></tr></thead>
+        <tbody>
+          <tr><th>Firefox</th><td>132 (29 Oct 2024): added support, "mlkem768x25519"</td></tr>
+          <tr><th>Chrome</th><td>Planned switch to ML-KEM (0x11EC) in Chrome 131</td></tr>
+          <tr><th>Apple OS 26</th><td>Advertised automatically in TLS 1.3 (URLSession, Network)</td></tr>
+          <tr><th>OpenSSL 3.5</th><td>Default key shares: X25519MLKEM768 and X25519</td></tr>
+          <tr><th>OpenSSH 10.0</th><td>Default: mlkem768x25519-sha256</td></tr>
+          <tr><th>Cloudflare</th><td>~70% of browser traffic; ~15% of origins</td></tr>
+        </tbody></table></div>
+    </div>
+    <div class="stack">
+      <div class="controls controls-col">
+        <div class="btn-row"><button type="button" class="btn btn-sm" id="hy-run">Run a hybrid handshake</button></div>
+        <label class="check"><input type="checkbox" id="hy-brokeX"> An attacker has broken X25519 (a quantum computer)</label>
+        <label class="check"><input type="checkbox" id="hy-brokeK"> An attacker has broken the lattice KEM (a SIKE-style surprise)</label>
+      </div>
+      <pre class="term term-small" id="hy-out" aria-live="polite"></pre>
+      <p class="verdict" id="hy-verdict" aria-live="polite"></p>
+      <p class="fine">Real X25519 (RFC 7748 test vectors pass) with the toy lattice KEM from slide 11 as a stand-in for ML-KEM. HKDF stands in for the TLS key schedule. Teaching code.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>This is already how most of your browser traffic works. Run the handshake: both sides derive the same key from two secrets. Now pretend the quantum half is broken by ticking the X25519 box: the attacker knows the classical secret, but not the lattice one, so their guess at the key is wrong. Tick only the lattice box: same result. Tick both: the key falls. That is the whole argument for hybrids, in one tick box.</span></li><li><b class="show">Show</b><span>Run it a few times and compare the "client key" and "server key": equal. Then use the toggles. Point at the sizes in the notes at the bottom of the terminal: 1,216 and 1,120 bytes are what the real X25519MLKEM768 would send.</span></li><li><b class="ask">Ask</b><span>Where in this picture would a downgrade attack aim? <em>Answer: at making both sides pick plain X25519. TLS 1.3 signs the handshake transcript, so a tampered group list is detected, but only if the signature itself is still trustworthy.</em></span></li><li><b class="tip">Check</b><span>RFC 10024 (August 2026, Standards Track; Kwiatkowski, Kampanakis, Westerbaan and Stebila): X25519MLKEM768 is code point 4588 (0x11EC), client share 1,216 bytes (ML-KEM-768 key 1,184 plus X25519 32), server share 1,120 (1,088 plus 32), shared secret the ML-KEM secret followed by the X25519 secret, 64 bytes; the ML-KEM share is first "for historical reasons" in the name; a failed ML-KEM decapsulation aborts the connection. Firefox: release notes for 132.0 (29 October 2024) say "Added support for a post-quantum key exchange mechanism for TLS 1.3 (mlkem768x25519)"; whether it was on by default isn't stated there. Chrome: Google's security blog (13 September 2024) says Chrome would switch from Kyber to ML-KEM in Chrome 131; I could not confirm from release notes that it shipped as described. Apple: the enterprise guide says TLS connections on iOS, iPadOS, macOS and visionOS 26 "automatically advertise support for hybrid, quantum-secure key exchange in TLS 1.3". OpenSSL: the 3.5 notes (8 April 2025) say the default groups list prefers hybrid groups and the default key shares are X25519MLKEM768 and X25519. OpenSSH: 10.0 release notes (9 April 2025) make mlkem768x25519-sha256 the default and turn off finite-field DH in sshd. Cloudflare: 29 September 2026 post.</span></li><li><b class="next">Next</b><span>"What about SSH, VPNs and the rest?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="protocols" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// HYBRID TODAY 02</p><h2>Beyond the web: what to check, by protocol</h2></header>
+  <div class="slide-body stack">
+    <div class="table-wrap"><table class="grid-table pr stack-rows" aria-label="Protocols and what to check">
+      <thead><tr><th>I run… (tick)</th><th>Status in 2026</th><th>Check</th></tr></thead>
+      <tbody id="pr-rows"></tbody>
+    </table></div>
+    <p class="verdict" id="pr-list" aria-live="polite"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The pattern is the same everywhere: the protocol team has done the hard part, and your job is versions, configuration and the things in the middle. Tick the ones you run and read your own list back.</span></li><li><b class="show">Show</b><span>Tick TLS and SSH and the checks appear on the right. The storage row is a reminder that symmetric encryption of data at rest is fine; it's how the data keys are wrapped (often RSA) that needs a plan.</span></li><li><b class="tip">Check</b><span>OpenSSH 10.0 (9 April 2025): "the hybrid post-quantum algorithm mlkem768x25519-sha256 is now used by default for key agreement", and sshd disables finite-field Diffie-Hellman by default. Cloudflare reports IPsec post-quantum encryption became generally available on 30 April 2026 (post title; details not read here), so VPN status depends on your vendor. Signal's PQXDH (2023) and its later post-quantum ratchet (2025), and Apple's iMessage PQ3 (2024), are covered in Modern Messaging Protocols; whether Signal's ratchet is now enforced for everyone isn't confirmed there either. IR 8547 says symmetric primitives at 128 bits or more are believed to meet at least Category 1, which is the basis of the storage row.</span></li><li><b class="next">Next</b><span>"The harder half: certificates and signatures."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pki" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// HYBRID TODAY 03</p><h2>Certificates: why the PKI is harder to move</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <label>CA signatures <select id="pk-alg" aria-label="Algorithm used by the CA chain"></select></label>
+        <label>Certificates <select id="pk-certs" aria-label="Certificates sent"><option>1</option><option selected>2</option><option>3</option></select></label>
+        <label>CT proofs <select id="pk-scts" aria-label="Signed certificate timestamps"><option>0</option><option>1</option><option selected>2</option><option>3</option></select></label>
+      </div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="pk-sigs">–</b><span>signatures</span></div>
+        <div class="stat"><b id="pk-keys">–</b><span>public keys</span></div>
+        <div class="stat"><b id="pk-bytes">–</b><span>bytes in the certificate chain</span></div>
+      </div>
+      <p class="verdict" id="pk-verdict" aria-live="polite"></p>
+      <ul class="rules">
+        <li><b>Many parties must move together:</b> browsers' root programmes, CAs, logs, servers, clients, and every client that is never updated.</li>
+        <li><b>A bigger signature appears five times per handshake.</b> Replacing each one is a bandwidth problem, not only a maths one.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Merkle Tree Certificates <span class="chip chip-part">proposal</span></b><span>A CA batches certificates into an append-only Merkle tree and signs only the tree head. A client checks a short inclusion proof against it. Issuance and logging are coupled. In Cloudflare's design, a handshake carries one public key, one signature and a proof under 1 KB.</span></div>
+      <ul class="rules">
+        <li>Status: an IETF working-group draft; a Chrome experiment ran with Cloudflare in 2026 (wound down in August); Cloudflare targets early 2027 for Chrome's quantum-resistant root store, under a draft policy. Google Cloud lists Merkle Tree Certificates for its own CA in 2028.</li>
+        <li>Until then: ML-DSA for authentication to origins and for internal PKI, and hybrid key exchange for confidentiality.</li>
+      </ul>
+      <p class="src">SOURCES <a href="https://blog.cloudflare.com/pq-ca-with-mtcs/" target="_blank" rel="noopener">Cloudflare, 29 Sep 2026</a> · <a href="https://blog.cloudflare.com/ml-dsa-will-have-to-do/" target="_blank" rel="noopener">Cloudflare, 9 Jul 2026</a> · <a href="https://cloud.google.com/blog/products/identity-security/pqc-in-plaintext-google-clouds-post-quantum-cryptography-roadmap" target="_blank" rel="noopener">Google Cloud, 11 Aug 2026</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Key exchange is a two-party matter inside one handshake. Certificates involve the whole web. Every client has to trust a post-quantum root before a server can use one, and browsers decide that. The size problem is real too: a chain carries five signatures. That's why the design that's getting attention changes the structure rather than just the algorithm.</span></li><li><b class="show">Show</b><span>Pick ML-DSA-44 and then ML-DSA-65 for the CA signatures: the certificate chain goes from about 1.7 KB to about 13.6 KB and then about 18.4 KB. Then SLH-DSA-128s: about 33 KB. Remember this is a model with an assumed per-certificate overhead; the signature and key sizes are the real ones.</span></li><li><b class="tip">Check</b><span>MTC details are from Cloudflare's post of 29 September 2026: a CA signs only the tree head; the handshake in the landmark-relative form sends one public key, one signature and an inclusion proof of under 1 kB; Chrome's draft policy requires at least two cosignatures; a Chrome Beta 146 experiment served 50% of traffic and wound down in August 2026; Cloudflare "targets early 2027" for Chrome's Quantum-resistant Root Store, which is governed by a draft policy, and its CA isn't trusted for MTC issuance yet. The post links two different IETF draft names (plants and transcert), so the slide says only "a working-group draft". Google Cloud's roadmap lists "Google Trust Service: Merkle Tree Certificates" under 2028 and says the certificate transition will follow IETF standardisation. Nothing here is final, so treat MTCs as a proposal. The sizes in the simulator are real; the overhead is assumed.</span></li><li><b class="next">Next</b><span>"And one place where the signature has to outlive everything: firmware."</span></li></ul></div>
+</section>
+
+<section class="slide" id="signing" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// HYBRID TODAY 04</p><h2>Long-lived signatures: code, firmware and roots of trust</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>A forged signature needs the quantum computer <i>at the time of forging</i>, but a <b>device in the field can't change its verifier</b>. If the check is in ROM, today's choice has to outlast the product.</li>
+        <li>So ask: <b>how long will this verifier be in service, and can I change it?</b></li>
+        <li>NSA's CNSA 2.0 puts software and firmware signing first (2025 to 2030) and names the stateful schemes LMS and XMSS. They need strict handling of signing state.</li>
+      </ul>
+      <p class="src">SOURCES <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">NIST IR 8547, section 2.1.1</a> · CNSA 2.0 (NSA FAQ; see notes)</p>
+    </div>
+    <div class="stack">
+      <div class="controls controls-col">
+        <label>Years the product stays in service: <output id="sn-life-out">15</output><input type="range" id="sn-life" min="1" max="30" value="15"></label>
+        <label>Years until you ship: <output id="sn-ship-out">1</output><input type="range" id="sn-ship" min="0" max="8" value="1"></label>
+        <label>Earliest plausible quantum computer: <output id="sn-crqc-out">2033</output><input type="range" id="sn-crqc" min="2028" max="2050" value="2033"></label>
+        <div class="controls"><span class="mini-label">Can the verifier be updated?</span><span class="seg-pick" id="sn-upd" role="group" aria-label="Can the verifier be updated"></span></div>
+      </div>
+      <p class="verdict" id="sn-verdict" aria-live="polite"></p>
+      <ul class="rules" id="sn-advice"></ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is the slide that justifies starting early. Key exchange can change next quarter. A boot ROM can't. Set the product lifetime to 15 years, ship in a year, and the earliest date to 2033: that device spends 9 years of its life after the earliest date, with a verifier that can't change. That's a hardware revision problem, and hardware revisions take years.</span></li><li><b class="show">Show</b><span>Set the verifier to "no", then flip it to "yes". Then shorten the lifetime to 5 years: the verdict goes green because the product retires first. Then push the earliest date out to 2045 and see what that does to the 15-year product.</span></li><li><b class="tip">Check</b><span>IR 8547 describes LMS and XMSS (SP 800-208) as hash-based, stateful and "not intended for general use but may be useful for applications like software and firmware signing"; it also lists SLH-DSA and ML-DSA as the stateless choices. CNSA 2.0's dates (software and firmware signing: support and prefer from 2025, exclusive use by 2030) and its LMS recommendation are from secondary summaries because NSA's PDFs returned HTTP 403 to automated downloads here: confirm against NSA's copy. The planner's rule is a simple illustration, not a standard.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What is the first thing your organisation should inventory?</p><details><summary>Hint</summary><p>Think about the earlier talk's order: recorded data first, long-lived signatures second.</p></details><details class="answer"><summary>Answer</summary><p>Where public-key cryptography protects data that has to stay secret for many years, in transit and at rest: key exchange in TLS, SSH and VPNs, and the RSA or elliptic-curve keys that wrap data keys. Then long-lived signatures and anything in hardware, because those take the longest to change.</p></details></li>
+      <li><p>Why is a firmware verifier in ROM the hardest case?</p><details><summary>Hint</summary><p>What can you change after the product ships?</p></details><details class="answer"><summary>Answer</summary><p>The verifier can't be updated and the product may live for 15 years or more, so the algorithm chosen at manufacture has to survive the whole life. The fix is a new hardware revision with a post-quantum-capable verifier, and that has a long lead time.</p></details></li>
+      <li><p>Your servers get hybrid TLS by default after an upgrade. What could break, and how would you find out before your users do?</p><details><summary>Hint</summary><p>A hybrid ClientHello is about 1.2 KB bigger.</p></details><details class="answer"><summary>Answer</summary><p>Older servers, load balancers, firewalls and inspection devices that can't handle a ClientHello bigger than one packet. Test with the real client stacks (Apple documents a diagnostic command and warns that some legacy servers fail on large ClientHellos), watch connection errors after the rollout, and keep a way to switch the group off while you fix the device.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The first question is the plan's third checkpoint question. The third uses Apple's published guidance: <code>nscurl --tls-diagnostics</code> on macOS Tahoe 26 reports whether a server supports X25519MLKEM768.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="inventory" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 01</p><h2>Inventory first: where is your public-key crypto?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Where to look</h3>
+      <div class="chips" id="iv-chips" role="group" aria-label="Places to look"></div>
+      <div class="detail" id="iv-detail" aria-live="polite"></div>
+    </div>
+    <div class="stack">
+      <h3>What to record for each use</h3>
+      <ul class="rules">
+        <li><b>The algorithm and key size</b>, and where it is used.</li>
+        <li><b>What it protects</b> and how long that data must stay secret.</li>
+        <li><b>Exposure:</b> internet, partner or internal.</li>
+        <li><b>How it can change:</b> a setting, a code change, a data format, or hardware and a vendor.</li>
+        <li><b>Who owns it.</b> An item without an owner doesn't get migrated.</li>
+      </ul>
+      <div class="card"><b>A format for it: CBOM</b><span>CycloneDX's Cryptography Bill of Materials describes cryptographic assets (algorithms, keys, certificates) and how they relate to software components, so inventories can be shared and checked.</span></div>
+      <p class="fine">CISA's 2024 strategy on automated discovery tools says it is unclear whether such tools can detect algorithms embedded inside software packages, such as custom code. Expect gaps: use tools <i>and</i> ask people.</p>
+      <p class="src">SOURCES <a href="https://cyclonedx.org/capabilities/cbom/" target="_blank" rel="noopener">CycloneDX CBOM</a> · <a href="https://www.cisa.gov/resources-tools/resources/strategy-migrating-automated-post-quantum-cryptography-discovery-and-inventory-tools" target="_blank" rel="noopener">CISA, 2024</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>You can't plan what you can't see. The inventory is the first deliverable, and NCSC's first milestone is exactly this: discovery by 2028. It doesn't have to be perfect, but it has to include the long-lived data and the hardware you can't easily change, and it has to name an owner for each line.</span></li><li><b class="show">Show</b><span>Click through the six places. Each one has a question to ask and a way to find the answer. The last one, data and its shelf life, is the one most inventories skip.</span></li><li><b class="ask">Ask</b><span>Where would a surprise be most likely in your organisation? <em>Answer: usually vendors and appliances, and old keys nobody owns.</em></span></li><li><b class="tip">Check</b><span>The CycloneDX page describes CBOM as a way to "discover, manage, and report on cryptographic assets in preparation for a quantum-safe future", with algorithms, keys and certificates; it doesn't say which spec version added it, so the slide doesn't either. CISA's "Strategy for Migrating to Automated Post-Quantum Cryptography Discovery and Inventory Tools" (15 August 2024, issued under OMB M-23-02) says it hasn't confirmed the full scope of detection capabilities and that it's unclear whether tools can detect embedded algorithms in software packages. NCSC's 2028 milestone is from its 20 March 2025 page.</span></li><li><b class="next">Next</b><span>"With an inventory, you can put things in order."</span></li></ul></div>
+</section>
+
+<section class="slide" id="triage" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 02</p><h2>Triage: what do you migrate first?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <ol class="triage" id="tr-list" aria-label="Systems in your order"></ol>
+    <div class="stack">
+      <p class="note">An invented estate of twelve systems. Put them in the order you would migrate them, most urgent first.</p>
+      <div class="btn-row"><button type="button" class="btn btn-sm" id="tr-compare">Compare with the model</button><button type="button" class="btn btn-ghost btn-sm" id="tr-shuffle">Shuffle</button><button type="button" class="btn btn-ghost btn-sm" id="tr-reset">Model order</button></div>
+      <ul class="rules">
+        <li><b>The model's score</b> = (years it must stay secret or trusted + years to change) × a weight: 1 internet-exposed, 0.75 partner, 0.4 internal, 0.6 signatures.</li>
+      </ul>
+      <pre class="term term-small" id="tr-out" aria-live="polite"></pre>
+      <p class="fine">A model to argue with, not a standard.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Give people two minutes to order the list, in pairs. There's no single right answer: it depends on what you value. Then press compare: it shows the model's order, each item's score, and how far your order is from it. The point isn't to match; it's to see which assumption made you disagree.</span></li><li><b class="show">Show</b><span>Press "Compare" without moving anything first (the list starts shuffled), then "Model order" to see the model's own ranking. Look at the top: long-lived, hard-to-change key exchange (backups, vendor-run HR data, site-to-site VPN). The bottom: short-lived internal sessions.</span></li><li><b class="ask">Ask</b><span>The single sign-on tokens are signatures. Why are they low? <em>Answer: they last an hour; the keys matter before the computer arrives, but there's nothing to harvest, and changing them is a config-and-library job.</em></span></li><li><b class="tip">Check</b><span>The estate, scores and rationale are invented for illustration. The weights (1, 0.75, 0.4, 0.6) and the migration-years table (0.5, 1.5, 3, 5, 8 years for difficulty 1 to 5) are my own simple choices, in the spirit of Mosca's inequality and NIST's statement that data with long-term confidentiality needs warrants the earliest transitions (IR 8547, October 2026).</span></li><li><b class="next">Next</b><span>"Can you actually swap an algorithm? That's agility."</span></li></ul></div>
+</section>
+
+<section class="slide" id="agility" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 03</p><h2>Crypto agility: can you swap it?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="note" id="ag-count">Snippet 1 of 8</p>
+      <pre class="snippet" id="ag-snippet" aria-label="Code or configuration snippet"></pre>
+      <p class="mini-label">What would it take to move this to a post-quantum algorithm?</p>
+      <div class="seg-col" id="ag-opts" role="group" aria-label="Choose what it would take"></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="ag-feed" aria-live="polite"></p>
+      <div class="btn-row"><button type="button" class="btn btn-sm" id="ag-next" hidden>Next snippet</button></div>
+      <ul class="rules">
+        <li><b>Agile</b> means the algorithm is a <i>choice</i>, not a hard-coded fact: named in one place, stored beside the data, with room for new sizes.</li>
+        <li>You won't pick the last algorithm you ever use. <b>Hybrids are temporary</b> and a second transition is expected, so agility pays back twice.</li>
+        <li>Fix the cheap things now: wrap calls behind one interface, store algorithm identifiers and versions with every key and blob, leave room for large fields.</li>
+      </ul>
+      <p class="stat-line" id="ag-score" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Eight snippets, each from a real kind of thing: a config line, a hard-coded call, a database column, a boot ROM, a self-describing blob, a fixed-size field, an HSM, a JWT library. For each, say what it would take to swap the algorithm. The answers are often not about cryptography at all.</span></li><li><b class="show">Show</b><span>Answer the first two as a group, then let people call out the rest. The "perfect score" egg appears at 8 out of 8.</span></li><li><b class="ask">Ask</b><span>Which of these would you fix this quarter, with no budget? <em>Answer: the call sites (wrap them), the self-describing blob habit, and asking the HSM vendor for a roadmap in writing.</em></span></li><li><b class="tip">Check</b><span>The snippets are invented but typical. The statement that hybrids are expected to be temporary and lead to a second transition is NIST's (IR 8547, section 3.2). The JWT answer refers to the earlier talks' advice to pin algorithms; support for post-quantum algorithms in JOSE and COSE was still at the draft stage in the sources I found, so the slide says only that it needs library support.</span></li><li><b class="next">Next</b><span>"Then the places where bytes and hardware get in the way."</span></li></ul></div>
+</section>
+
+<section class="slide" id="constraints" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 04</p><h2>Where the bytes and the hardware won't fit</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-3">
+      <div class="card"><b>HSMs, smart cards and TPMs</b><span>Fixed firmware, limited memory, long certification cycles.</span><i class="ask-line">Ask the vendor: which post-quantum algorithms, which firmware, which date?</i></div>
+      <div class="card"><b>Embedded and constrained devices</b><span>Small radio frames, small flash, no field updates. A 7,856-byte signature is many frames.</span><i class="ask-line">Ask: can the verifier be updated? What's the frame budget?</i></div>
+      <div class="card"><b>Fixed-size fields and databases</b><span>A 65-byte key slot, a 128-character column, a QR code, a token in a header.</span><i class="ask-line">Ask: what is the largest object this field can ever hold?</i></div>
+      <div class="card"><b>Packets, MTUs and middleboxes</b><span>A hybrid ClientHello no longer fits one packet. Anything that parses or rewrites TLS has to cope.</span><i class="ask-line">Ask: what sits between client and server, and has it been tested?</i></div>
+      <div class="card"><b>Dependencies and vendors</b><span>Your roadmap is the slowest dependency's roadmap: libraries, SaaS, appliances, cloud services.</span><i class="ask-line">Ask: put post-quantum support and a date in the contract.</i></div>
+      <div class="card"><b>Validation and compliance</b><span>FIPS 140 validations lag releases. IR 8547 says a hybrid can be validated if one input is an approved scheme.</span><i class="ask-line">Ask: which modules do we need validated, and when?</i></div>
+    </div>
+    <p class="src">SOURCES <a href="https://nvlpubs.nist.gov/nistpubs/ir/2026/NIST.IR.8547.pdf" target="_blank" rel="noopener">NIST IR 8547, sections 3.2 and 4.1.2</a> · <a href="https://support.apple.com/en-us/122756" target="_blank" rel="noopener">Apple: quantum-secure TLS</a> · <a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.205.pdf" target="_blank" rel="noopener">FIPS 205</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>These are the cases that decide your timeline. None of them are about the maths. For each card, the useful move is the question at the bottom: it turns a vague worry into a request that someone can answer.</span></li><li><b class="show">Show</b><span>Read the six questions aloud and ask for a show of hands on how many have an answer today.</span></li><li><b class="tip">Check</b><span>IR 8547 (October 2026) says that as long as at least one input to an approved composite key-establishment technique comes from an approved scheme, the combination can be FIPS 140-validated even if other inputs are disallowed. The "7,856 bytes" is SLH-DSA-128s (FIPS 205); frame sizes depend on the radio (IEEE 802.15.4 frames are small, as the earlier size explorer's constrained link assumes). The rest are general planning observations, not sourced figures.</span></li><li><b class="next">Next</b><span>"Testing, because the first failure won't be a cryptographic one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="testing" data-part="4" data-num="25">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 05</p><h2>Testing: bigger handshakes, odd middleboxes</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>How big is your ClientHello now?</h3>
+      <div class="controls">
+        <label>Before key shares (bytes) <input type="number" id="ts-base" class="mono" min="100" max="1500" step="10" value="300"></label>
+        <label>Link MTU <select id="ts-mtu" aria-label="Link MTU"><option value="1500" selected>1500</option><option value="1400">1400</option><option value="1280">1280</option></select></label>
+        <label class="check"><input type="checkbox" id="ts-plain"> also offers a plain X25519 share</label>
+      </div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="ts-size">–</b><span>ClientHello bytes</span></div>
+        <div class="stat"><b id="ts-pkts">–</b><span>TCP packets for it</span></div>
+        <div class="stat"><b id="ts-before">–</b><span id="ts-before-note">before hybrid</span></div>
+      </div>
+      <p class="verdict" id="ts-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3>A test plan</h3>
+      <ol class="rules">
+        <li><b>Old servers and load balancers</b> that can't read a ClientHello bigger than one packet: Apple documents connection failures and a diagnostic, <code>nscurl --tls-diagnostics</code>.</li>
+        <li><b>Inspection devices</b> that parse or rewrite TLS: IDS, proxies, firewalls.</li>
+        <li><b>QUIC and HTTP/3 paths</b>, where the ClientHello now spans two Initial packets.</li>
+        <li><b>Load and latency:</b> bigger handshakes and more CPU per connection, on your own hardware.</li>
+        <li><b>Fallback:</b> what happens when a group isn't supported, and whether it's logged.</li>
+        <li><b>Monitoring:</b> record the negotiated group so you can see the migration.</li>
+      </ol>
+      <p class="src">SOURCES <a href="https://support.apple.com/en-us/122756" target="_blank" rel="noopener">Apple support 122756</a> · <a href="https://www.rfc-editor.org/rfc/rfc9000.html" target="_blank" rel="noopener">RFC 9000, section 14.1</a> · <a href="https://www.rfc-editor.org/rfc/rfc10024.html" target="_blank" rel="noopener">RFC 10024</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The first failures are rarely cryptographic. A hybrid ClientHello carries a 1,184-byte ML-KEM key plus an X25519 share, so it grows by about 1.2 KB and usually no longer fits in one packet. Some software was written assuming it always would. The fix is to find those before your users do, not to turn the feature off.</span></li><li><b class="show">Show</b><span>Leave the defaults (a 300-byte base): the ClientHello is 1,520 bytes, over one 1,500-byte packet. Tick the plain-share box: it goes to 1,556. Lower the MTU to 1,280 and see more packets. The "before" figure is what the same hello looked like with only X25519.</span></li><li><b class="tip">Check</b><span>Apple's support page (122756) says that on iOS, iPadOS, macOS Tahoe and visionOS 26, TLS connections automatically advertise hybrid key exchange; that devices may fail to connect to some legacy servers whose TLS implementation "fails to read large ClientHello messages"; that you can check a server with <code>nscurl --tls-diagnostics</code> on macOS Tahoe 26; and it points to an external resource (tldr.fail) for failures. It gives no byte size. The 300-byte base and 60 bytes of headers per packet are my round assumptions; real hellos vary with extensions. RFC 9000 requires client Initial datagrams of at least 1,200 bytes. RFC 10024: a failed ML-KEM decapsulation aborts the connection.</span></li><li><b class="next">Next</b><span>"Put it together: a roadmap you can finish."</span></li></ul></div>
+</section>
+
+<section class="slide" id="plan" data-part="4" data-num="26">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 06</p><h2>A roadmap you can finish</h2></header>
+  <div class="slide-body stack">
+    <div class="controls"><span class="mini-label">Deadline set</span><span class="seg-pick" id="pl-regime" role="group" aria-label="Which deadlines to plan against"></span></div>
+    <div class="controls" id="pl-custom" hidden>
+      <label>Plan done by <input type="number" id="cu-plan" class="mono" min="2026" max="2045" value="2027"></label>
+      <label>Key exchange by <input type="number" id="cu-kex" class="mono" min="2026" max="2045" value="2030"></label>
+      <label>Signatures by <input type="number" id="cu-sigs" class="mono" min="2026" max="2045" value="2032"></label>
+      <label>Everything by <input type="number" id="cu-all" class="mono" min="2026" max="2045" value="2035"></label>
+    </div>
+    <div class="table-wrap"><table class="grid-table plan stack-rows" aria-label="Roadmap phases">
+      <thead><tr><th>Done</th><th>Phase</th><th>Owner</th><th>Finish in</th><th>Limit</th><th>Status</th></tr></thead>
+      <tbody id="pl-body"></tbody>
+    </table></div>
+    <p class="verdict" id="pl-sum" aria-live="polite"></p>
+    <p class="fine">Your answers are saved in this browser (localStorage), not sent anywhere.</p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Seven phases, an owner for each, and an end year for each. Pick the set of deadlines that applies to you (or enter your own), and the table shows which phases miss them. The one lesson: certificates, firmware and vendors have the longest lead times, so they start first, not last.</span></li><li><b class="show">Show</b><span>Start on "UK: NCSC": all green with the default dates. Switch to "US federal, high-impact": still green, but only just: certificates and signing finish in 2031, exactly the limit. Switch to "EU": discovery and planning miss 31 December 2026, and certificates miss 2030. "National security systems" misses on signatures (2030). Then edit the years and ticks, reload the page, and see them stay.</span></li><li><b class="tip">Check</b><span>Deadlines are the ones on slide 8 (NIST IR 8547 final, quoting EO 14412 and OMB M-26-15; NCSC, 20 March 2025; EU roadmap, June 2025; CNSA 2.0 from secondary summaries; the private-company row is an assumed set of milestone years). The phases and default dates are an illustrative plan, not a standard. In the US-federal set no "plan done" deadline is stated by NIST, so those rows show "no stated deadline". For national security systems, the key-exchange year is CNSA 2.0's 2033 for browsers, servers and cloud and the signature year is 2030 for software and firmware signing.</span></li><li><b class="next">Next</b><span>"Before questions: a last check on the claims you'll hear."</span></li></ul></div>
+</section>
+
+<section class="slide" id="claims" data-part="4" data-num="27">
+  <header class="slide-head"><p class="eyebrow">// PLANNING A MIGRATION 07</p><h2>Hype and reality: true, false, or it depends?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="note" id="cl-count">Claim 1 of 8</p>
+      <p class="claim" id="cl-claim"></p>
+      <div class="seg-pick" id="cl-btns" role="group" aria-label="Your verdict"></div>
+      <div class="btn-row"><button type="button" class="btn btn-sm" id="cl-next" hidden>Next claim</button></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="cl-feed" aria-live="polite"></p>
+      <ul class="rules">
+        <li>Hype runs in <b>both</b> directions: "it's all about to break" and "it's all fine".</li>
+        <li>The calm position: <b>public-key crypto is the target, there's no date, and the work is mostly inventory, key exchange first, and the long tail</b>.</li>
+      </ul>
+      <p class="stat-line" id="cl-score" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Eight claims you'll hear in meetings. Vote, then reveal. Each answer points back to a slide and a source.</span></li><li><b class="show">Show</b><span>Take votes by show of hands before each reveal. The hybrid claim is the "it depends" one on purpose.</span></li><li><b class="tip">Check</b><span>Each answer's source is on an earlier slide: IR 8547 for the symmetric statement, harvest-now-decrypt-later, hybrids and FN-DSA status; Cloudflare's 29 September 2026 post and Apple's guide for deployment; the GRI page for the survey ranges; Cloudflare's 9 July 2026 post for "ML-DSA will have to do". The "wait for better signatures" answer is a judgement, labelled as such.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="28">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Bring a system you're not sure how to classify, or a vendor answer that sounded vague.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The planners, the size explorer and the roadmap stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../crypto-101/">Crypto 101</a><span>The lattice toy and the maths this talk builds on.</span></li>
+        <li><a href="../pki-in-depth/">Public Key Infrastructure in Depth</a><span>Certificates, chains and the 47-day schedule.</span></li>
+        <li><a href="../cryptographic-failures/">Case Studies in Cryptographic Failures</a><span>Why hedges and agility matter.</span></li>
+        <li><a href="../modern-messaging/">Modern Messaging Protocols</a><span>Harvest-now-decrypt-later and a hybrid handshake in a messenger.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The demos run on invented data in your browser and nothing you type is sent anywhere. The lattice KEM is a toy and not ML-KEM; X25519 is real but not constant-time. Use a vetted library. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. If there's time, ask each person for the one item in their own inventory that they expect to be hardest to change, and why.</span></li><li><b class="tip">Check</b><span>Still open as of 11 November 2026, and worth re-checking before you present: whether Chrome shipped X25519MLKEM768 as Google's September 2024 post described (Chrome's 131 release notes don't mention it) and Firefox's default status; the CNSA 2.0 dates (NSA's PDFs still returned 403 on 11 November; secondary summaries agree on 2030 for signing and 2033 for browsers, servers and cloud); the exact current IETF draft name for Merkle Tree Certificates; FIPS 206 (FN-DSA) and the HQC FIPS, both "under development" per IR 8547; and the Global Risk Institute survey figures, taken from its page. Cloudflare's usage figures change month to month.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="pqc.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
