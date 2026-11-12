@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hashing Beyond Passwords</title>
+<meta name="description" content="Hashing Beyond Passwords: how hashes name content in Git and containers, how Merkle trees prove things about huge logs, and how signatures and transparency keep downloads honest. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/hashing-beyond-passwords/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Hashing Beyond Passwords">
+<meta property="og:description" content="Git, container digests, Certificate Transparency and signed releases all run on hashes. Build a mini Git, a Merkle tree and an inclusion proof in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/hashing-beyond-passwords/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/hashing-beyond-passwords/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Hashing Beyond Passwords in neon, beside a terminal that prints the SHA-256 hash and Git object ID of whatever you type.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M16 5v7M16 12L8 20M16 12l8 8' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='5' r='3' fill='%23ff2e88'/%3E%3Ccircle cx='8' cy='23' r='3' fill='%23ff2e88'/%3E%3Ccircle cx='24' cy='23' r='3' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "hashing-beyond-passwords", "title": "Hashing Beyond Passwords", "footer": "HASHING", "subtitle": "DEVELOPER TRACK · 09",
+  "parts": [{ "name": "Content addressing", "minutes": 20 }, { "name": "Merkle trees", "minutes": 24 }, { "name": "Keeping downloads honest", "minutes": 28 }, { "name": "Choosing a hash", "minutes": 13 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">HASHING<span>BEYOND</span></a>
+  <div class="scroll-parts">
+    <a href="#naming" data-part="1"><b>01</b>Content addressing</a>
+    <a href="#merkle" data-part="2"><b>02</b>Merkle trees</a>
+    <a href="#checksum" data-part="3"><b>03</b>Honest downloads</a>
+    <a href="#choose" data-part="4"><b>04</b>Choosing a hash</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 09 · FOR DEVELOPERS AND CURIOUS ENGINEERS · INTERMEDIATE</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Hashing Beyond Passwords">Hashing Beyond Passwords</span></h1>
+      <p class="lede">The humble hash quietly runs Git, container images, Certificate Transparency and signed software updates. Here's how, and why it keeps your downloads honest.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/hashing-beyond-passwords/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ hash "<input id="hero-in" value="hello" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes with two checkpoints. You met hashing in Crypto 101 and again for passwords. This talk is about the other 90% of what hashes do, and almost all of it is about one idea: a hash is a fingerprint, so you can name data by what it is.</span></li><li><b class="show">Show</b><span>The terminal prints the SHA-256 hash of whatever you type, and the ID that Git would give a file with that text in it. Add a newline in your head: Git's blob ID covers a header too, so the two hashes differ even for the same text.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try an empty input, abc, password, the quick brown fox, or shattered; in the fingerprint demo, change one character; in the mini Git, edit the newest commit, flip to SHA-256, or put the original text back; in the Merkle builder, try one leaf, or empty it; on the inclusion slide, look at every one of the eight proofs; in the domain-separation demo, turn the prefixes off; in the log demo, rewrite history and ask for a proof; in the download demo, try the broken-into website, or the stolen key; in the signing walk-through, reach the last step; in the build demo, switch on all three fixes; in the pin checker, load the all-pinned preset; in the hash chooser, pick the password job; and tick all eight boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#naming"><small>PART 1 · 20 MIN</small><b>Content addressing</b></a><span>Naming data by its fingerprint</span><span>Git under the hood</span><span>From SHA-1 to SHA-256</span></li>
+      <li><a href="#merkle"><small>PART 2 · 24 MIN</small><b>Merkle trees</b></a><span>Building one</span><span>Inclusion proofs</span><span>Consistency proofs</span></li>
+      <li><a href="#checksum"><small>PART 3 · 28 MIN</small><b>Keeping downloads honest</b></a><span>Checksums vs signatures</span><span>Signing, logs and provenance</span><span>Pinning by digest</span></li>
+      <li><a href="#choose"><small>PART 4 · 13 MIN</small><b>Choosing a hash</b></a><span>Which hash for which job</span><span>A checklist to take home</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, content addressing: using the hash as the name, which is how Git works. Then the Merkle tree, which lets you prove one item belongs to a huge collection with a handful of hashes. Then the part that matters to anyone who installs software: what a checksum really proves, what a signature adds, and how a public log keeps even the signers honest. Last, a simple way to pick the right hash for a job.</span></li><li><b class="next">Next</b><span>"Where do hashes hide?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>A hash is a name you can check</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stat-row stat-row-3">
+        <div class="stat"><b>2017</b><span>the year the first practical SHA-1 collision was published (SHAttered).</span></div>
+        <div class="stat"><b>30</b><span>hashes are enough to prove one entry is in a log of a billion.</span></div>
+        <div class="stat"><b>10 min</b><span>is how long a Sigstore signing certificate stays valid.</span></div>
+      </div>
+      <ul class="rules">
+        <li>A good hash is a <b>fingerprint</b>: same input, same output, and no known way to make two inputs share one.</li>
+        <li>So if you know the right fingerprint, you can <b>check</b> the content. The whole game is <b>who gave you the fingerprint</b>.</li>
+        <li>Three jobs built on that: <b>naming</b> data, <b>proving</b> things about big collections, and <b>verifying</b> what you download.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://shattered.io/" target="_blank" rel="noopener">shattered.io</a> · <a href="https://www.rfc-editor.org/rfc/rfc9162.html" target="_blank" rel="noopener">RFC 9162</a> · <a href="https://docs.sigstore.dev/certificate_authority/overview/" target="_blank" rel="noopener">Sigstore: certificate authority</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Git · every object has a hash for a name</b><span>Files, folders, commits and tags are stored under the hash of their content. The commit ID is a fingerprint of the whole history behind it.</span></div>
+      <div class="card"><b>Containers and packages · digests and lock files</b><span>A container image digest, an npm lock file's <code>integrity</code> value and Python's <code>--hash</code> all pin exact bytes, not a version label.</span></div>
+      <div class="card"><b>Certificates and releases · public, hash-based logs</b><span>Certificate Transparency, Go's checksum database and Sigstore's log all use Merkle trees so nobody can quietly rewrite the past.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>You probably think of hashes as the thing that stores passwords. That's one job, and a special one: there you want the hash to be slow. Everywhere else you want it fast and you want it to be a fingerprint. The talk is about the fingerprint jobs.</span></li><li><b class="tip">Tip</b><span>SHAttered (23 February 2017, CWI Amsterdam and Google): the first SHA-1 collision, about nine quintillion SHA-1 computations, roughly 6,500 CPU-years and 110 GPU-years of work (from shattered.io). The proof size is ceil(log2 n): a log with a billion entries needs 30 hashes (RFC 9162 gives the proof size as at most ceil(log2 n) nodes). Sigstore's certificate authority page says Fulcio certificates are valid for 10 minutes.</span></li><li><b class="show">Check</b><span>The "10 minutes" is the figure on Sigstore's documentation page read on 11 November 2026; the public-good instance's settings could change, so read the page again before presenting.</span></li><li><b class="next">Next</b><span>"Part 1: using the hash as the name."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="naming" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// CONTENT ADDRESSING 01</p><h2>Name it by what it is</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Edit the message, or change one character, and watch the fingerprint.</p>
+      <div class="controls">
+        <label class="grow">Message<input id="fp-in" class="mono" value="Pay Bob $100" spellcheck="false" autocomplete="off"></label>
+        <button type="button" class="btn btn-sm" id="fp-flip">Change one character</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="fp-reset">Reset</button>
+      </div>
+      <pre class="term fp-out" id="fp-out"></pre>
+      <p class="verdict" id="fp-verdict"></p>
+      <p class="comment" id="fp-note"></p>
+    </div>
+    <div class="stack">
+      <h3>Where a hash is the name</h3>
+      <table class="grid-table nm-table">
+        <thead><tr><th>Where</th><th>The name looks like</th></tr></thead>
+        <tbody>
+          <tr><th>Git</th><td><code>commit 9fceb02…</code></td></tr>
+          <tr><th>Container image</th><td><code>image@sha256:3f1a…</code></td></tr>
+          <tr><th>npm lock file</th><td><code>"integrity": "sha512-…"</code></td></tr>
+          <tr><th>Python</th><td><code>--hash=sha256:…</code></td></tr>
+          <tr><th>Go modules</th><td><code>h1:… in go.sum</code></td></tr>
+        </tbody>
+      </table>
+      <div class="card"><b>The two rules that make it work</b><span>Change any byte and the name changes (try it on the left). And nobody can make a different file with the same name. A version label like <code>1.4.2</code> or a tag like <code>latest</code> promises neither.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Normal names are labels: someone chooses them, and someone can move them. A content address is computed from the bytes, so it can't point at anything else. Type a different message: about half of the 256 bits flip every time, however small the change. That's the avalanche effect, and it's what makes the hash useful as a fingerprint.</span></li><li><b class="ask">Ask</b><span>If I tell you a package's name and version, do you know exactly which bytes you'll get? <em>Answer: no, only if the registry never changes it. A hash is the only name that guarantees the bytes.</em></span></li><li><b class="tip">Tip</b><span>Sources: Docker's digest page (tags are mutable, digests are immutable); npm's package-lock docs (the <code>integrity</code> field is a Subresource Integrity string, sha512 or sha1); pip's secure-installs page (<code>--hash</code> pins an exact file, and using it on one requirement turns hash-checking on for all). The Go row comes from the Go blog's checksum-database post (go.sum records hashes of module versions).</span></li><li><b class="show">Check</b><span>The Docker digest page doesn't say what exactly is hashed; per the OCI image specification the digest of an image is the SHA-256 of its manifest, which lists the layers by their own digests. Confirm against the spec if you say it out loud.</span></li><li><b class="next">Next</b><span>"The best-known example is Git, so let's build one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="minigit" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// CONTENT ADDRESSING 02</p><h2>Git under the hood: a mini Git</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="mg-chain" id="mg-chain" aria-live="polite"></div>
+      <p class="mg-count" id="mg-count"></p>
+      <p class="comment" id="mg-note"></p>
+    </div>
+    <div class="stack">
+      <span class="lr-label">1 · Edit the README of commit…</span>
+      <div class="seg-pick" role="group" aria-label="Which commit to edit" id="mg-which">
+        <button type="button" data-c="0" aria-pressed="true">Commit 1 (oldest)</button>
+        <button type="button" data-c="1">Commit 2</button>
+        <button type="button" data-c="2">Commit 3 (newest)</button>
+      </div>
+      <textarea id="mg-text" rows="3" spellcheck="false" aria-label="README.md as it is in that commit"></textarea>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="mg-flip">Flip one byte</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="mg-reset">Put it back</button>
+      </div>
+      <span class="lr-label">2 · Hash format</span>
+      <div class="seg-pick" role="group" aria-label="Git object format" id="mg-algo">
+        <button type="button" data-a="sha1" aria-pressed="true">SHA-1 (Git's default)</button>
+        <button type="button" data-a="sha256">SHA-256</button>
+      </div>
+      <p class="m mg-how">Each object is named by the hash of <code>type size NUL content</code>. A file is a <b>blob</b>, a folder a <b>tree</b> of names and IDs, and a <b>commit</b> points at one tree and its <b>parent</b>.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>This is real Git's format, written from scratch, and I checked its IDs against the real git program. A blob's name is the hash of its content with a small header. A tree lists names and the IDs of what they point to. A commit names one tree and one parent. Now edit the README of the oldest commit and look at what turns pink: the blob, the tree, that commit, and then every commit after it, because each one holds its parent's ID inside it. Trees and files of the later commits stay the same: they never mention the parent. Now edit the newest commit instead: only that one changes. That's why you can't change history quietly: everyone who holds the old tip ID can tell.</span></li><li><b class="ask">Ask</b><span>What does a force-push really do, then? <em>Answer: it makes new commit IDs from the changed point onward, and moves a branch label to them. The old commits still exist until they're cleaned up, and everyone else's copy has to be fixed.</em></span></li><li><b class="tip">Tip</b><span>Format: Git's hash-function-transition document says an object's name is the hash of its type, length, a NUL byte and its content, and that a SHA-256 repository names objects with SHA-256 throughout (trees hold raw 32-byte IDs). The demo's timestamps and author are fixed so every run gives the same IDs. Tested against Git 2.56.0: the commit, tree and blob IDs for a three-commit history matched in both object formats.</span></li><li><b class="show">Show</b><span>Flip to SHA-256 and the IDs get longer (64 hex characters instead of 40); everything else behaves the same. Real Git does this for a repository created with <code>git init --object-format=sha256</code>.</span></li><li><b class="next">Next</b><span>"So what's the plan for SHA-1?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="gitsha" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CONTENT ADDRESSING 03</p><h2>Git's slow move from SHA-1 to SHA-256</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls"><label class="grow">File content (a newline is added)<input id="g2-in" class="mono" value="hello" spellcheck="false" autocomplete="off"></label></div>
+      <pre class="term g2-out" id="g2-out"></pre>
+      <div class="card"><b>Same file, two names</b><span>On Git 2.56.0, <code>printf 'hello\n' | git hash-object --stdin</code> printed the SHA-1 form above. In a repository made with <code>--object-format=sha256</code> it printed the SHA-256 form.</span></div>
+      <p class="src">Sources: <a href="https://git-scm.com/docs/hash-function-transition" target="_blank" rel="noopener">Git: hash function transition</a> · <a href="https://git-scm.com/docs/BreakingChanges" target="_blank" rel="noopener">Git: breaking changes</a> · <a href="https://shattered.io/" target="_blank" rel="noopener">shattered.io</a></p>
+    </div>
+    <div class="stack">
+      <ol class="tl">
+        <li><b>2017</b><span>SHAttered: a real SHA-1 collision. Git adds a collision-detecting SHA-1 (Git 2.13).</span></li>
+        <li><b>2018</b><span>The project picks SHA-256 as the successor.</span></li>
+        <li><b>2020</b><span>Git 2.29 ships SHA-256 repositories, marked experimental, with no interoperability yet.</span></li>
+        <li><b>Since</b><span>Work on a compatibility mode that maps between SHA-1 and SHA-256 names.</span></li>
+        <li><b>Git 3.0</b><span>The plan is SHA-256 for new repositories. <b>No release date.</b> The switch waits until libraries and forges are ready; no plan to drop SHA-1 repositories.</span></li>
+      </ol>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>SHA-1 is broken for collisions: researchers made two different files with the same SHA-1 in 2017. Git didn't panic, for two reasons. Git's hashing isn't a signature: nobody has found a way to swap content in a repository someone already trusts. And Git added a check that detects the known attack patterns. But the direction is clear, and the project has been moving to SHA-256 for years, carefully, because everything that touches a repository has to understand the new IDs: forges, CI, tools, libraries.</span></li><li><b class="tip">Tip</b><span>What I read: Git's BreakingChanges page says the default for new repositories will change from sha1 to sha256 in Git 3.0, "There is no planned release date for this breaking version yet", the change waits for the ecosystem ("popular Git libraries, applications and forges"), and "There is no plan to deprecate the sha1 object format at this point in time". The hash-function-transition document describes the compatibility mode (an SHA-256 repository stores a mapping to SHA-1 names) and says SHA-256 repositories can't be read by older Git, and, until the protocol gains SHA-256 support, SHA-256 storage on public-facing servers is "strongly discouraged". Git 2.13's release notes say the collision-detecting SHA-1 by Stevens and Shumow was integrated and made the default. Git 2.29's notes call SHA-256 support experimental, with no interoperability yet.</span></li><li><b class="show">Check</b><span>Several blog posts give a date for Git 3.0 (April 2027 appears); Git's own page says there isn't one, so the slide follows Git. I didn't verify the status of SHA-256 support on GitHub or other forges: look before telling anyone they can use it for hosted repositories. "Since" row (compatibility mode work) is from the transition document plus Git 2.52's release notes, which list "the beginning of SHA1-SHA256 interoperability work" and describe the compatObjectFormat extension as unfinished.</span></li><li><b class="next">Next</b><span>Checkpoint 1.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why does changing an old commit change the ID of every commit after it?</p><details><summary>Hint</summary><p>What does each commit contain besides your files?</p></details><details class="answer"><summary>Answer</summary><p>Each commit includes its parent's ID, and its own ID is the hash of all of that. Change the old one and its ID changes, so the next commit's content changes, so its ID changes, and so on up to the tip. Anyone holding the old tip ID can see that history was rewritten.</p></details></li>
+      <li><p>Two people on different continents both commit the same file contents. What do they share, without ever talking?</p><details><summary>Hint</summary><p>What is a blob's name computed from?</p></details><details class="answer"><summary>Answer</summary><p>The same blob ID. The name depends only on the content (and the object type), so identical content gets the same name everywhere. That's what makes deduplication and cheap comparison possible.</p></details></li>
+      <li><p>SHA-1 has a known collision attack. Why isn't every Git repository broken, and what should change over time?</p><details><summary>Hint</summary><p>What would an attacker need to do to hurt a repository you already trust?</p></details><details class="answer"><summary>Answer</summary><p>A collision lets someone create two files up front that share an ID. It doesn't let them replace a file in a repository that already exists, and Git detects the known attack patterns. Still, the safer long-term answer is a stronger hash, which is why SHA-256 repositories exist and are planned to become the default for new repositories.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="show">Check</b><span>Question 3's claim that a collision doesn't let an attacker replace a file in an existing repository is the standard second-preimage versus collision distinction: nobody has published a second-preimage attack on SHA-1. Keep the answer to that.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="merkle" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// MERKLE TREES 01</p><h2>Building a tree from leaves to root</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="mk-wrap"><div class="mk-tree" id="mk-tree" aria-live="polite"></div></div>
+      <p class="verdict y" id="mk-root"></p>
+      <p class="comment" id="mk-note"></p>
+    </div>
+    <div class="stack">
+      <span class="lr-label">Leaves: one per line (up to 8)</span>
+      <textarea id="mk-in" rows="6" spellcheck="false" aria-label="Leaves, one per line"></textarea>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="mk-reset">Reset</button></div>
+      <ul class="rules">
+        <li>Hash each item to make a <b>leaf</b>. Hash pairs of hashes to make a <b>parent</b>. Repeat to one <b>root</b>.</li>
+        <li>Change any leaf and the hashes <b>on its path to the root</b> change (pink). The rest stay put.</li>
+        <li>The root is a <b>fingerprint of the whole set</b>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Hash every item. Then hash each pair of hashes, and keep going until there's one hash. That's a Merkle tree, and the top hash is the root. Edit one line and notice that only the hashes on the way up change. That property is what's useful: if you know the root, any change anywhere changes it. With five items the tree isn't balanced, and that's fine: the rule is that the left side takes the largest power of two that fits (four here), and the rest goes right.</span></li><li><b class="tip">Tip</b><span>This follows RFC 9162's tree definition (also used by RFC 6962 for Certificate Transparency): a leaf hash is HASH(0x00 || data), an inner node is HASH(0x01 || left || right), and for n entries the left subtree takes the largest power of two smaller than n. Boxes show the first six hex characters of each SHA-256. The empty tree is the hash of the empty string. Tested against RFC 6962's published test-vector roots for 1 to 8 leaves.</span></li><li><b class="show">Check</b><span>The 0x00 and 0x01 prefixes are explained on the domain-separation slide a few minutes from now, so for now just say "there's a byte added to separate leaves from parents".</span></li><li><b class="next">Next</b><span>"What can you do with a root? Prove things."</span></li></ul></div>
+</section>
+
+<section class="slide" id="inclusion" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// MERKLE TREES 02</p><h2>Inclusion proofs: a handful of hashes</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="mk-wrap"><div class="mk-tree" id="inc-tree" aria-live="polite"></div></div>
+      <div class="seg-pick" role="group" aria-label="Which entry to prove" id="inc-pick"></div>
+      <p class="m inc-legend"><span class="lg lg-path"></span> path from the entry to the root <span class="lg lg-sib"></span> the proof: hashes you're given</p>
+    </div>
+    <div class="stack">
+      <ol class="inc-steps" id="inc-steps"></ol>
+      <p class="verdict" id="inc-verdict"></p>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="inc-tamper">Swap in a different entry</button></div>
+      <p class="comment" id="inc-note"></p>
+      <p class="m inc-scale" id="inc-scale"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>I hold only the root. You tell me that "cafe.example" is entry 3 of this log. To check, I don't need the log: you send the entry plus the sibling hashes along its path, three here. I hash the entry, combine it with the first sibling, then the next, then the next, and if I get the root I already trust, the entry is in the log. Pick each entry and watch the pink hashes: they're all I needed. For a log of a billion entries that's thirty hashes, a few hundred bytes of hash.</span></li><li><b class="ask">Ask</b><span>Why can't someone hand me a fake entry with the same proof? <em>Answer: they'd need to find a different input that produces the same leaf hash, a second preimage. Press "Swap in a different entry" and see the recomputed path go somewhere else.</em></span></li><li><b class="tip">Tip</b><span>The verification steps follow RFC 9162 section 2.1.3 (the iterative algorithm over the leaf index and tree size); the demo's log of eight entries is made up, and tested for every position of every tree size from 1 to 40, including rejecting a wrong leaf or a wrong index. The size line uses ceil(log2 n), the bound RFC 9162 gives.</span></li><li><b class="next">Next</b><span>"Where does this run in real life?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="merkle-use" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// MERKLE TREES 03</p><h2>Where Merkle trees are used</h2></header>
+  <div class="slide-body">
+    <div class="cards-3">
+      <div class="card"><b>Certificate Transparency</b><span>Every publicly trusted TLS certificate is meant to be recorded in public, append-only logs built as Merkle trees. Anyone can check a certificate is logged, and monitors watch for certificates nobody expected.</span></div>
+      <div class="card"><b>Go's checksum database</b><span><code>sum.golang.org</code> is a transparency log of module hashes. Before it adds a line to <code>go.sum</code>, the <code>go</code> command checks inclusion and consistency proofs, so a proxy or even an author can't hand you different code for the same version.</span></div>
+      <div class="card"><b>Sigstore's Rekor</b><span>The public log for signed software releases. Version 2, announced in October 2025, is built on a tile-based log library.</span></div>
+      <div class="card"><b>Git</b><span>Trees and commits form a Merkle structure (a "Merkle DAG"): a commit ID covers the tree, its files and the parent commit. Not one single balanced tree, but the same idea.</span></div>
+      <div class="card"><b>File sync and big downloads</b><span>Systems that move large files in pieces (peer-to-peer downloads, sync tools, content-addressed storage) hash each chunk and combine the hashes, so one damaged chunk is found and re-fetched alone.</span></div>
+      <div class="card"><b>Blockchains</b><span>Blocks commit to their transactions with a Merkle root, so light clients can check one transaction with a short proof. Same maths, different context.</span></div>
+    </div>
+    <p class="src">Sources: <a href="https://certificate.transparency.dev/howctworks/" target="_blank" rel="noopener">certificate.transparency.dev</a> · <a href="https://go.dev/blog/module-mirror-launch" target="_blank" rel="noopener">Go blog: module mirror and checksum database</a> · <a href="https://blog.sigstore.dev/rekor-v2-ga/" target="_blank" rel="noopener">Sigstore blog: Rekor v2</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Same trick everywhere: when a lot of data has to be checked by people who don't hold all of it, keep one small root and prove things against it. Notice who benefits: not the log's operator, but the public, who can check the operator without trusting it.</span></li><li><b class="tip">Tip</b><span>What I read: certificate.transparency.dev (logs are append-only ledgers, leaves are hashes of certificates, the log signs the root as a Signed Tree Head, monitors use consistency proofs); the Go blog post of 29 August 2019 (the checksum database is "built on a Transparent Log (or Merkle tree) of hashes backed by Trillian", the go command checks inclusion and consistency proofs); the Rekor v2 announcement of 10 October 2025 (a tile-backed log built on the Tessera library). RFC 6962 (June 2013) is what Certificate Transparency's deployed logs were built on; RFC 9162 obsoletes it and is itself Experimental.</span></li><li><b class="show">Check</b><span>I did not verify the current Certificate Transparency policy of the browsers, or which RFC the largest logs run today (RFC 6962's API versus newer tile-based designs). The file-sync and blockchain cards are general descriptions from background knowledge, not from a source read for this talk: check any specific product's claim before naming it.</span></li><li><b class="next">Next</b><span>"One detail that keeps trees honest."</span></li></ul></div>
+</section>
+
+<section class="slide" id="domain" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// MERKLE TREES 04</p><h2>Why leaves and parents hash differently</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="check dm-switch"><input type="checkbox" id="dm-prefix" checked> Add the 0x00 (leaf) and 0x01 (parent) bytes, as RFC 9162 does</label>
+      <div class="dm-box"><b>Tree A: four leaves</b><code>a · b · c · d</code><output id="dm-a"></output></div>
+      <div class="dm-box"><b>Tree B: two leaves, each the two hashes it replaces, glued together</b><code>H(a)‖H(b) · H(c)‖H(d)</code><output id="dm-b"></output></div>
+      <p class="verdict" id="dm-verdict"></p>
+      <p class="comment" id="dm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Without a marker, a <b>leaf</b> and a <b>parent</b> are both "a hash of some bytes". An attacker can present a parent's two child hashes <b>as if they were data</b>.</li>
+        <li>Then two different sets of data share <b>one root</b>, and a proof for one can pass for the other.</li>
+        <li>The fix is cheap: <b>one different byte</b> in front of leaves and parents. It's called <b>domain separation</b>.</li>
+        <li>The general lesson: when hashing different kinds of thing, <b>label what you're hashing</b>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Uncheck the box. Two different datasets, one root. Tree B's leaves are just the intermediate hashes of tree A, glued together. Without separate markers, nothing says "this is a leaf, not a parent", and the structure is ambiguous. This is why RFC 6962 and 9162 put a 0x00 byte before leaves and 0x01 before parents. Tick the box again and the roots differ. The lesson applies to any code that hashes different kinds of data with the same function: label them, or someone will confuse them.</span></li><li><b class="tip">Tip</b><span>RFC 9162 says the prefixes provide domain separation for second-preimage resistance (RFC 6962 says leaf hashes use 0x00 and interior node hashes use 0x01, so the two stay distinct). The demo is a defensive illustration only: it shows two toy datasets with one root, and it's tested in Node (the unprefixed trees collide, the prefixed ones don't).</span></li><li><b class="next">Next</b><span>"Last Merkle idea: proving a log only grew."</span></li></ul></div>
+</section>
+
+<section class="slide" id="consistency" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// MERKLE TREES 05</p><h2>Consistency proofs: the log only grew</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="cs-log" id="cs-log" aria-live="polite"></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="cs-append">Append an entry</button>
+        <button type="button" class="btn btn-sm" id="cs-rewrite">Quietly rewrite entry 2</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cs-restore">Start over</button>
+      </div>
+      <p class="comment" id="cs-note"></p>
+    </div>
+    <div class="stack">
+      <span class="lr-label">You saved the root when the log had 5 entries</span>
+      <pre class="term cs-out" id="cs-roots"></pre>
+      <button type="button" class="btn btn-sm" id="cs-verify">Ask the log for a consistency proof</button>
+      <pre class="term cs-out" id="cs-out"></pre>
+      <p class="verdict" id="cs-verdict"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>An inclusion proof says an entry is in the log. A consistency proof says something different and just as important: the log you see today contains the log you saw last week, unchanged. You kept the old root. The log gives you a few hashes. You recompute <i>both</i> roots from them, the old one and the new one, and if both match, nothing earlier was altered or removed. Append some entries and ask: it works. Now quietly rewrite entry 2 and ask again: an honest proof can't exist, and the check fails. This is how monitors keep a public log honest without storing all of it.</span></li><li><b class="ask">Ask</b><span>What does it buy you that signing the root alone doesn't? <em>Answer: a signed root says what the log claims now. Only a consistency proof ties the new claim to the old one, so a log can't show different histories to different people without being caught (given someone compares the roots they saw).</em></span></li><li><b class="tip">Tip</b><span>Proofs and verification follow RFC 9162 sections 2.1.4 (consistency proofs, with the verification algorithm that recomputes both roots), tested for every pair of sizes from 1 to 40, including a rewritten old root and a rewritten new root failing. Comparing roots seen by different people is "gossip", which the talk mentions but does not demo.</span></li><li><b class="next">Next</b><span>"Part 3: what you actually do with all this when you download something."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="checksum" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// KEEPING DOWNLOADS HONEST 01</p><h2>Checksums vs signatures</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">The maintainer publishes a file, its SHA-256, and a signature. You got their public key earlier, somewhere else. What happens to the download?</p>
+      <div class="seg-pick" role="group" aria-label="What goes wrong" id="cv-pick"></div>
+      <p class="cv-what" id="cv-what"></p>
+      <pre class="term cv-rec" id="cv-rec"></pre>
+    </div>
+    <div class="stack">
+      <ul class="cv-checks" id="cv-checks"></ul>
+      <p class="comment" id="cv-note"></p>
+      <div class="card"><b>What each one proves</b><span><b>Checksum:</b> these bytes match this number. Useful against damage, or when the number came from somewhere the attacker can't touch. <b>Signature:</b> these bytes were approved by the holder of this key. Only as good as how you got the key and how well it's guarded.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Go through the five situations. Flaky connection: both checks catch it. A bad mirror: the checksum still catches it, because the number came from the official page. The website itself broken into: the attacker replaces the file and the number, so the checksum passes, and that's the case people forget. The signature fails, because the attacker can't sign without the key. The last one is the honest limit: if the signing key is stolen, both pass. So the next questions are how to avoid long-lived keys, and how to notice a bad signature after the fact. That's the next slide.</span></li><li><b class="ask">Ask</b><span>The download page lists a SHA-256 next to the link. What does that protect against, and what doesn't it? <em>Answer: transfer errors and some bad mirrors. Not a compromised site, since it can change both.</em></span></li><li><b class="tip">Tip</b><span>The signatures here are real ECDSA over P-256 with the page's own from-scratch implementation (shared/crypto.js), with a key made fresh in your browser; the "stolen key" case just signs the attacker's file with the same key. The signer's public key is assumed to have been obtained earlier through a separate channel.</span></li><li><b class="next">Next</b><span>"How do you avoid the long-lived key?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sigstore" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// KEEPING DOWNLOADS HONEST 02</p><h2>Signed releases and transparency logs</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick ss-pick" role="group" aria-label="Steps of keyless signing" id="ss-pick"></div>
+      <div class="ss-detail" id="ss-detail"></div>
+      <p class="comment" id="ss-note"></p>
+    </div>
+    <div class="stack">
+      <h3>What the verifier checks</h3>
+      <ul class="rules">
+        <li>The <b>signature</b> on the artifact's digest is valid for the key in the certificate.</li>
+        <li>The <b>certificate</b> chains to Sigstore's root and was valid <b>when it was logged</b>.</li>
+        <li>The <b>identity</b> in the certificate is the one <b>you expect</b>: this repository, this workflow.</li>
+        <li>The signature is <b>in the public log</b>, with an inclusion proof: the same Merkle trees as before.</li>
+      </ul>
+      <p class="callout"><b>NO LONG-LIVED KEY</b> to lose, rotate or steal. The trust moves to <strong>identity</strong> and the <strong>log</strong>.</p>
+      <p class="src">Sources: <a href="https://docs.sigstore.dev/about/overview/" target="_blank" rel="noopener">Sigstore overview</a> · <a href="https://blog.sigstore.dev/rekor-v2-ga/" target="_blank" rel="noopener">Rekor v2</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Click through the six steps. The signer proves who they are to an identity provider, makes a one-off key, gets a certificate valid for about ten minutes that ties that identity to that key, signs, and throws the key away. The signature goes into a public log. Verifiers don't need to know a key in advance: they check the identity in the certificate against what they expect, and the log entry against the log's tree. A stolen key doesn't exist to steal. And because the log is public, a signature made in your project's name is visible, so you can watch for ones you didn't make.</span></li><li><b class="tip">Tip</b><span>From Sigstore's docs: Fulcio is the certificate authority that checks an OIDC token and issues a short-lived certificate (10 minutes) binding the identity to the key; Rekor is an append-only transparency log of signing events; Cosign is the client; keyless signing uses an ephemeral key. The Rekor v2 post (10 October 2025): a tile-backed log, inclusion proofs returned on upload, entry types for signatures and attestations, cosign 2.6.0 and later support it. This slide's flow is a simplified outline.</span></li><li><b class="show">Check</b><span>Real keyless verification has extra details this slide leaves out (trusted roots delivered with TUF, signed timestamps, bundle formats, and Rekor v2 delegating timestamps to a separate timestamp authority). Check Sigstore's current documentation for the exact verification steps before telling people how to run them.</span></li><li><b class="next">Next</b><span>"A different question: can you rebuild it yourself?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="repro" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// KEEPING DOWNLOADS HONEST 03</p><h2>Reproducible builds</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Two people build the same source. Will the files hash the same? Switch on the fixes one at a time.</p>
+      <div class="rp-fixes">
+        <label class="check"><input type="checkbox" id="rp-ts"> Use a fixed timestamp (<code>SOURCE_DATE_EPOCH</code>)</label>
+        <label class="check"><input type="checkbox" id="rp-sort"> Sort the files before packing</label>
+        <label class="check"><input type="checkbox" id="rp-path"> Don't embed the build directory</label>
+      </div>
+      <div class="rp-builds" id="rp-builds"></div>
+      <p class="verdict" id="rp-verdict"></p>
+      <p class="comment" id="rp-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>The idea</b><span>A build is <b>reproducible</b> when anyone, given the same inputs, can recreate bit-for-bit identical artifacts. Then a hash isn't just something the publisher says: <b>anyone can rebuild and compare</b>.</span></div>
+      <ul class="rules">
+        <li>The usual causes of drift: <b>timestamps</b>, <b>file order</b>, <b>build paths</b>, locale, random IDs.</li>
+        <li>The fixes are mostly boring and mechanical.</li>
+        <li>It lets independent rebuilders <b>catch a tampered build server</b>.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://reproducible-builds.org/docs/definition/" target="_blank" rel="noopener">reproducible-builds.org: definition</a> · <a href="https://reproducible-builds.org/docs/source-date-epoch/" target="_blank" rel="noopener">SOURCE_DATE_EPOCH</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is a toy "build" that bundles three files. Alice and Ben build the same source and get different hashes, for silly reasons: the time was a second apart, the file system listed the files in a different order, and the build folder's name is baked in. None of it is malicious, but a difference you can't explain looks exactly like tampering. Switch on the fixes and the hashes match. Real build tools have these same three culprits, among others, and the standard way to fix the clock is the SOURCE_DATE_EPOCH environment variable.</span></li><li><b class="tip">Tip</b><span>The definition quoted is reproducible-builds.org's: "any party can recreate bit-by-bit identical copies of all specified artifacts", checked by bit-by-bit comparison, usually with cryptographic hashes. SOURCE_DATE_EPOCH is described there as a standardised environment variable that distributions can set centrally, holding seconds since the Unix epoch. The demo's build, files and paths are invented.</span></li><li><b class="next">Next</b><span>"Then how do you describe where an artifact came from? SLSA."</span></li></ul></div>
+</section>
+
+<section class="slide" id="slsa" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// KEEPING DOWNLOADS HONEST 04</p><h2>Provenance and SLSA levels</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Build track</h3>
+      <table class="grid-table slsa-table">
+        <thead><tr><th>Level</th><th>What you get</th></tr></thead>
+        <tbody>
+          <tr><th>L0</th><td>Nothing: no claims about the build.</td></tr>
+          <tr><th>L1</th><td>Provenance showing how the package was built.</td></tr>
+          <tr><th>L2</th><td>Signed provenance, generated by a hosted build platform.</td></tr>
+          <tr><th>L3</th><td>A hardened build platform.</td></tr>
+        </tbody>
+      </table>
+      <h3>Source track (new in v1.2)</h3>
+      <table class="grid-table slsa-table">
+        <tbody>
+          <tr><th>L1</th><td>Use a version control system.</td></tr>
+          <tr><th>L2</th><td>Preserve change history and generate source provenance.</td></tr>
+          <tr><th>L3</th><td>Enforce organisational technical controls.</td></tr>
+          <tr><th>L4</th><td>Require code review.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack">
+      <h3>Provenance, in one picture</h3>
+      <pre class="term slsa-prov" id="slsa-prov"></pre>
+      <ul class="rules">
+        <li>Provenance is a <b>signed statement</b> about an artifact's digest: <b>what</b> built it, <b>from which source</b>, <b>how</b>.</li>
+        <li>It's the hash that ties the statement to the file. Change the file and the digest <b>no longer matches</b>.</li>
+        <li>Levels measure <b>how hard the claims are to forge</b>, not whether the software is good.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://slsa.dev/spec/v1.2/build-track-basics" target="_blank" rel="noopener">SLSA v1.2: build track</a> · <a href="https://slsa.dev/spec/v1.2/source-requirements" target="_blank" rel="noopener">source requirements</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>SLSA, said "salsa", is a ladder for how much you can trust a build's story. At level 1 there's a statement of how it was built, easy to fake. At level 2 the statement is signed by the build platform. At level 3 the platform itself is hardened so one build can't tamper with another. The picture: the provenance names the artifact by its hash, which is why the whole thing rests on the same fingerprint idea. A level isn't a verdict that the code is safe: it's about how trustworthy the claim of where it came from is.</span></li><li><b class="tip">Tip</b><span>From slsa.dev, v1.2 (status Approved): Build L1 "Provenance showing how the package was built", L2 "Signed provenance, generated by a hosted build platform", L3 "Hardened build platform". The build page also says L1 provenance "can be used to prevent mistakes but is trivial to bypass or forge". The Source track levels as written on the source-requirements page: L1 use a version control system, L2 preserve change history and generate source provenance, L3 enforce organizational technical controls, L4 require code review. The provenance sketch is a simplified, made-up example in the shape of an in-toto statement; it is not a real artifact.</span></li><li><b class="show">Check</b><span>Some secondary sources describe the Source track with three levels; the v1.2 source-requirements page (re-read 11 November 2026) lists four, with "Level 0" only meaning no Source VSA. Re-read slsa.dev before presenting, because levels and wording have changed between versions.</span></li><li><b class="next">Next</b><span>"And how do you make your own project hold still? Pin by hash."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pinning" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// KEEPING DOWNLOADS HONEST 05</p><h2>Lock files and pinning by digest</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Example files" id="pn-pick">
+        <button type="button" data-p="mixed" aria-pressed="true">A typical mess</button>
+        <button type="button" data-p="pinned">All pinned</button>
+        <button type="button" data-p="empty">Clear</button>
+      </div>
+      <textarea id="pn-in" rows="9" spellcheck="false" aria-label="Dependency lines to check"></textarea>
+      <p class="comment" id="pn-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="sc-list pn-out" id="pn-out"></ul>
+      <p class="verdict" id="pn-score"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Everything in the first column is a label: a tag, a range, a version number. Whoever controls the label can change what it points at. The green lines name exact bytes. The pattern is the same in every ecosystem: a Docker image by its sha256 digest, a GitHub Action by its full commit hash, a Python package with its file hash, an npm package through the lock file's integrity value. Pinning isn't about never updating: it's about making an update a visible change you review, instead of something that happens to you.</span></li><li><b class="ask">Ask</b><span>If you pin everything by hash, who tells you about security fixes? <em>Answer: a tool that opens update pull requests (Dependabot or Renovate style), so the update is a reviewable diff, and your scanners.</em></span></li><li><b class="tip">Tip</b><span>The checker is a simplified pattern matcher for four formats (Dockerfile FROM lines, workflow <code>uses:</code> lines, pip requirements, npm-style JSON lines). Sources: pip's secure-installs page (a hash per requirement pins an exact file, and one hashed requirement turns hash-checking on for all, so unhashed ones then fail); npm's lock file docs (<code>integrity</code> is an SRI string, sha512 or sha1); Docker's page on digests (tags mutable, digests immutable). Pinning an Action to a full commit hash is GitHub's own advice for third-party actions, which I did not re-read for this talk: check it.</span></li><li><b class="next">Next</b><span>Checkpoint 2. (CI, lock files and package registries get a full talk of their own: Securing Dependencies and CI/CD.)</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A website lists a file's SHA-256 next to the download link. What does that protect against, and what doesn't it?</p><details><summary>Hint</summary><p>Who can edit the page?</p></details><details class="answer"><summary>Answer</summary><p>It catches accidents (a damaged download) and a bad mirror, since the number came from the official page. It doesn't help if the site itself is compromised: whoever can replace the file can replace the number. A signature checked against a key you got elsewhere, or a log you can check, covers that.</p></details></li>
+      <li><p>A Merkle proof for one entry in a log of a million needs about 20 hashes. What does the verifier already need to hold, and why is that enough?</p><details><summary>Hint</summary><p>What does the proof get compared to at the end?</p></details><details class="answer"><summary>Answer</summary><p>Only a trusted root (and the log's size). The verifier hashes the entry, combines it with the proof's hashes up the path, and compares the result with the root. If it matches, the entry must be in the tree, unless someone can find a second input with the same hash.</p></details></li>
+      <li><p>Your lockfile pins every dependency by hash. Name one thing that still isn't covered.</p><details><summary>Hint</summary><p>The hash says "these are the bytes you got last time". Does it say they're good?</p></details><details class="answer"><summary>Answer</summary><p>Several: the first time you added the dependency (the hash can pin a bad package just as well), bugs and vulnerabilities in the pinned version, and the build and CI process around it. Pinning makes change deliberate; it doesn't make the content trustworthy.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="choose" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHOOSING A HASH 01</p><h2>Which hash for which job?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Pick the job:</p>
+      <div class="seg-pick" role="group" aria-label="The job" id="ch-pick"></div>
+      <div class="ch-detail" id="ch-detail"></div>
+      <p class="comment" id="ch-note"></p>
+    </div>
+    <div class="stack">
+      <h3>The one-page version</h3>
+      <table class="grid-table ch-table">
+        <thead><tr><th>Job</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><th>Integrity, IDs</th><td>SHA-256 or better</td></tr>
+          <tr><th>Message authentication</th><td>HMAC, or an AEAD</td></tr>
+          <tr><th>Passwords</th><td>Argon2id, scrypt, bcrypt</td></tr>
+          <tr><th>Keys from keys</th><td>HKDF</td></tr>
+          <tr><th>Hash tables</th><td>Fast non-crypto, keyed if exposed</td></tr>
+        </tbody>
+      </table>
+      <p class="callout"><b>RULE OF THUMB</b> Never invent a construction. Pick the named tool for the job, from a maintained library.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Four questions pick the right tool. Is the input a secret? Is there a key? Do you want it fast or slow? Could someone attack it? Click through the jobs. The two mistakes that come up most: using a fast hash for passwords, and hashing a key and a message together to make a MAC. Use a password hash and HMAC instead; both are in your standard library.</span></li><li><b class="tip">Tip</b><span>NIST's hash-functions page lists SHA-2 (FIPS 180-4) and SHA-3 (FIPS 202) as approved hash families and says it deprecated SHA-1 in 2011 and published a plan in December 2022 to transition away from it (NIST's December 2022 announcement says by 31 December 2030). Length extension is a property of the SHA-2 construction that HMAC is designed around; I did not re-fetch a primary source for it, but it is standard and in RFC 2104 and in NIST guidance on keyed hashes. The BLAKE3 and SipHash mentions are background knowledge.</span></li><li><b class="show">Check</b><span>The mention of "SHA-256 or better" simplifies a bigger choice: SHA-512, SHA-3 and BLAKE3 are fine for integrity too. If a standards body, a compliance regime or an existing protocol picks the algorithm for you, follow that.</span></li><li><b class="next">Next</b><span>"A checklist to take away."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHOOSING A HASH 02</p><h2>A hashing checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="name"> I know which of my dependencies and images are named by a label, and which by a digest</label>
+      <label><input type="checkbox" data-k="pin"> Container images, CI actions and packages are pinned by digest or commit hash, with a bot proposing updates</label>
+      <label><input type="checkbox" data-k="lock"> Lock files are committed, and installs use them (and fail if they don't match)</label>
+      <label><input type="checkbox" data-k="where"> When I check a checksum, I know where the expected value came from</label>
+      <label><input type="checkbox" data-k="sign"> Releases we publish are signed, and consumers have a way to verify the signature and the identity</label>
+      <label><input type="checkbox" data-k="repro"> We know what stops our builds being reproducible, and we've tried rebuilding something</label>
+      <label><input type="checkbox" data-k="job"> Each use of a hash in our code is the right tool: password hash, HMAC, or SHA-256, not a mix-up</label>
+      <label><input type="checkbox" data-k="label"> Where we hash different kinds of data with one function, we label them (domain separation)</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what's true today and treat each unticked box as a ticket. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box is the cheapest one to fix this week?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or somewhere in your own stack where a hash is doing a job you're not sure it's suited for.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The mini Git, the Merkle tree and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../crypto-101/">Crypto 101</a><span>Hashes and signatures from first principles.</span></li>
+        <li><a href="../git-github-security/">Git and GitHub Security</a><span>Signed commits and protected branches, using what you saw today.</span></li>
+        <li><a href="../pki-in-depth/">PKI in Depth</a><span>Certificate Transparency and how certificates are trusted.</span></li>
+        <li><a href="../passwords-and-accounts/">Passwords and Accounts</a><span>The one job where a hash should be slow.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser with invented data; nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to name a place in their own systems where something is identified by a label and could be identified by a hash, and talk through what it would take to switch.</span></li><li><b class="show">Check</b><span>Links go to other hub talks. Nothing external is linked from this slide.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="hashes.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
