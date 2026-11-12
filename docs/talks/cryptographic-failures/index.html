@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Case Studies in Cryptographic Failures</title>
+<meta name="description" content="Case Studies in Cryptographic Failures: famous real-world breaks told from the defender's side, with demos on toy data that run in your browser. A talk by zevaryx.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/cryptographic-failures/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Case Studies in Cryptographic Failures">
+<meta property="og:description" content="The algorithms were usually fine. Famous breaks from the defender's side: what failed, how it was found, and what to check in your own systems.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/cryptographic-failures/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/cryptographic-failures/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "cryptographic-failures", "title": "Case Studies in Cryptographic Failures", "footer": "BROKEN", "subtitle": "SECURITY TRACK · 07",
+  "parts": [{ "name": "Randomness and keys", "minutes": 28 }, { "name": "Hashes and trust", "minutes": 23 },
+            { "name": "Modes, padding and negotiation", "minutes": 30 }, { "name": "Protocols, code and lessons", "minutes": 29 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Cryptographic Failures</a>
+  <div class="scroll-parts">
+    <a href="#debian" data-part="1"><b>01</b>Randomness</a>
+    <a href="#flame" data-part="2"><b>02</b>Hashes</a>
+    <a href="#padding" data-part="3"><b>03</b>Negotiation</a>
+    <a href="#krack" data-part="4"><b>04</b>Lessons</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 07 · FOR PRACTITIONERS</p>
+      <h1><span class="pre">Case studies in</span> <span class="glitch" data-text="Cryptographic Failures">Cryptographic Failures</span></h1>
+      <p class="lede">The algorithms were usually fine. Twelve famous breaks, told from the defender's side: what was built, what failed, how it was found, what fixed it, and what to check in your own systems.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/cryptographic-failures/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>where does it stand today?</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ audit&nbsp;<input id="hero-in" value="ssl 3.0" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About two hours, four parts, three checkpoints. Every case here is a failure that was public, fixed and studied. We tell each one the same way, and we stay at the level of a post-incident review: no reproduction steps and no exploit code, and every demo runs on invented toy data.</span></li><li><b class="show">Show</b><span>The terminal on the right: type an old name (ssl 3.0, rc4, 3des, md5, sha-1, export, wep) and it says where it stands today, with the RFC or advisory behind the answer. These are the leftovers this whole talk is about.</span></li><li><b class="tip">Eggs</b><span>In the terminal try: 4 (or dice, or xkcd), poodle, heartbleed, freak, logjam, sweet32, krack, roca, debian, rot13. Each answers with a true one-liner. Other eggs: the weak-key demo (all 18 bits), the birthday demo at 32 bits, the downgrade lab with every defence on, a 12 of 12 on the sorter, ticking all twelve audit boxes, and a console hint.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Twelve cases, four parts</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#debian"><small>PART 1 · 28 MIN</small><b>Randomness and keys</b></a><span>Debian OpenSSL, 2008</span><span>ROCA, 2017</span><span>Sony PS3, 2010</span><span>Dual_EC and Juniper</span></li>
+      <li><a href="#flame"><small>PART 2 · 23 MIN</small><b>Hashes and trust</b></a><span>MD5 and Flame</span><span>Birthday bound demo</span><span>SHA-1's long goodbye</span><span>DigiNotar and eMudhra, revisited</span></li>
+      <li><a href="#padding"><small>PART 3 · 30 MIN</small><b>Modes, padding and negotiation</b></a><span>Padding oracles</span><span>FREAK, Logjam, DROWN</span><span>Sweet32</span><span>CRIME and BREACH</span></li>
+      <li><a href="#krack"><small>PART 4 · 29 MIN</small><b>Protocols, code and lessons</b></a><span>KRACK, Heartbleed</span><span>Two from 2024</span><span>The root-cause map</span><span>Your audit</span></li>
+    </ol>
+    <p class="callout"><b>NO EXPLOITS</b> Each failure is explained at the level a defender needs. The demos use toy ciphers, toy keys and an invented web page: nothing here attacks a real system.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>We group the cases by failure class, not by date: bad randomness, bad hashes, bad padding and negotiation, then protocol and code. At the end we put all twelve on one map and ask what controls would have caught them.</span></li><li><b class="tip">Tip</b><span>This builds on two earlier talks: Using Crypto Correctly in Code (nonces, comparisons, JWTs and TLS settings) and Public Key Infrastructure in Depth (DigiNotar, eMudhra and Certificate Transparency). We point back to them instead of repeating them.</span></li><li><b class="next">Next</b><span>"The method."</span></li></ul></div>
+</section>
+
+<section class="slide" id="method" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// THE METHOD</p><h2>Six beats for every case</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats beats-lg">
+        <div><dt>Design</dt><dd>What was built, and why it was reasonable.</dd></div>
+        <div><dt>Failure</dt><dd>The root cause, in one sentence.</dd></div>
+        <div><dt>Found</dt><dd>Researchers, monitoring, a whistleblower, luck.</dd></div>
+        <div><dt>Impact</dt><dd>Who was exposed, with the numbers that are sourced.</dd></div>
+        <div><dt>Fix</dt><dd>The technical fix, and what operators had to do.</dd></div>
+        <div><dt>Lesson</dt><dd>What to check in your own systems on Monday.</dd></div>
+      </dl>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Ask two questions of every case: was the <b>algorithm</b> broken, or was it <b>used</b> wrongly? And could a user have seen it?</li>
+        <li>Use the same six beats for your own incident reviews. A review that follows a fixed shape is easier to compare and to learn from.</li>
+        <li>Facts, dates and numbers come from the researchers' own pages, advisories and standards. Where a source couldn't be read, the speaker notes say so.</li>
+      </ul>
+      <div class="card"><b>Already covered, so only a pointer here</b><span>Nonce reuse, constant-time comparison and JWT pinning: <a href="../crypto-in-code/">Using Crypto Correctly in Code</a>. DigiNotar, eMudhra and Certificate Transparency: <a href="../pki-in-depth/">PKI in Depth</a>. The algebra of a repeated signing value: <a href="../zero-knowledge-proofs/#extract">Zero-Knowledge Proofs</a>.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The point of a fixed shape is that you can lay cases side by side. By the end you'll see the same few causes in very different headlines.</span></li><li><b class="ask">Ask</b><span>Pick a failure you know from your own career. Can you tell it in six beats? <em>Usually the "found" and "lesson" beats are the ones people have to think about.</em></span></li><li><b class="next">Next</b><span>"Starting with keys nobody could see being made."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="debian" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// RANDOMNESS AND KEYS 01 · CASE</p><h2>Debian OpenSSL, 2006 to 2008: a cleanup removed the randomness</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>OpenSSL stirs several inputs into a random pool, then makes keys from the pool.</dd></div>
+        <div><dt>Failure</dt><dd>A Debian-only patch, made to silence a memory-checker warning, removed the code that mixed in entropy. The process ID was the only variable left.</dd></div>
+        <div><dt>Found</dt><dd>Luciano Bello reported it; Debian's advisory DSA-1571 is dated 13 May 2008.</dd></div>
+        <div><dt>Impact</dt><dd>Keys made since the 17 Sep 2006 upload: SSH, OpenVPN, DNSSEC, X.509. 32,767 possible streams per architecture, so the list of weak keys is small enough to publish.</dd></div>
+        <div><dt>Fix</dt><dd>A fixed package, then regenerate every key made on an affected system. Blocklists and checkers (ssh-vulnkey, dowkd) find the known-weak ones.</dd></div>
+        <div><dt>Lesson</dt><dd>Nobody can see key generation. Test that two runs differ, and review changes to randomness code like a security patch.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://lists.debian.org/debian-security-announce/2008/msg00152.html" target="_blank" rel="noopener">Debian DSA-1571-1</a> · <a href="https://wiki.debian.org/SSLkeys" target="_blank" rel="noopener">Debian wiki: SSLkeys</a></p>
+    </div>
+    <div class="stack">
+      <h3>Build the defender's blocklist <span class="chip chip-part">toy keys</span></h3>
+      <div class="controls">
+        <label class="grow">Seed size, in bits <input type="range" id="dbg-bits" min="8" max="18" value="15" aria-label="Seed size in bits"><output id="dbg-bits-out">15</output></label>
+        <button type="button" class="btn btn-sm" id="dbg-build">Build the list</button>
+      </div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="dbg-n">–</b><span>possible keys</span></div>
+        <div class="stat"><b id="dbg-t">–</b><span>to list them all</span></div>
+        <div class="stat"><b id="dbg-r">–</b><span>keys per second, here</span></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="dbg-weak">Make a weak key</button>
+        <button type="button" class="btn btn-sm" id="dbg-good">Make a good key</button>
+        <span class="note mono" id="dbg-key" aria-live="polite"></span>
+      </div>
+      <p class="verdict" id="dbg-verdict" aria-live="polite"></p>
+      <p class="fine" id="dbg-scale"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Nothing was wrong with RSA or DSA. A well-meant change made the key generator draw from a pool with almost nothing in it. The keys looked fine: that is the problem with key generation, nobody can see it. Debian's own wiki calls the change "an overzealous, well-intentioned elimination of code".</span></li><li><b class="show">Show</b><span>The demo makes toy keys from a seed, the way the broken generator effectively did. Build the list with 15 bits: the list is complete in a moment, so a defender (or anyone) can list every weak key. Then make a weak key and check it: it is on the list. A good key comes from 128 random bits and can't be listed. Drag the slider to 18 bits to see the cost grow, and read the scale line: each extra bit doubles the work.</span></li><li><b class="say">Say</b><span>Debian's numbers: the wiki counts 32,767 possible random streams per architecture and 98,301 across the three it lists, which is why the blocklists were small enough to ship in packages. The advisory says all DSA keys ever used for signing or authentication on affected systems should be considered compromised, because a single signature made with a predictable value can reveal the key (the PS3 story, next but one).</span></li><li><b class="tip">Tip</b><span>The control that would have caught it is boring: a test that generates two keys and checks they differ. Known-answer tests pass even when the generator is broken.</span></li><li><b class="tip">Check</b><span>DSA-1571-1 (13 May 2008), the Debian wiki and the Debian security team's detector are the sources; the exact date Bello found it isn't in the advisory. The demo's keys are 64-bit fingerprints of SHA-256 of a seed: invented, not OpenSSL's real format.</span></li><li><b class="next">Next</b><span>"A different kind of key-generation flaw, with no bad random generator at all."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roca" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// RANDOMNESS AND KEYS 02 · CASE</p><h2>ROCA, 2017: a key-generation shortcut with a public fingerprint</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>RSA needs two big random primes. A chip library built them from smaller parts: faster on small devices, and it met certification rules.</dd></div>
+        <div><dt>Failure</dt><dd>The primes had a special form, so the keys carried far less entropy than their size. Not a bad random generator: a flaw in how primes were built.</dd></div>
+        <div><dt>Found</dt><dd>Masaryk University researchers noticed statistical oddities in smartcard public keys. Reported to the manufacturer in February 2017; public 16 Oct 2017.</dd></div>
+        <div><dt>Impact</dt><dd>Worst cases for 1024- and 2048-bit keys: under 3 CPU-months and about 100 CPU-years. Tens of millions of devices; ID cards, TPMs, tokens, PGP, software signing.</dd></div>
+        <div><dt>Fix</dt><dd>Library and firmware updates, replace affected keys, scan your public keys with the fingerprint test.</dd></div>
+        <div><dt>Lesson</dt><dd>Certified is not analysed. Keep an inventory of which chip made each key, and plan to rotate.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://acmccs.github.io/papers/p1631-nemecA.pdf" target="_blank" rel="noopener">Nemec et al., CCS 2017</a> (the researchers' paper) · CVE-2017-15361</p>
+    </div>
+    <div class="stack">
+      <h3>The public-key fingerprint test <span class="chip chip-part">toy keys</span></h3>
+      <div class="controls">
+        <span class="seg-pick" id="rk-kind" role="group" aria-label="How the toy primes are made"></span>
+        <button type="button" class="btn btn-sm" id="rk-gen">Make 5 toy keys</button>
+      </div>
+      <table class="rk-table" aria-label="Toy keys and fingerprint results">
+        <thead><tr><th>Public modulus</th><th>20 small-prime tests</th><th>Result</th></tr></thead>
+        <tbody id="rk-body"></tbody>
+      </table>
+      <div class="controls">
+        <label class="grow">Test a modulus <input id="rk-in" class="mono" spellcheck="false" autocomplete="off" placeholder="paste a number"></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="rk-test">Test</button>
+      </div>
+      <p class="verdict" id="rk-out" aria-live="polite"></p>
+      <p class="fine" id="rk-odds"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>ROCA stands for Return Of Coppersmith's Attack: the researchers extended an older attack to this special prime shape. The important defender fact is in the paper's abstract: the keys contain "a strong fingerprint that is verifiable in microseconds", so everyone could scan their keys for it without knowing any secret.</span></li><li><b class="show">Show</b><span>Make five keys from ordinary random primes: most tests fail, so they aren't flagged. Switch to structured primes (the toy follows the shape in the paper, with a shorter list of small primes): every test passes, every time. The test only reads the public modulus. Then read the odds line: with these 20 tests a random key passes about once in the number shown; the real test uses more primes (the paper's example is 2^-154 for 512-bit keys).</span></li><li><b class="say">Say</b><span>The paper says the library was in FIPS 140-2 and Common Criteria EAL 5+ certified devices, and that the code dated to 2012 at the latest. Neither certification is a statement that the key-generation output was analysed for this. The lesson is not "certification is bad": it is "don't treat a label as a test of the output".</span></li><li><b class="tip">Tip</b><span>This is the same family as Debian: the keys looked random, and only statistics over many public keys showed otherwise. Anyone with an inventory of public keys can run a check like this when a vendor publishes a pattern.</span></li><li><b class="tip">Check</b><span>Numbers are from the CCS 2017 paper (abstract and sections 1-4); I read the paper itself. The disclosure dates (reported 1 February 2017, public 16 October 2017) are from the researchers' own page as returned by search; that page (crocs.fi.muni.cz) didn't load here, so the paper link is the ACM CCS copy I read. The toy uses 112-bit primes and 20 small primes, not the real parameters, and the real library's format isn't reproduced.</span></li><li><b class="next">Next</b><span>"Now a case where the generator was fine and one value was reused."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ps3" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// RANDOMNESS AND KEYS 03 · CASE</p><h2>Sony PS3, 2010: a signing key recovered from signatures</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>Game code is signed with ECDSA, and the console checks the signature before running it.</dd></div>
+        <div><dt>Failure</dt><dd>Each ECDSA signature needs a fresh, unpredictable value. Two signatures made with the same value let anyone compute the private key.</dd></div>
+        <div><dt>Found</dt><dd>The fail0verflow team presented it at 27C3 on 29 December 2010.</dd></div>
+        <div><dt>Impact</dt><dd>A private key that signs anything the console will run. Their slide: "With private keys you can SIGN THINGS."</dd></div>
+        <div><dt>Fix</dt><dd>In general: derive the value from key and message (RFC 6979) or use a vetted signing API, and never let application code pick it.</dd></div>
+        <div><dt>Lesson</dt><dd>The maths is two lines. A test that two signatures differ would have caught it.</dd></div>
+      </dl>
+      <p class="src">SOURCE <a href="https://fahrplan.events.ccc.de/congress/2010/Fahrplan/attachments/1780_27c3_console_hacking_2010.pdf" target="_blank" rel="noopener">fail0verflow, "Console Hacking 2010", 27C3</a> (slides)</p>
+    </div>
+    <div class="stack">
+      <h3>The algebra, from the talk's own slides</h3>
+      <pre class="term" aria-label="ECDSA algebra">R = (m·G)x          S = (e + k·R) / m
+e = hash of the data
+m = random per signature
+k = the private key
+
+same m twice  →  same R, and
+  m = (e1 − e2) / (S1 − S2)
+  k = (m·S − e) / R</pre>
+      <div class="card"><b>Where you've seen this</b><span>The same mistake with an encryption nonce is <a href="../crypto-in-code/#reuse">What a repeated nonce breaks</a>; the same algebra for a Schnorr proof is the <a href="../zero-knowledge-proofs/#extract">extraction slide</a>.</span></div>
+      <p class="fine">Their slide titled "Sony's ECDSA code" is a joke slide: a function that returns 4, "chosen by fair dice roll", borrowed from a well-known web comic. It illustrates the failure; it is not Sony's source code.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Here the algorithm and the generator were not the problem: one value that must be fresh every time was not. The talk's own slide states the rule: "It is imperative to have a random m for every signature: from a pair of signatures that use the same m, we can compute m and k." The letters are theirs: m is the per-signature value and k is the private key.</span></li><li><b class="show">Show</b><span>The algebra. Subtract the two S equations and m falls out; then k does. No lattices, no cleverness.</span></li><li><b class="say">Say</b><span>Be careful with the joke slide: the slide deck shows a comic-style function that returns 4. It makes the point that a constant is not random. It is not a quote of Sony's code, so don't present it as one.</span></li><li><b class="tip">Tip</b><span>Why this keeps happening: signing code looks like a pure function of key and message, so nobody tests it for freshness. Deterministic nonces (RFC 6979) remove the need for a good generator at signing time.</span></li><li><b class="tip">Check</b><span>The date (29 December 2010) and the algebra are from the slide PDF, which I downloaded and read; I rendered the "Sony's ECDSA code" slide to confirm it is the joke slide. The statement that Sony's implementation reused the value comes from the talk and its coverage, not from Sony. Sony's response isn't covered here.</span></li><li><b class="next">Next</b><span>"A generator whose constants nobody could explain."</span></li></ul></div>
+</section>
+
+<section class="slide" id="dualec" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// RANDOMNESS AND KEYS 04 · CASE</p><h2>Dual_EC_DRBG, 2007 to 2015: constants nobody could explain</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>A NIST-standardised random generator (SP 800-90A) built on two elliptic-curve points, P and Q, with recommended values.</dd></div>
+        <div><dt>Failure</dt><dd>If whoever chose P and Q knows how they relate, a short stretch of output reveals the internal state, and every later output follows. The standard gave no hint how its points were chosen.</dd></div>
+        <div><dt>Found</dt><dd>Shumow and Ferguson (Microsoft) raised the possibility at the CRYPTO 2007 rump session. In September 2013, "in light of recent reports", NIST reopened its comment period.</dd></div>
+        <div><dt>Impact</dt><dd>It shipped in products. In December 2015 Juniper disclosed unauthorised code in ScreenOS: an admin backdoor (CVE-2015-7755) and VPN decryption (CVE-2015-7756).</dd></div>
+        <div><dt>Fix</dt><dd>NIST recommended against it (Sept 2013) and removed it in SP 800-90A Rev. 1 (June 2015). Juniper issued patched releases.</dd></div>
+        <div><dt>Lesson</dt><dd>Constants are part of the design: ask how they were chosen. And watch third-party code for changed constants.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://csrc.nist.gov/Projects/random-bit-generation/RBG-Archive/NIST-SP-800-90-Historical-Information" target="_blank" rel="noopener">NIST SP 800-90 history</a> · <a href="https://kb.cert.org/vuls/id/640184" target="_blank" rel="noopener">CERT/CC VU#640184</a> · <a href="https://eprint.iacr.org/2016/376" target="_blank" rel="noopener">Checkoway et al., Juniper analysis</a></p>
+    </div>
+    <div class="stack">
+      <div class="stats stats-4">
+        <div class="stat"><b>2007</b><span>back door possibility raised</span></div>
+        <div class="stat"><b>Sep 2013</b><span>NIST: stop using it</span></div>
+        <div class="stat"><b>Jun 2015</b><span>Rev. 1: "has been removed"</span></div>
+        <div class="stat"><b>17 Dec 2015</b><span>Juniper advisory public</span></div>
+      </div>
+      <ul class="rules">
+        <li>The Juniper analysis (CCS 2016): contrary to Juniper's earlier statements, the ScreenOS VPN code had been vulnerable <b>since 2008</b> to passive attack by whoever chose the Dual_EC curve point.</li>
+        <li>CERT/CC on the VPN issue: "There is no way to detect that this vulnerability was exploited."</li>
+      </ul>
+      <p class="fine">This slide sticks to what NIST, the researchers and Juniper documented. Who, if anyone, held a back door is not established there and is not claimed.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>This is a trust failure more than a maths failure: a standard with unexplained constants, adopted widely, and later a vendor whose own code was changed. The 2007 observation, in Finney's summary, was that if you know the discrete logarithm of one point relative to the other, you can recover the internal state from the output. The standard published a pair of points without saying how they were derived.</span></li><li><b class="say">Say</b><span>NIST's own page records the sequence: on 10 September 2013 it reopened the comment period, and the accompanying bulletin recommended that Dual_EC_DRBG no longer be used; in April 2014 and again in November 2014 it requested comments on a revision that removes it; Rev. 1 was published in June 2015.</span></li><li><b class="ask">Ask</b><span>What in your own supply chain has constants, curve points, seeds or parameters nobody on the team can explain? <em>Look at VPN appliances, embedded libraries and anything with a "magic number" in its crypto setup.</em></span></li><li><b class="tip">Tip</b><span>Defences: prefer designs that explain their constants, diff third-party and firmware code for changed constants, and don't use one generator's output raw (mix sources). Crypto agility means you can switch away.</span></li><li><b class="tip">Check</b><span>I read NIST's historical page and CERT/CC's note. CERT/CC doesn't mention Dual_EC; the link between Juniper's issues and Dual_EC rests on the CCS 2016 paper's abstract (via its ePrint record) and the researchers' analysis, which I did not read in full. The 2007 rump-session detail is from secondary summaries of the talk. I downloaded SP 800-90A Rev. 1 (June 2015) and its change notes say "The Dual_EC_DRBG has been removed". Contested parts of the story are deliberately left out.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Debian, the PS3 and eMudhra (PKI in Depth) all failed at key generation or signing. What control would have caught each one?</p><details><summary>Hint</summary><p>What would a test, a reviewer and a monitor each have seen?</p></details><details class="answer"><summary>Answer</summary><p>Debian: a test that two key generations differ, review of the patch, and a scan of keys against a blocklist. PS3: a test that two signatures differ, and a vetted signing API or deterministic values. eMudhra: checking the public output of key generation, and the public logging that let browsers react quickly. None of them could be seen from the outside by an ordinary user.</p></details></li>
+      <li><p>Why can't users see this kind of flaw?</p><details><summary>Hint</summary><p>Look at a weak key next to a good one.</p></details><details class="answer"><summary>Answer</summary><p>Key generation happens once, out of sight, and the result looks random either way. The Debian blocklist and ROCA's fingerprint exist because defenders examined many keys, not one.</p></details></li>
+      <li><p>ROCA's library was in certified devices. What does that tell you about relying on a certification?</p><details><summary>Hint</summary><p>What did the certification test, and what did it not?</p></details><details class="answer"><summary>Answer</summary><p>A certification is evidence that a process was followed, not proof that the output has no structure. Keep your own inventory, scan public keys when advisories appear, and keep lifetimes short enough to rotate.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The common thread for the room: key generation is never visible to users, so the controls are tests, reviews, scans of public output and short lifetimes.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="flame" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// HASHES AND TRUST 01 · CASE</p><h2>MD5, 2008 to 2012: from a rogue CA to Flame</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>A certificate is signed over its hash. If nobody can build two certificates with the same hash, the signature can be trusted.</dd></div>
+        <div><dt>Failure</dt><dd>MD5 collisions were shown in 2004, yet some CAs still signed with MD5, with predictable serial numbers and issue times.</dd></div>
+        <div><dt>Found</dt><dd>2008: a team of seven researchers built a rogue CA certificate as a demonstration. 2012: Flame malware was found signed with a forged Microsoft certificate.</dd></div>
+        <div><dt>Impact</dt><dd>The forged certificate let malware pass as a Windows Update. Microsoft: "active attacks using unauthorized digital certificates derived from a Microsoft Certificate Authority."</dd></div>
+        <div><dt>Fix</dt><dd>Microsoft revoked trust in the affected intermediates through Windows Update (advisory 2718704, 3 June 2012).</dd></div>
+        <div><dt>Lesson</dt><dd>Retire a broken hash everywhere, including odd corners like a licensing service, and know every CA and key purpose you trust.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://learn.microsoft.com/en-us/security-updates/securityadvisories/2012/2718704" target="_blank" rel="noopener">Microsoft Security Advisory 2718704</a> · <a href="http://www.cwi.nl/news/2012/cwi-cryptanalist-discovers-new-cryptographic-attack-variant-in-flame-spy-malware" target="_blank" rel="noopener">CWI, 7 June 2012</a> · <a href="https://marc-stevens.nl/research/hashclash/rogue-ca/" target="_blank" rel="noopener">Rogue CA project</a></p>
+    </div>
+    <div class="stack">
+      <ol class="tl-v">
+        <li><b>2004</b><span>First MD5 collision demonstrated</span></li>
+        <li><b>30 Dec 2008</b><span>"MD5 considered harmful today": a rogue CA certificate, using about 200 PlayStation 3 consoles for the collision</span></li>
+        <li><b>Jan 2009</b><span>Microsoft stops accepting MD5-based signatures elsewhere, but one licensing CA path still did</span></li>
+        <li><b>3 Jun 2012</b><span>Microsoft advisory: trust revoked for the Enforced Licensing intermediates</span></li>
+        <li><b>7 Jun 2012</b><span>CWI: Flame used a new variant of a chosen-prefix collision attack</span></li>
+      </ol>
+      <ul class="rules">
+        <li>Per Microsoft's explanation, systems older than Windows Vista were exposed without any collision; on Vista and later the attackers needed one.</li>
+        <li>DigiNotar's lesson (2011) was "watch your CAs". Flame's (2012) is "retire the weak hash everywhere".</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Two separate stories joined. In 2008 researchers showed the whole chain: a chosen-prefix MD5 collision, a CA that still signed with MD5, and serial numbers and issue times predictable enough to line things up. In 2012, malware used a collision against a Microsoft licensing CA to sign code as Microsoft. CWI's Marc Stevens found it was a new variant of the attack rather than the published one.</span></li><li><b class="say">Say</b><span>Per Microsoft's advisory, the update revoked trust in the Microsoft Enforced Licensing Intermediate PCA (two certificates) and the Microsoft Enforced Licensing Registration Authority CA (SHA1). CWI called the licensing path's continued MD5 acceptance "an important oversight". Microsoft's blog post "Flame malware collision attack explained" (6 June 2012) says older systems didn't need a collision and Vista and later did; I couldn't open that page, so this comes from its search snippet, and CWI's item says Microsoft's licensing customers also had code-signing ability without a collision.</span></li><li><b class="ask">Ask</b><span>Where in your estate does an old hash still sign something? <em>Think of code signing, internal CAs, SAML, firmware, and RADIUS (see the 2024 slide).</em></span></li><li><b class="tip">Tip</b><span>Certificate Transparency didn't exist yet. It is part of why a rogue certificate would be noticed sooner today: see PKI in Depth.</span></li><li><b class="tip">Check</b><span>I read Microsoft's advisory (published 3 June 2012, revised 13 June) and CWI's news item (7 June 2012). The 2008 details (30 Dec 2008, 25C3, about 200 PS3s, RapidSSL, predictable serials) are from the researchers' project page results and a mailing-list copy of their announcement: I didn't read the paper itself. The claim that Microsoft disallowed MD5 elsewhere in January 2009 is CWI's. "2004" is the date the Blast-RADIUS site gives for the first MD5 collision.</span></li><li><b class="next">Next</b><span>"How cheap is a collision? Let's find one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="birthday" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// HASHES AND TRUST 02 · DEMO</p><h2>Collisions are cheaper than you think: the birthday bound</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Find a collision in a shortened hash <span class="chip chip-part">toy sizes</span></h3>
+      <div class="controls">
+        <label class="grow">Hash length, in bits <input type="range" id="bd-bits" min="8" max="32" step="2" value="20" aria-label="Hash length in bits"><output id="bd-bits-out">20</output></label>
+        <button type="button" class="btn btn-sm" id="bd-go">Find a collision</button>
+      </div>
+      <div class="stats stats-3 stats-sm" id="bd-stats">
+        <div class="stat"><b id="bd-trials">–</b><span>messages hashed</span></div>
+        <div class="stat"><b id="bd-expect">–</b><span>expected, about 1.25 × 2<sup>n/2</sup></span></div>
+        <div class="stat"><b id="bd-pre">–</b><span>to hit one chosen hash (2<sup>n</sup>)</span></div>
+      </div>
+      <pre class="term bd-out" id="bd-out" aria-live="polite"></pre>
+      <p class="verdict" id="bd-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <table class="gap-table" aria-label="Generic collision cost against the best known attack">
+        <thead><tr><th>Hash</th><th>Generic collision (2<sup>n/2</sup>)</th><th>Best result on that hash</th></tr></thead>
+        <tbody>
+          <tr><td>MD5 (128 bits)</td><td class="n">2<sup>64</sup></td><td>Chosen-prefix collisions in practice: a rogue CA (2008), Flame (2012)</td></tr>
+          <tr><td>SHA-1 (160 bits)</td><td class="n">2<sup>80</sup></td><td>SHAttered, 2017: about nine quintillion computations (about 2<sup>63</sup>), 6,500 CPU-years and 110 GPU-years. Chosen-prefix, 2020: 2<sup>63.4</sup>, estimated at about $45,000</td></tr>
+          <tr><td>SHA-256</td><td class="n">2<sup>128</sup></td><td>No collision known</td></tr>
+        </tbody>
+      </table>
+      <ul class="rules">
+        <li>A hash with <b>n</b> bits collides after about 2<sup>n/2</sup> tries, not 2<sup>n</sup>. That is why a 160-bit hash gives about 80 bits of collision resistance.</li>
+        <li>A <b>collision</b> (any two inputs) is much cheaper than a <b>preimage</b> (matching one chosen hash). Signatures over attacker-influenced documents need collision resistance.</li>
+      </ul>
+      <p class="src">SOURCES <a href="https://shattered.io/" target="_blank" rel="noopener">shattered.io</a> · <a href="https://sha-mbles.github.io/" target="_blank" rel="noopener">"SHA-1 is a Shambles"</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start at 20 bits and press the button: about a thousand hashes, instantly. Move to 24, 28 and 32: each step of two bits makes the search about twice as long, not four times. The page uses the first n bits of real SHA-256 of "salt:counter" messages and stops at the first match, then prints the two messages and the shared prefix. Compare the second stat: finding a match to one chosen hash would take 2^n tries.</span></li><li><b class="say">Say</b><span>The shortened hash is a stand-in for the structure of the bound, not for any real attack. The table next to it is the real-world gap between the generic bound and the best known attack: SHAttered needed about 2^63 SHA-1 computations against a generic 2^80; shattered.io calls that "thousands of times faster than trying every possibility by brute force".</span></li><li><b class="ask">Ask</b><span>Which of your systems sign documents or certificates that someone else gets to influence? <em>Those need collision resistance, so the hash they use matters even when "preimage" attacks are still far away.</em></span></li><li><b class="tip">Tip</b><span>At 32 bits the demo should take a second or two: about 82,000 hashes expected. Don't go further in the browser.</span></li><li><b class="tip">Check</b><span>shattered.io (23 Feb 2017: about nine quintillion computations; 6,500 CPU-years and 110 GPU-years) and sha-mbles.github.io (chosen-prefix 2^63.4; about $45,000 estimated, about $75,000 spent) were both read. The MD5 row is qualitative on purpose: I didn't find a single sourced cost figure to quote.</span></li><li><b class="next">Next</b><span>"How SHA-1 left the building."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sha1" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// HASHES AND TRUST 03 · CASE</p><h2>SHA-1, 2015 to 2030: the long goodbye</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="tl-v">
+        <li><b>1 Jan 2016</b><span>CAs may no longer issue SHA-1 certificates (CA/Browser Forum Ballot 118)</span></li>
+        <li><b>Jan 2017</b><span>Chrome 56 and Firefox 51 begin to stop trusting SHA-1 certificates from public CAs</span></li>
+        <li><b>23 Feb 2017</b><span>SHAttered: two different PDFs with the same SHA-1 hash, from CWI Amsterdam and Google. Mozilla's policy reaches all Firefox users the next day</span></li>
+        <li><b>Jan 2020</b><span>A practical chosen-prefix collision (Leurent and Peyrin); GnuPG changes how it treats SHA-1 identity signatures</span></li>
+        <li><b>15 Dec 2022</b><span>NIST: phase SHA-1 out of all uses by 31 December 2030</span></li>
+      </ol>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3">
+        <div class="stat"><b>9 quintillion</b><span>SHA-1 computations for SHAttered, about 2<sup>63</sup></span></div>
+        <div class="stat"><b>$45k</b><span>estimated cost of a chosen-prefix collision in 2020</span></div>
+        <div class="stat"><b>2030</b><span>NIST's end date for SHA-1 in any application</span></div>
+      </div>
+      <ul class="rules">
+        <li><b>Deprecation was staged</b> on purpose: stop issuing, then stop trusting, then retire. The break arrived while the schedule was running.</li>
+        <li>RFC 9325 (2022): when authenticating with RSA, SHA-1 and MD5 signatures must not be used.</li>
+        <li><b>Your check:</b> search your own estate for SHA-1 in internal CAs, code signing, SAML, document signing and old VPN gear.</li>
+      </ul>
+      <p class="src">SOURCES <a href="https://cabforum.org/2014/10/16/ballot-118-sha-1-sunset-passed/" target="_blank" rel="noopener">CA/B Forum Ballot 118</a> · <a href="https://security.googleblog.com/2016/11/sha-1-certificates-in-chrome.html" target="_blank" rel="noopener">Chrome</a> · <a href="https://blog.mozilla.org/security/2017/02/23/the-end-of-sha-1-on-the-public-web/" target="_blank" rel="noopener">Mozilla</a> · <a href="https://csrc.nist.gov/News/2022/nist-transitioning-away-from-sha-1-for-all-apps" target="_blank" rel="noopener">NIST</a> · <a href="https://sha-mbles.github.io/" target="_blank" rel="noopener">Shambles</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>SHA-1 shows what a managed retirement looks like. The break was predictable, so the schedule ran ahead of it: the CA/Browser Forum's Ballot 118 banned new SHA-1 certificates from 1 January 2016, and browsers started refusing them in January 2017, just before SHAttered. NIST's end date for every use is the end of 2030.</span></li><li><b class="say">Say</b><span>The practical lesson is about long tails: public certificates moved quickly because a few browsers and CAs controlled the schedule. Everything without a gatekeeper (code signing, SAML, internal CAs, embedded devices) moves at the speed of your own inventory.</span></li><li><b class="tip">Tip</b><span>The Shambles authors' advice: "Remove any use of SHA-1 in your product as soon as possible and use instead SHA-256 or SHA-3." Their GnuPG disclosure is a good example of a lab break becoming a tool-vendor fix.</span></li><li><b class="tip">Check</b><span>Ballot 118 (voting closed 16 Oct 2014; effective 1 Jan 2016) is from the CA/B Forum list. Chrome 56 (planned for the end of January 2017) is from Google's November 2016 post; Mozilla's post is dated 23 Feb 2017 and says the policy reaches all Firefox users the next day. I didn't read Microsoft's schedule, which differed (Edge and IE: 14 February 2017 per secondary coverage).</span></li><li><b class="next">Next</b><span>"Two trust failures you've already met."</span></li></ul></div>
+</section>
+
+<section class="slide" id="revisit" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// HASHES AND TRUST 04 · REVISITED</p><h2>DigiNotar and eMudhra, in six beats</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>DigiNotar, 2011</h3>
+      <dl class="beats beats-sm">
+        <div><dt>Design</dt><dd>A CA signs certificates that every browser trusts.</dd></div>
+        <div><dt>Failure</dt><dd>Intruders reached all eight CA servers and tampered with the logs.</dd></div>
+        <div><dt>Found</dt><dd>A routine check on 19 July; a rogue *.google.com certificate surfaced publicly on 28 August.</dd></div>
+        <div><dt>Impact</dt><dd>531 rogue certificates; about 300,000 users, 95% in Iran.</dd></div>
+        <div><dt>Fix</dt><dd>Browsers removed DigiNotar from their trust stores.</dd></div>
+        <div><dt>Lesson</dt><dd>Ship logs off the machine; watch the CAs you trust.</dd></div>
+      </dl>
+      <p class="fine">Full story: <a href="../pki-in-depth/#diginotar">PKI in Depth, DigiNotar</a>. Source: Fox-IT's report of 13 August 2012.</p>
+    </div>
+    <div class="stack">
+      <h3>eMudhra, October 2026</h3>
+      <dl class="beats beats-sm">
+        <div><dt>Design</dt><dd>Subordinate CAs sign certificates under a trusted root.</dd></div>
+        <div><dt>Failure</dt><dd>Keys for eight intermediates "were generated with insufficient randomness" (Google).</dd></div>
+        <div><dt>Found</dt><dd>A researcher's report on Saturday 17 October.</dd></div>
+        <div><dt>Impact</dt><dd>None logged: no certificate had been seen in Certificate Transparency before the block.</dd></div>
+        <div><dt>Fix</dt><dd>Chrome blocked within two hours, Firefox within three, then the root was removed.</dd></div>
+        <div><dt>Lesson</dt><dd>It is Debian again: a badly made key is a key anyone can guess.</dd></div>
+      </dl>
+      <p class="fine">Full story: <a href="../pki-in-depth/#emudhra">PKI in Depth, eMudhra</a>. Sources: Google and Mozilla.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>You've seen both of these in PKI in Depth, so this is only the six-beat summary. The point of putting them side by side is the "found" beat: DigiNotar was found after weeks of abuse; eMudhra was reported by a researcher and blocked in hours. What changed in fifteen years is public logs, pushed blocklists and published policies. What didn't change is that a badly made key is a key anyone can guess.</span></li><li><b class="ask">Ask</b><span>Which beat of the DigiNotar story is closest to something in your own estate? <em>Most rooms answer "logs on the same machine" or "one network".</em></span></li><li><b class="tip">Check</b><span>All numbers here come from the PKI in Depth slides, which were checked against Fox-IT's report and Google's and Mozilla's posts. If you update that talk, update this slide.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why did DigiNotar's failure affect sites that never used DigiNotar?</p><details><summary>Hint</summary><p>Who decides which CAs your browser trusts, and for which names?</p></details><details class="answer"><summary>Answer</summary><p>Any CA in the trust store can issue a certificate for any name. A rogue certificate for a site with a different CA still validated, so users of every site were exposed until browsers removed DigiNotar.</p></details></li>
+      <li><p>MD5 collisions were shown in 2004, and Flame used one in 2012. Why the long gap?</p><details><summary>Hint</summary><p>Think about who controls each place a hash is used.</p></details><details class="answer"><summary>Answer</summary><p>Migrating off a hash means finding every signing path, including the odd ones. One licensing CA path still accepted MD5 after Microsoft had disallowed it elsewhere. Public certificates moved only when browsers and CAs forced a schedule.</p></details></li>
+      <li><p>A hash has n bits. About how many messages until two of them probably collide, and why does that matter for signatures?</p><details><summary>Hint</summary><p>Use the demo's second number.</p></details><details class="answer"><summary>Answer</summary><p>About 2<sup>n/2</sup>. Signatures over documents or certificates an attacker can influence need collision resistance, not just resistance to matching one chosen hash.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>The plan's second question (why DigiNotar affected sites that never used it) is the first one here.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="padding" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// MODES, PADDING AND NEGOTIATION 01 · CASE</p><h2>Padding oracles, 2002 to 2017: when an error message is an answer</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>Encrypt in CBC mode with padding and a MAC. On receipt, decrypt, check the padding, then check the MAC.</dd></div>
+        <div><dt>Failure</dt><dd>How the receiver reacts to bad padding (an error, a delay) says whether the padding was valid. That is a decryption oracle for anyone who can send altered messages.</dd></div>
+        <div><dt>Found</dt><dd>Vaudenay (EUROCRYPT 2002); Lucky Thirteen, AlFardan and Paterson (4 Feb 2013); POODLE, Möller, Duong and Kotowicz at Google (Sept 2014); ROBOT, Böck, Somorovsky and Young (Dec 2017).</dd></div>
+        <div><dt>Impact</dt><dd>Lucky Thirteen: full plaintext recovery against OpenSSL. POODLE: secure cookies from SSL 3.0 sessions. ROBOT: 27 of the top 100 domains had vulnerable subdomains.</dd></div>
+        <div><dt>Fix</dt><dd>AEAD cipher suites, encrypt-then-MAC (RFC 7366), one identical error for every failure, no RSA key exchange, and no SSL 3.0 (RFC 7568).</dd></div>
+        <div><dt>Lesson</dt><dd>Fail the same way every time, and authenticate before you decrypt or parse.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://www.isg.rhul.ac.uk/tls/Lucky13.html" target="_blank" rel="noopener">Lucky Thirteen</a> · <a href="https://openssl-library.org/files/ssl-poodle.pdf" target="_blank" rel="noopener">POODLE advisory</a> · <a href="https://robotattack.org/" target="_blank" rel="noopener">ROBOT</a> · <a href="https://www.rfc-editor.org/rfc/rfc7366" target="_blank" rel="noopener">RFC 7366</a></p>
+    </div>
+    <div class="stack">
+      <div class="cards-2 tight">
+        <div class="card"><b>POODLE · CVE-2014-3566</b><span>In SSL 3.0's CBC the padding isn't covered by the MAC, so it can't be fully checked. Clients that retried with older versions after a failed handshake could be pushed into SSL 3.0 by a network attacker.</span></div>
+        <div class="card"><b>Lucky Thirteen · 2013</b><span>A timing difference of about one hash computation in CBC processing. The authors say it is a flaw in the TLS specification, not in one implementation.</span></div>
+        <div class="card"><b>ROBOT · 2017</b><span>"The return of a 19-year-old vulnerability": Bleichenbacher's 1998 oracle on RSA key exchange, still leaking from servers. The fix is to turn RSA key exchange off.</span></div>
+        <div class="card"><b>Why AEAD</b><span>An authenticated cipher suite rejects any altered message before it looks at padding. TLS 1.3 allows only AEAD ciphers.</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>The family resemblance is the point. Different decades, different protocols, the same shape: a receiver does something with unauthenticated input and then reveals, by an error or by timing, how far it got. The mitigation is also the same shape: reject altered messages at the authentication step, before any padding or format check, and answer every failure identically.</span></li><li><b class="say">Say</b><span>From the POODLE advisory: CBC padding in SSL 3.0 "is not deterministic, and not covered by the MAC", and "unlike with the BEAST and Lucky 13 attacks, there is no reasonable workaround", so SSL 3.0 had to be avoided entirely. That is why RFC 7568 prohibits it.</span></li><li><b class="tip">Tip</b><span>Lucky Thirteen's page lists the long-term advice: move to AEAD cipher suites such as AES-GCM. Random delays were not effective, and RC4 was only a stopgap.</span></li><li><b class="tip">Check</b><span>I read Lucky Thirteen's page, the POODLE advisory PDF (dated September 2014; Google's blog post is 14 October 2014), ROBOT's page and the RFC texts. Vaudenay's paper itself blocked automated reading here; its venue and title come from the IACR listing returned by search. ROBOT's "27 of the Alexa top 100" is the authors' figure. The paper says encrypt-then-MAC is "rarely implemented"; RFC 9325 says CBC suites should not be used without it.</span></li><li><b class="next">Next</b><span>"Let's watch an error message leak, on a toy cipher."</span></li></ul></div>
+</section>
+
+<section class="slide" id="oracle" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// MODES, PADDING AND NEGOTIATION 02 · DEMO</p><h2>Why distinguishable errors leak</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <span class="seg-pick" id="og-mode" role="group" aria-label="How the server reports errors"></span>
+        <button type="button" class="btn btn-ghost btn-sm" id="og-new">New toy key</button>
+      </div>
+      <p class="note mono" id="og-ct" aria-live="polite"></p>
+      <div class="og-grid" id="og-grid" role="img" aria-label="256 answers from the toy server, one per possible value of the last byte"></div>
+      <p class="verdict" id="og-out" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The toy has an 8-byte block cipher (a made-up 4-round network) in CBC mode, with PKCS #7 padding. <b>It is not a real cipher.</b></li>
+        <li>The grid asks the toy server about <b>256 altered messages</b>: each changes one byte of the block before the target.</li>
+        <li>With <b>distinct errors</b> ("padding OK" or "bad padding"), exactly one answer differs. That cell reveals the last byte of the hidden block.</li>
+        <li>With <b>one uniform error</b> every cell is the same. The server tells nobody anything.</li>
+      </ul>
+      <div class="card"><b>The defence</b><span>Authenticate first: check a MAC over the whole message (or use AEAD), and answer every failure the same way and in the same time. Then there is no question to ask.</span></div>
+      <p class="fine">Teaching code on invented data. Real attacks repeat this for every byte and need many sessions or a vulnerable server; none of that is automated here.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start in "distinct errors". The grid has 256 cells, one per possible last byte of the altered block. One cell is lit: that is the only guess for which the toy server found valid padding. Read the line under the grid: from that one lit cell the last byte of the hidden block follows by one XOR. Then switch to "uniform error": nothing is lit, and the line says nothing was learned. Press "New toy key" to see it hold for any key (occasionally two cells light, which the page explains).</span></li><li><b class="say">Say</b><span>We only show one byte, one position, on a toy. The point is the information flow, not a recipe. A receiver that says "bad padding" versus "bad MAC" has told the sender something that only the key holder should know.</span></li><li><b class="ask">Ask</b><span>What are the ways a server can answer differently without printing a different message? <em>Timing, a different HTTP status, a different connection behaviour, a log line the sender can read.</em></span></li><li><b class="tip">Tip</b><span>This is exactly the "Logs and errors" slide in Using Crypto Correctly in Code: "Detailed errors to the caller ... can turn the decryption service into an oracle".</span></li><li><b class="tip">Check</b><span>The toy cipher is a 4-round Feistel network with SHA-256 as the round function, written for this page; it is only there to make small blocks. The behaviour shown (a valid ending of 0x01 after decryption) is standard PKCS #7 padding. Node tests check that the oracle recovers the right byte for 300 random keys in distinct mode and nothing in uniform mode.</span></li><li><b class="next">Next</b><span>"When the oracle is the negotiation itself."</span></li></ul></div>
+</section>
+
+<section class="slide" id="downgrade" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// MODES, PADDING AND NEGOTIATION 03 · CASES</p><h2>FREAK, Logjam, DROWN: the weakest option wins</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-3 tight">
+      <div class="card"><b>FREAK · 3 March 2015</b><span><b>Found:</b> "Factoring attack on RSA-EXPORT Keys"; CVE-2015-0204 in OpenSSL, with similar bugs elsewhere. <b>Impact:</b> 36.7% of HTTPS servers with browser-trusted certificates at disclosure. <b>Fix:</b> disable export suites; update TLS libraries and browsers.</span></div>
+      <div class="card"><b>Logjam · 20 May 2015</b><span><b>Found:</b> a TLS flaw lets an attacker downgrade DHE_EXPORT connections to 512-bit; many servers share the same 1024-bit primes. <b>Impact:</b> 8.4% of the top million HTTPS domains at first. <b>Fix:</b> no export suites; unique 2048-bit groups (or ECDHE).</span></div>
+      <div class="card"><b>DROWN · March 2016</b><span><b>Found:</b> SSLv2 on any server sharing the key can break a modern TLS connection; CVE-2016-0800. <b>Impact:</b> 33% of HTTPS servers vulnerable at disclosure. <b>Fix:</b> turn SSLv2 off everywhere, and don't share keys across services.</span></div>
+    </div>
+    <div class="cols-2">
+      <ul class="rules">
+        <li><b>Design:</b> servers kept 1990s export-grade suites and SSLv2 for compatibility. Logjam's authors trace the export suites to "1990s-era U.S. export restrictions".</li>
+        <li><b>Failure:</b> the weaker option was still on offer, and an active attacker could steer the negotiation to it. A 512-bit value can be broken: the Logjam team broke the most common 512-bit prime.</li>
+      </ul>
+      <ul class="rules">
+        <li><b>Fix that lasts:</b> remove the old options, don't just prefer the new ones. TLS_FALLBACK_SCSV (RFC 7507) and TLS 1.3's downgrade sentinel (RFC 8446) catch some downgrades; the lab on the next slide lets you try both.</li>
+        <li><b>Lesson:</b> backwards compatibility is attack surface. Test every service, including mail and appliances.</li>
+      </ul>
+    </div>
+    <p class="src">SOURCES <a href="https://freakattack.com/" target="_blank" rel="noopener">freakattack.com</a> · <a href="https://weakdh.org/" target="_blank" rel="noopener">weakdh.org (Logjam)</a> · <a href="https://drownattack.com/" target="_blank" rel="noopener">drownattack.com</a> · <a href="https://www.rfc-editor.org/rfc/rfc9325" target="_blank" rel="noopener">RFC 9325</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three attacks, one mechanism. Each uses an option that was only there for compatibility, and each works even when both ends also support something strong, because the negotiation can be steered. Operators can't fix it from the client side: DROWN's site says "there is nothing practical that web browsers or other client software can do to prevent DROWN".</span></li><li><b class="say">Say</b><span>Percentages are the researchers' own disclosure-time figures and have fallen since: FREAK's page says 36.7% fell to 6.5% later; DROWN's page notes SSL Labs estimated 1.2% in 2019. Quote them as "at disclosure".</span></li><li><b class="tip">Tip</b><span>RFC 9325 (2022) now says implementations must not negotiate suites under 112 bits, including export-level ones, and must not negotiate TLS 1.0 or 1.1. Note RFC 8996 later marked RFC 7507's fallback signalling obsolete, because TLS 1.3's sentinel does the same job once older versions are gone.</span></li><li><b class="tip">Check</b><span>I read all three sites plus the Logjam paper PDF for the export-restrictions wording. The FREAK page doesn't state the export history; the Logjam paper does ("to comply with 1990s-era U.S. export restrictions"). CVE for Logjam isn't on weakdh.org, so none is given. I read RFC 7507, 8446 and 8996 directly.</span></li><li><b class="next">Next</b><span>"Try the negotiation yourself."</span></li></ul></div>
+</section>
+
+<section class="slide" id="dg-sim" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// MODES, PADDING AND NEGOTIATION 04 · DEMO</p><h2>Negotiation lab: who wins, and which defence stops it?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="dg-pick">
+        <fieldset><legend>Client supports</legend><div class="dg-checks" id="dg-client"></div></fieldset>
+        <fieldset><legend>Server supports</legend><div class="dg-checks" id="dg-server"></div></fieldset>
+      </div>
+      <div class="dg-opts">
+        <label class="check"><input type="checkbox" id="dg-attacker"> An attacker on the network resets handshakes that offer TLS 1.0 or newer</label>
+        <label class="check"><input type="checkbox" id="dg-dance" checked> The client retries with older versions when a handshake fails</label>
+        <label class="check"><input type="checkbox" id="dg-scsv"> Fallback signal (TLS_FALLBACK_SCSV, RFC 7507, later obsoleted by RFC 8996)</label>
+        <label class="check"><input type="checkbox" id="dg-sent"> TLS 1.3 downgrade sentinel (RFC 8446)</label>
+        <label class="check"><input type="checkbox" id="dg-export"> The server still offers export-grade suites</label>
+      </div>
+    </div>
+    <div class="stack">
+      <ol class="dg-log" id="dg-log" aria-live="polite"></ol>
+      <p class="verdict" id="dg-verdict" aria-live="polite"></p>
+      <p class="fine" id="dg-export-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start with everything supported on both sides and no attacker: TLS 1.3. Switch the attacker on: the client falls back to SSL 3.0 and the verdict turns red (the POODLE setup). Untick SSL 3.0 on the server: the attacker can only cause a failure. Put SSL 3.0 back and tick the fallback signal: the server refuses the fallback, and the connection fails safely. Untick that and tick the TLS 1.3 sentinel instead: the client sees "DOWNGRD" and aborts.</span></li><li><b class="say">Say</b><span>Two lessons. First, a defence that only works if the other side also supports it (the sentinel needs both sides to speak TLS 1.3) doesn't help against the oldest clients. Second, the strongest fix is the one the lab shows when you untick the old version on the server: with nothing to fall back to, there is nothing to steer toward.</span></li><li><b class="show">Show</b><span>Tick "export-grade suites" with the attacker on and read the note under the log: it describes what FREAK and Logjam did, and why a 512-bit value is breakable.</span></li><li><b class="tip">Tip</b><span>The "no downgrade" outcome is a failed connection, not a safe one: the user may then be offered an "insecure" option by software. Fail closed.</span></li><li><b class="tip">Check</b><span>The lab is a model of the negotiation logic described in RFC 7568, 7507 and 8446 (section 4.1.3), on invented hosts. The attacker model is deliberately simple: it resets every handshake offering above SSL 3.0. The sentinel bytes are "DOWNGRD" followed by 0x01 for a TLS 1.2 negotiation, per RFC 8446. Node tests cover the main combinations (no attacker, attacker with and without each defence, SSL 3.0 removed, no retries, empty client list, export on and off).</span></li><li><b class="next">Next</b><span>"A cipher that was fine until the data grew."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sweet32" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// MODES, PADDING AND NEGOTIATION 05 · CASE</p><h2>Sweet32, 2016: a cipher that was fine until the data grew</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>3DES and Blowfish encrypt in 64-bit blocks. In CBC mode, repeated blocks start to appear sooner than you'd expect.</dd></div>
+        <div><dt>Failure</dt><dd>With 64-bit blocks the birthday bound is about 2<sup>32</sup> blocks: roughly 32 GB under one key. Long-lived connections go past it.</dd></div>
+        <div><dt>Found</dt><dd>Bhargavan and Leurent at Inria; CCS 2016, August 2016. CVE-2016-2183 (TLS) and CVE-2016-6329 (OpenVPN).</dd></div>
+        <div><dt>Impact</dt><dd>They recovered a two-block HTTPS cookie from 610 GB captured over 30.5 hours, and an OpenVPN token in 18.6 hours (705 GB). At least 0.6% of HTTPS connections were vulnerable.</dd></div>
+        <div><dt>Fix</dt><dd>Stop using 64-bit block ciphers, or cap the data per key. NIST later disallowed three-key TDEA encryption after 2023.</dd></div>
+        <div><dt>Lesson</dt><dd>Ciphers have limits on data per key, not just on key size. Something has to enforce the limit.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://sweet32.info/" target="_blank" rel="noopener">sweet32.info</a> · <a href="https://csrc.nist.gov/news/2023/nist-to-withdraw-sp-800-67-rev-2" target="_blank" rel="noopener">NIST: withdrawal of SP 800-67 Rev. 2</a></p>
+    </div>
+    <div class="stack">
+      <h3>How much data until blocks collide?</h3>
+      <div class="controls">
+        <span class="seg-pick" id="sw-bits" role="group" aria-label="Block size"></span>
+        <label>Link speed <select id="sw-rate" aria-label="Link speed"><option value="10">10 Mbit/s</option><option value="100" selected>100 Mbit/s</option><option value="1000">1 Gbit/s</option><option value="10000">10 Gbit/s</option></select></label>
+      </div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="sw-blocks">–</b><span>blocks to reach the birthday bound</span></div>
+        <div class="stat"><b id="sw-data">–</b><span>data under one key</span></div>
+        <div class="stat"><b id="sw-time">–</b><span>to send that at this speed</span></div>
+      </div>
+      <p class="verdict" id="sw-verdict" aria-live="polite"></p>
+      <p class="fine">The bound is where repeated blocks become likely, not where an attack finishes: the researchers needed about 2<sup>36.6</sup> blocks (785 GB) for their full cookie attack.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>3DES wasn't broken by a clever new attack. It was used for longer connections than a 64-bit block can safely carry. The same birthday arithmetic you ran on the hash slide applies to blocks: after about 2^32 of them under one key, two will match, and in CBC a match leaks the XOR of two plaintext blocks.</span></li><li><b class="show">Show</b><span>Switch between 64-bit and 128-bit blocks at 100 Mbit/s: 64-bit reaches the bound in under an hour of saturated 100 Mbit/s traffic (hours at 10 Mbit/s); 128-bit blocks need an astronomically larger amount.</span></li><li><b class="tip">Tip</b><span>This is why TLS 1.3 and modern libraries limit the data per key and rekey (RFC 8446 section 5.5 is titled "Limits on Key Usage"; the nonces slide in Using Crypto Correctly in Code covers how long a key lasts).</span></li><li><b class="tip">Check</b><span>All Sweet32 numbers (32 GB bound; 785 GB / 2^36.6; 610 GB in 30.5 h; 18.6 h and 705 GB for OpenVPN; 0.6%) are from sweet32.info, which I read. The NIST detail is from NIST's 2023 withdrawal notice for SP 800-67 Rev. 2 (1 January 2024) as returned by search; the "deprecated through 2023, disallowed after" wording is from SP 800-131A Rev. 2 via search, and I didn't open that document.</span></li><li><b class="next">Next</b><span>"When compression and secrets meet."</span></li></ul></div>
+</section>
+
+<section class="slide" id="compression" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// MODES, PADDING AND NEGOTIATION 06 · CASE AND DEMO</p><h2>CRIME and BREACH, 2012 to 2013: compression leaks length</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Design:</b> compress a response, then encrypt it. Both are fine on their own.</li>
+        <li><b>Failure:</b> if a secret (a token) and text the attacker controls are compressed together, matching text compresses smaller, and encryption doesn't hide <i>length</i>.</li>
+        <li><b>Found:</b> CRIME, Rizzo and Duong (ekoparty, September 2012; CVE-2012-4929) on TLS compression. BREACH, Prado, Harris and Gluck (Black Hat USA, 2013) on HTTP compression.</li>
+        <li><b>Fix:</b> turn TLS compression off (TLS 1.3 removed it). For HTTP compression: keep secrets away from reflected input, mask tokens per response, hide the length, or turn compression off.</li>
+        <li><b>Lesson:</b> encryption hides content, not size. Treat length as output.</li>
+      </ul>
+      <p class="src">SOURCES <a href="https://breachattack.com/" target="_blank" rel="noopener">breachattack.com</a> · <a href="https://www.rfc-editor.org/rfc/rfc9325" target="_blank" rel="noopener">RFC 9325 §3.3</a> · <a href="https://www.rfc-editor.org/rfc/rfc8446" target="_blank" rel="noopener">RFC 8446</a></p>
+    </div>
+    <div class="stack">
+      <h3>An invented page, a toy compressor <span class="chip chip-part">choose each character</span></h3>
+      <div class="controls">
+        <span class="seg-pick" id="cx-mode" role="group" aria-label="Defence"></span>
+        <button type="button" class="btn btn-ghost btn-sm" id="cx-again">Measure again</button><button type="button" class="btn btn-ghost btn-sm" id="cx-new">New secret</button>
+      </div>
+      <pre class="term cx-page" id="cx-page" aria-label="The invented page"></pre>
+      <p class="note mono">Characters locked in so far: <b id="cx-known">(none)</b></p>
+      <div class="cx-cands" id="cx-cands" role="group" aria-label="Candidates for the next character, with the compressed length of the page for each"></div>
+      <p class="verdict" id="cx-note" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Defence "none": the page includes a hidden token and a line that repeats whatever the visitor typed. For each possible next character the table shows the page's compressed length. One character is one byte shorter: the one that extends a match with the real token. Click it to lock it in, then look at the next row. Now switch the defence: "mask" changes the token on the page every response, "random padding" blurs the sizes, and "compression off" makes every size identical.</span></li><li><b class="say">Say</b><span>The page is invented and the compressor is a toy (a literal costs one byte, a repeated run costs two), chosen so the effect is readable. Real compressors are noisier, which is why real attacks need many requests; the breachattack.com site says "a few thousand". We make you click each character yourself so you see the principle, not a tool.</span></li><li><b class="ask">Ask</b><span>Which responses in your estate reflect user input next to a token or a personal detail? <em>Search results, error pages, "you searched for" lines and form echoes are the usual places.</em></span></li><li><b class="tip">Tip</b><span>Breachattack.com ranks mitigations: turn off HTTP compression first; keep secrets away from user input; fresh secrets per request; masking by XOR with a per-request random value; CSRF defences; random padding; rate limiting. It also says its authors know of no "clean, effective, practical solution" to the whole class.</span></li><li><b class="tip">Check</b><span>I read breachattack.com, the RFC 9325 text (TLS 1.2 deployments should not support TLS-level compression) and RFC 8446 (compression removed). The page lists no CVE for BREACH, so none is given here. CRIME's CVE and date are from Debian's and Red Hat's trackers as returned by search; the browser versions that disabled TLS compression weren't verified, so none are named.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Which of these were bugs in the algorithm, and which were in how it was used: MD5 and Flame, POODLE, Sweet32, Heartbleed (next part), the PS3?</p><details><summary>Hint</summary><p>Ask of each: was the maths itself broken, or the construction around it, or the code?</p></details><details class="answer"><summary>Answer</summary><p>MD5 and the 3DES block size: the primitive's limits. POODLE: a construction (padding outside the MAC). The PS3: ECDSA was fine; a value that must be fresh was reused. Heartbleed: neither: a memory bug in a library. Most famous breaks are in the construction or the use, not in the cipher.</p></details></li>
+      <li><p>Why does it matter that a server returns the same error for every failure?</p><details><summary>Hint</summary><p>What did the one lit cell in the demo tell you?</p></details><details class="answer"><summary>Answer</summary><p>Different errors, delays or logs are an answer to a question the sender shouldn't be able to ask. Authenticate first, and make every failure look the same.</p></details></li>
+      <li><p>A server supports TLS 1.2 and 1.3 only. Why does a client's "retry with an older version" habit stop mattering?</p><details><summary>Hint</summary><p>Try it in the negotiation lab.</p></details><details class="answer"><summary>Answer</summary><p>There is no older version to fall back to: the attacker can cause a failure, not a downgrade. Removing the weak option beats trying to detect its use.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li><li><b class="tip">Tip</b><span>This is the plan's third checkpoint question (algorithm or use) as the first question here.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="krack" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 01 · CASE</p><h2>KRACK, 2017: a proof that didn't cover the step that broke</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>WPA2's four-way handshake derives fresh keys and installs them; the cipher's nonce is a packet counter that must never repeat under a key.</dd></div>
+        <div><dt>Failure</dt><dd>Message 3 of the handshake can be retransmitted, and a client that installs the key again resets its counter. A repeated nonce reuses the key stream.</dd></div>
+        <div><dt>Found</dt><dd>Mathy Vanhoef and Frank Piessens (KU Leuven), disclosed 16 October 2017. Ten CVEs (CVE-2017-13077 to -13088 in part).</dd></div>
+        <div><dt>Impact</dt><dd>Worst on Linux's wpa_supplicant 2.4 and later, and so Android 6.0 and later: they could be tricked into installing an all-zero key.</dd></div>
+        <div><dt>Fix</dt><dd>Backwards-compatible patches on both clients and access points. Changing the Wi-Fi password doesn't help; "keep using WPA2".</dd></div>
+        <div><dt>Lesson</dt><dd>A proof covers what it models. Test the state machine: retransmission, loss and replay, not only the happy path.</dd></div>
+      </dl>
+      <p class="src">SOURCE <a href="https://www.krackattacks.com/" target="_blank" rel="noopener">krackattacks.com</a> (the researchers' site)</p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>The proof question, in the researchers' words</b><span>"The brief answer is that the formal proof does not assure a key is installed only once." The proofs covered key secrecy and handshake authentication, not <i>when</i> keys are installed.</span></div>
+      <ul class="rules">
+        <li>This is nonce reuse again, in a protocol: see <a href="../crypto-in-code/#reuse">What a repeated nonce breaks</a>. The difference is that the implementation, not the application, reset the counter.</li>
+        <li>WEP before it was broken in 2001 (Fluhrer, Mantin and Shamir; practical key recovery by Stubblefield, Ioannidis and Rubin the same year). WPA followed in 2003 and WPA2 in 2004. Sources differ on the exact retirement dates.</li>
+        <li>HTTPS or a VPN on top of Wi-Fi limits what one broken link exposes.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is the case that most changed how people think about proofs. The handshake had been analysed and proven secure for secrecy and authentication. The break was in an action the proof didn't describe: installing the same key twice. The fix is also instructive: it's a change to the client's behaviour, not to the cryptography.</span></li><li><b class="ask">Ask</b><span>Where in your own protocols does a "reinstall", "retry" or "resume" path exist that a spec and a test suite might not exercise? <em>Think of session resumption, token refresh, handshake retransmission and key rollover.</em></span></li><li><b class="tip">Tip</b><span>The page says both client and AP must be patched to defend against all attacks, and that routers can reduce exposure by disabling client or repeater modes and fast roaming (802.11r).</span></li><li><b class="tip">Check</b><span>I read krackattacks.com. The disclosure date (16 October 2017) isn't printed on the page itself; it is dated by the press items it links. The WEP 2001 papers are from IACR/Springer and AT&T technical-report listings as returned by search, and the WPA (2003) and WPA2 (2004) dates are from the Wi-Fi Alliance's history as summarised by several sources that disagree slightly about WEP's "retirement". The earlier timeline slide uses "WPA2, 2004" only as an approximate start.</span></li><li><b class="next">Next</b><span>"A different kind of failure: not the maths at all."</span></li></ul></div>
+</section>
+
+<section class="slide" id="heartbleed" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 02 · CASE</p><h2>Heartbleed, 2014: not a crypto bug at all</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <dl class="beats">
+        <div><dt>Design</dt><dd>OpenSSL implemented the TLS heartbeat extension (RFC 6520): a peer sends some data and a length, and the other side echoes it back.</dd></div>
+        <div><dt>Failure</dt><dd>The code trusted the length it was given and read past the data. OpenSSL calls it "a missing bounds check" that can reveal "up to 64k of memory". A programming mistake, not a flaw in the protocol.</dd></div>
+        <div><dt>Found</dt><dd>Neel Mehta of Google Security and a team at Codenomicon, in early April 2014. Fixed in OpenSSL 1.0.1g on 7 April 2014. CVE-2014-0160.</dd></div>
+        <div><dt>Impact</dt><dd>Anyone could read server memory: secret keys, passwords, session data. Netcraft counted about 17% of SSL web servers with trusted certificates, around half a million.</dd></div>
+        <div><dt>Fix</dt><dd>Patch to 1.0.1g or later, revoke and reissue certificates, invalidate sessions, then change passwords. Or rebuild without heartbeats.</dd></div>
+        <div><dt>Lesson</dt><dd>Crypto libraries are programs: fuzz them, review them, use memory-safe code for parsers, and rehearse key rotation.</dd></div>
+      </dl>
+      <p class="src">SOURCES <a href="https://openssl-library.org/news/secadv/20140407.txt" target="_blank" rel="noopener">OpenSSL advisory, 7 Apr 2014</a> · <a href="https://heartbleed.com/" target="_blank" rel="noopener">heartbleed.com</a> · <a href="https://netcraft.com/blog/half-a-million-widely-trusted-websites-vulnerable-to-heartbleed-bug" target="_blank" rel="noopener">Netcraft</a></p>
+    </div>
+    <div class="stack">
+      <ol class="tl-v">
+        <li><b>Dec 2011</b><span>The vulnerable code is written</span></li>
+        <li><b>14 Mar 2012</b><span>OpenSSL 1.0.1 is released with it</span></li>
+        <li><b>3 Apr 2014</b><span>Discovered</span></li>
+        <li><b>7 Apr 2014</b><span>Fixed release and public disclosure</span></li>
+      </ol>
+      <ul class="rules">
+        <li>heartbleed.com: "Exploitation of this bug does not leave any trace of anything abnormal happening to the logs." That is a logging lesson as much as a coding one: see <a href="../logging-and-incident-response/">Logging, Monitoring and Incident Response</a>.</li>
+        <li>Forward secrecy limits what stolen keys unlock later. It wouldn't help against memory that holds live session data.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Not every cryptographic failure is cryptography. Heartbleed sits in the same category as any parser bug: a missing bounds check. What made it a crypto event is where it lived and what was in the memory next door: private keys.</span></li><li><b class="say">Say</b><span>Recovery had four steps, and the site lists them: patch, revoke compromised keys and reissue, invalidate session keys and cookies, then password changes once trust is restored. Netcraft later reported many sites reissued certificates and some reused the same private key, which defeats the point.</span></li><li><b class="ask">Ask</b><span>If one of your TLS keys leaked tonight, how long would reissue and revoke take, end to end? <em>This is the "crypto agility" question again.</em></span></li><li><b class="tip">Check</b><span>I read OpenSSL's advisory (the "missing bounds check" wording, up to 64k, credit to Neel Mehta, fix 1.0.1g) and heartbleed.com (dates, versions, steps, the no-trace quote) and Netcraft's write-up (about 17% of SSL servers with trusted certificates; around half a million). The "Dec 2011" date is the site's. The Netcraft remark about reissuing is from a later eWeek summary of Netcraft figures (43% reissued; 7% of those reused the key), which I didn't read in full, so it is only in these notes.</span></li><li><b class="next">Next</b><span>"Two from 2024."</span></li></ul></div>
+</section>
+
+<section class="slide" id="recent" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 03 · RECENT</p><h2>2024: old lessons in new places</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Blast-RADIUS · CVE-2024-3596 · public 9 July 2024</h3>
+      <dl class="beats beats-sm">
+        <div><dt>Design</dt><dd>RADIUS authenticates server replies with a home-made MD5 construction from the 1990s.</dd></div>
+        <div><dt>Failure</dt><dd>An attacker on the path can use an MD5 chosen-prefix collision to turn a "Reject" into an "Accept" without the shared secret.</dd></div>
+        <div><dt>Found</dt><dd>Researchers from several universities and companies; coordinated by CERT/CC.</dd></div>
+        <div><dt>Fix</dt><dd>Require the Message-Authenticator attribute; move to RADIUS over TLS or DTLS. EAP-only deployments are unaffected.</dd></div>
+        <div><dt>Lesson</dt><dd>It's the Flame lesson again, 12 years on: a legacy protocol still leaning on MD5.</dd></div>
+      </dl>
+    </div>
+    <div class="stack">
+      <h3>EUCLEAK · Yubico YSA-2024-03 · 3 September 2024</h3>
+      <dl class="beats beats-sm">
+        <div><dt>Design</dt><dd>A hardware security key keeps ECDSA private keys on a chip, using a vendor crypto library.</dd></div>
+        <div><dt>Failure</dt><dd>A side channel in the library's ECDSA code could let someone with the device and equipment recover a private key.</dd></div>
+        <div><dt>Found</dt><dd>Dr. Thomas Roche of NinjaLab reported it to Yubico on 19 April 2024.</dd></div>
+        <div><dt>Fix</dt><dd>Newer firmware (5.7, and 2.4.0 for the HSM) uses Yubico's own library. Yubico says affected keys can't be updated in the field.</dd></div>
+        <div><dt>Lesson</dt><dd>Hardware you can't patch needs a replacement plan, and a threat model that includes physical possession.</dd></div>
+      </dl>
+    </div>
+  </div>
+  <p class="src slide-src">SOURCES <a href="https://www.blastradius.fail/" target="_blank" rel="noopener">blastradius.fail</a> · <a href="https://kb.cert.org/vuls/id/456537" target="_blank" rel="noopener">CERT/CC VU#456537</a> · <a href="https://www.yubico.com/support/security-advisories/ysa-2024-03/" target="_blank" rel="noopener">Yubico YSA-2024-03</a></p>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Two recent ones, chosen because they rhyme with earlier cases. Blast-RADIUS needed no new idea: the researchers' own site says MD5 "should have been abolished 20 years ago", and that a collision was first shown in 2004. EUCLEAK is a side channel in a library, found by a researcher, in hardware that can't be updated: it is a good test of whether your vendor tells you what to do.</span></li><li><b class="say">Say</b><span>Keep the threat model honest for EUCLEAK: Yubico rates it Moderate (CVSS 4.9) and says the attacker needs physical possession of the device plus specialised equipment, and may also need an account name, password or PIN. Yubico's mitigation is to keep physical control of the key and deregister it promptly if lost or stolen. It's the same chip-maker family as ROCA, but a different flaw by a different team; the advisory doesn't connect them and neither should you.</span></li><li><b class="tip">Check</b><span>Blast-RADIUS: CERT/CC lists the note as public on 2024-07-09 (revised 2025-09-03), and blastradius.fail was read; that page doesn't print the disclosure date. EUCLEAK: Yubico's advisory (3 September 2024, "CVE in process" at publication) was read; the CVE number CVE-2024-45678 is from search coverage and records, so don't rely on it without checking. I did not read NinjaLab's own write-up.</span></li><li><b class="next">Next</b><span>"Let's see how long these things lived."</span></li></ul></div>
+</section>
+
+<section class="slide" id="timeline" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 04 · DEMO</p><h2>How long did each flaw live before anyone said so?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <span class="note">Sort by</span>
+        <span class="seg-pick" id="lf-sort" role="group" aria-label="Sort the bars"></span>
+      </div>
+      <div class="lf-chart" id="lf-chart" role="list"></div>
+      <p class="fine">Start dates are the standard's or release's date, or "at the latest" where only that is sourced. The flaw may have been exploited before it was public, or never. "Found by" is how the public story begins.</p>
+    </div>
+    <div class="stack">
+      <div class="lf-detail" id="lf-detail" aria-live="polite"></div>
+      <ul class="rules">
+        <li>In nearly every case here the answer to "who found it?" is a person looking, not an alarm going off.</li>
+        <li>Short bars (Debian, Heartbleed) are code bugs. Long bars are designs and standards that people stopped questioning.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click a bar for its dates and who found it. Sort by years to see the long ones on top: SSL 3.0's padding lived about 18 years before POODLE, and the WPA2 handshake about 13 years before KRACK. The code bugs (Debian: 1.7 years; Heartbleed: 2.1 years) are short by comparison.</span></li><li><b class="say">Say</b><span>Two lessons. Designs get less review than code once they're standards. And almost none of these were found by the people running the systems: they were found by researchers who chose to look. Budget for being the one who looks: external review and a bug-bounty or disclosure path are controls.</span></li><li><b class="tip">Check</b><span>Dates: Debian 17 Sep 2006 to 13 May 2008 (DSA-1571); Heartbleed 14 Mar 2012 to 7 Apr 2014 (heartbleed.com); POODLE 18 Nov 1996 (SSL 3.0, RFC 6101) to 14 Oct 2014 (Google's post); ROCA "2012 at the latest" to 16 Oct 2017 (paper, researchers' page); MD5 2004 to 3 Jun 2012; KRACK from WPA2's 2004 start to 16 Oct 2017. The 2004 and 2012 starts are marked approximate on the chart. The chart takes the SSL 3.0 start to be the version date, since POODLE's padding weakness is in the SSL 3.0 design.</span></li><li><b class="next">Next</b><span>"Put all twelve on one map."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sorter" data-part="4" data-num="25">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 05 · DEMO</p><h2>The root-cause map: where does each case belong?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="so-list" id="so-list" role="list"></div>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="so-done">0 / 12</b><span>placed</span></div>
+        <div class="stat"><b id="so-match">–</b><span>match my map</span></div>
+        <div class="stat"><b id="so-algo">–</b><span>match my second choice</span></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="so-reveal">Reveal my map</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="so-reset">Clear</button>
+      </div>
+      <p class="verdict" id="so-verdict" aria-live="polite"></p>
+      <div class="so-detail" id="so-detail" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>For each case, choose the category you think fits best. When you've placed some (or all), press "Reveal my map" to compare with mine, then click a case name to read my reasoning and whether the algorithm itself was broken.</span></li><li><b class="say">Say</b><span>The categories are randomness, aged or weak primitive, protocol design, implementation, and trust and process. Notice how few of the twelve are "the algorithm was broken": mostly it's what surrounds the algorithm.</span></li><li><b class="ask">Ask</b><span>Where do you disagree? <em>ROBOT (implementation of a legacy design), FREAK (client bugs plus legacy suites) and Flame (a weak hash and a process gap) are good ones to argue about.</em></span></li><li><b class="tip">Check</b><span>This is my map, not a standard taxonomy. ROBOT's "implementation bug in servers" is the authors' wording; Lucky Thirteen's "flaw in the TLS specification" is the authors' wording and counts as protocol design.</span></li><li><b class="next">Next</b><span>"What would have caught them?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="patterns" data-part="4" data-num="26">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 06</p><h2>What almost every break had in common, and what helps</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="pat-list">
+        <li><b>Legacy kept for compatibility.</b><span>SSL 3.0, export suites, MD5, 3DES, SSLv2.</span></li>
+        <li><b>Keys nobody can see being made.</b><span>Debian, ROCA, the PS3, eMudhra.</span></li>
+        <li><b>Behaviour that answers.</b><span>Error messages, timing and length: padding oracles, CRIME and BREACH.</span></li>
+        <li><b>Parts left unauthenticated or unmodelled.</b><span>SSL 3.0's padding; KRACK's key installation step.</span></li>
+        <li><b>Complexity and unexplained choices.</b><span>Dual_EC's constants; negotiation that could be steered.</span></li>
+        <li><b>The library, not the maths.</b><span>Heartbleed, ROBOT's servers, EUCLEAK.</span></li>
+      </ol>
+      <p class="fine">Controls that help: known-answer tests (but they miss weak randomness), fuzzing, independent review, formal analysis (only of what it models), transparency logs, short lifetimes, and crypto agility: the ability to change algorithms and keys quickly.</p>
+    </div>
+    <div class="stack">
+      <h3>Which control would have helped? <span class="chip chip-part">my mapping</span></h3>
+      <div class="chips" id="cf-chips" role="group" aria-label="Pick a case"></div>
+      <div class="cf-detail" id="cf-detail" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Six recurring patterns. Most cases show more than one. Pick a case on the right and read the three controls: one to prevent it, one to detect it, and one to limit the damage. They are my judgement: a checklist for discussion, not a standard.</span></li><li><b class="ask">Ask</b><span>Which of the six patterns does your estate have the most of right now? <em>"Legacy kept for compatibility" is the most common answer.</em></span></li><li><b class="tip">Tip</b><span>Notice the "limit" column: short lifetimes, forward secrecy, per-device keys and rehearsed rotation reduce the cost of every failure on the list, including the ones nobody has found yet.</span></li><li><b class="tip">Check</b><span>The deterministic-nonce control cites RFC 6979 (Pornin, August 2013, Informational: "Deterministic Usage of the Digital Signature Algorithm (DSA) and Elliptic Curve Digital Signature Algorithm (ECDSA)"), which I checked.</span></li><li><b class="next">Next</b><span>"Your turn: an audit you can take back."</span></li></ul></div>
+</section>
+
+<section class="slide" id="audit" data-part="4" data-num="27">
+  <header class="slide-head"><p class="eyebrow">// PROTOCOLS, CODE AND LESSONS 07</p><h2>A defender's audit you can run on Monday</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="plan" id="au-plan"></div>
+      <p class="verdict" id="au-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3>How to check, without payloads</h3>
+      <ul class="rules">
+        <li>Read configuration and versions first: TLS settings, library versions, firmware versions, and vendor advisories for every crypto library, HSM and smartcard you use.</li>
+        <li>Use standard, well-known scanners against your <b>own</b> servers to list protocol versions and cipher suites. Name what you scan, and get permission for anything you don't own.</li>
+        <li>Check public keys and certificates you already hold: key sizes, hash algorithms, issuers and expiry.</li>
+        <li>Write down who owns each key and how you would replace it in a day.</li>
+      </ul>
+      <p class="fine">Ticks are remembered in this browser only. Nothing on this page is sent anywhere.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Tick the points as you read them. They remember your ticks in this browser. At the end, ask the room how many of the twelve they could honestly tick today.</span></li><li><b class="say">Say</b><span>None of these needs an exploit. Each is a review of settings, versions, inventories and habits. The last two matter most: being able to replace a key in a day turns a headline into an afternoon, and writing your own incident reviews in six beats is how you learn from your own failures as well as other people's.</span></li><li><b class="tip">Tip</b><span>The checklist uses RFC 9325 (November 2022) as the reference for TLS settings: it covers TLS 1.2 and 1.3 best practice.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="28">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Which of these would you have caught in your own systems, and what would have told you?</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The toy demos stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>The calls that prevent many of these.</span></li>
+        <li><a href="../pki-in-depth/">Public Key Infrastructure in Depth</a><span>DigiNotar, eMudhra and Certificate Transparency.</span></li>
+        <li><a href="../modern-messaging/">Modern Messaging Protocols</a><span>Ratchets: forward secrecy in a design that survives a leak.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>What it all rests on.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The demos are teaching code on invented data (a toy cipher, toy keys, a toy compressor and an invented page): never use them to protect or test real systems. Nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="broken.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
