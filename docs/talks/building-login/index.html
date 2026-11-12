@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Building Login and Accounts Safely</title>
+<meta name="description" content="Building Login and Accounts Safely: when to use a provider, how to store passwords and run sessions, TOTP and passkeys, and recovery that attackers can't abuse. A developer talk with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/building-login/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Building Login and Accounts Safely">
+<meta property="og:description" content="The developer's side of accounts: password storage, sessions, TOTP, passkeys, recovery and credential stuffing, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/building-login/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/building-login/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Building Safe Login in neon, beside a terminal showing that a login returns the same answer whether or not the account exists.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Ccircle cx='12' cy='14' r='5' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M16 17l11 8M23 22l-3 3' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "building-login", "title": "Building Login and Accounts Safely", "footer": "LOGIN", "subtitle": "DEVELOPER TRACK · 06",
+  "parts": [{ "name": "Should you build it?", "minutes": 9 }, { "name": "Passwords and sessions", "minutes": 35 },
+            { "name": "Second factors and passkeys", "minutes": 24 }, { "name": "Recovery and abuse", "minutes": 40 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">LOG<span>IN</span></a>
+  <div class="scroll-parts">
+    <a href="#buy-build" data-part="1"><b>01</b>Build or buy</a>
+    <a href="#storage" data-part="2"><b>02</b>Passwords, sessions</a>
+    <a href="#totp" data-part="3"><b>03</b>Factors, passkeys</a>
+    <a href="#reset" data-part="4"><b>04</b>Recovery, abuse</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 06 · INTERMEDIATE</p>
+      <h1><span class="pre">Building</span> <span class="glitch" data-text="Safe Login">Safe Login</span></h1>
+      <p class="lede">Sign-up and login that hold up: when not to build it, storing passwords, sessions, TOTP, passkeys, and recovery that can't be turned against you.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/building-login/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ login --user "<input id="hero-in" value="alice" spellcheck="false" autocomplete="off" maxlength="40">" --password "wrong"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About two hours with three checkpoints (under 100 minutes if you skip the slides marked skippable), for anyone who builds sign-up and login. Defender's view only: every demo is a simulation in this page, nothing is sent anywhere, and the bugs are the ones that show up in real code reviews.</span></li><li><b class="show">Show</b><span>The terminal logs in with a wrong password. Type a name the system knows (alice, bob, carol) and one it doesn't: the server knows the difference, but the client sees the same answer. That's the whole of the last part of the talk in one picture.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try admin, root, hunter2, an empty name or a very long one; in the password demo, sign up as admin with the password admin, or try Password1! and correct horse battery staple; in the TOTP demo, enter 000000; in the reset demo, press the request button ten times; in the rehash demo, log all the users in; on the passkey slide, press the look-alike site button; on the checklist, tick everything. The console has a hint.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#buy-build"><small>PART 1 · 9 MIN</small><b>Should you build it?</b></a><span>Provider, library or from scratch</span><span>The seven parts of an account system</span></li>
+      <li><a href="#storage"><small>PART 2 · 35 MIN</small><b>Passwords and sessions</b></a><span>Storing passwords, rehash on login</span><span>Password rules that work</span><span>Cookies, sessions and tokens</span></li>
+      <li><a href="#totp"><small>PART 3 · 24 MIN</small><b>Second factors and passkeys</b></a><span>TOTP, from the server's side</span><span>Passkeys (WebAuthn) step by step</span><span>Offering both</span></li>
+      <li><a href="#reset"><small>PART 4 · 40 MIN</small><b>Recovery and abuse</b></a><span>Reset links, recovery codes</span><span>Changing email</span><span>Credential stuffing, enumeration</span><span>A checklist to take home</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 2, 3 and 4: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, whether to build login at all. Then the two things every account has: a password and a session. Then second factors, including passkeys. Last, the parts attackers go for: recovery and bulk guessing. This is the developer's side of the Passwords and Accounts talk, so I'll lean on it rather than repeat why people pick bad passwords.</span></li><li><b class="next">Next</b><span>"Why does this deserve a whole talk?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Accounts fail in ordinary ways</h2></header>
+  <div class="slide-body stack">
+    <p class="big-lede">None of these needed a clever attack: a password written where it shouldn't be, logins with no second factor, reused passwords tried at scale.</p>
+    <div class="cards-2">
+      <div class="card"><b>Twitter, 2018 · passwords in a log</b><span>A bug wrote passwords to an internal log before hashing finished. Twitter saw no sign anyone outside could read it, and advised all users to change theirs.</span></div>
+      <div class="card"><b>Facebook, 2019 · readable passwords</b><span>Some passwords sat in a readable format in internal systems. Facebook said none were visible outside the company and found no evidence of abuse; hundreds of millions of Lite users were expected to be notified.</span></div>
+      <div class="card"><b>23andMe, 2023 · credential stuffing</b><span>Passwords reused from other breaches, April to September 2023. The UK regulator fined the company £2.31m (155,592 UK residents) and cited no mandatory MFA, among other gaps.</span></div>
+      <div class="card"><b>Snowflake customers, 2024 · no second factor</b><span>About 165 organisations were told they might be exposed. Mandiant: stolen logins, mostly from infostealer malware, on accounts without MFA, some unchanged for up to four years.</span></div>
+    </div>
+    <p class="src">Sources: <a href="https://about.fb.com/news/2019/03/keeping-passwords-secure/" target="_blank" rel="noopener">Meta, 21 Mar 2019</a> · <a href="https://www.theregister.com/2018/05/03/twitter_no_big_deal_but_everyone_needs_to_change_their_password_right_now/" target="_blank" rel="noopener">The Register, 3 May 2018</a> · <a href="https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/2025/06/23andme-fined-for-failing-to-protect-uk-users-genetic-data" target="_blank" rel="noopener">UK ICO</a> · <a href="https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion" target="_blank" rel="noopener">Mandiant</a></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Four stories, four lessons, none of them exotic. Passwords found in places that were never the database. Logins that needed only a password. Accounts opened with passwords from other people's breaches. Everything else today is about making those stories boring.</span></li><li><b class="tip">Tip</b><span>Twitter: The Register (3 May 2018) quotes the CTO, Parag Agrawal, saying a bug logged passwords "before completing the hashing process", to about 330 million users, with no sign anyone outside the company could view the file; I read it through press coverage because Twitter's own post returned a 403 to my fetch. Facebook: the 21 March 2019 post said "hundreds of millions of Facebook Lite users, tens of millions of other Facebook users, and tens of thousands of Instagram users", and an update of 18 April 2019 raised Instagram to millions. 23andMe: the ICO's notice describes credential stuffing from April to September 2023, 155,592 UK residents, and says the company lacked mandatory MFA, strong password requirements and unpredictable usernames. Snowflake: Mandiant's report; at least 79.7% of the accounts used had prior credential exposure; the earliest infostealer infection dated from November 2020.</span></li><li><b class="show">Check</b><span>I did not use the "14,000 accounts" figure often quoted for 23andMe, because the ICO page doesn't contain it. Twitter's own post wasn't readable, so its wording here comes from secondary coverage.</span></li><li><b class="next">Next</b><span>"First question: do you have to build any of this?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="buy-build" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// SHOULD YOU BUILD IT? 01</p><h2>Buy, borrow or build</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table bb-table">
+        <thead><tr><th scope="col">Option</th><th scope="col">Good when</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Hosted identity provider<small>e.g. Auth0, Amazon Cognito, Firebase Authentication, Microsoft Entra External ID</small></th><td>Login isn't what makes your product different, and you want MFA, passkeys and recovery without writing them</td></tr>
+          <tr><th scope="row">Self-hosted identity server<small>e.g. Keycloak, Ory</small></th><td>You need control of the data, or can't send logins to a third party, and you can run and patch it</td></tr>
+          <tr><th scope="row">Your framework's auth library<small>e.g. Django, Rails, ASP.NET Core Identity, Spring Security</small></th><td>One app, a standard login, and a mature library that already hashes, rotates sessions and resets passwords</td></tr>
+          <tr><th scope="row">From scratch</th><td>Rarely. Only when login <em>is</em> the product, and then with specialists and a review</td></tr>
+        </tbody>
+      </table>
+      <p class="callout"><b>RULE OF THUMB</b> Don't invent a login protocol or a password scheme. Use OpenID Connect or OAuth 2.0 and your library's hash function.</p>
+    </div>
+    <div class="stack">
+      <h3>You still own, whatever you pick</h3>
+      <ul class="rules">
+        <li><b>Authorization</b>: who may do what, on every request.</li>
+        <li><b>Configuration</b>: MFA on, weak options off, sensible session lifetimes.</li>
+        <li><b>Recovery policy</b>: what happens when someone loses their device.</li>
+        <li><b>Logging</b>: failed logins, resets and MFA changes, watched by someone.</li>
+        <li><b>Deletion and data</b>: what you keep about people, and for how long.</li>
+      </ul>
+      <p class="src">Product names are examples, not endorsements. See <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authentication</a>.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The safest login code is the code a team with a security budget already wrote and keeps patching. A provider or a mature framework library gets you hashing, sessions, resets, MFA and passkeys, and a team that responds to advisories. It doesn't get you authorization or a sensible policy: those stay yours. Build from scratch only if login is your product.</span></li><li><b class="ask">Ask</b><span>Who has written their own sign-up form, hand up. Who has regretted it later? <em>Answer: usually in the same sentence, around password reset.</em></span></li><li><b class="tip">Tip</b><span>This is a teaching table, not a purchasing guide: price, data location, lock-in and outage behaviour all matter, and I haven't compared the vendors.</span></li><li><b class="show">Check</b><span>The product names are examples and I did not verify each one's current name or status (cloud identity products get renamed); check before presenting.</span></li><li><b class="next">Next</b><span>"Whatever you pick, here's what an account system is made of."</span></li></ul></div>
+</section>
+
+<section class="slide" id="anatomy" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// SHOULD YOU BUILD IT? 02</p><h2>Seven parts, and the attacker picks the weakest</h2></header>
+  <div class="slide-body stack">
+    <div class="props props-4">
+      <div><b>1 · Sign-up</b><span>Can I register as someone else, or learn who is already registered?</span></div>
+      <div><b>2 · Login</b><span>Can I guess, stuff or phish my way in?</span></div>
+      <div><b>3 · Sessions</b><span>Can I steal, fix or keep a session alive for ever?</span></div>
+      <div><b>4 · Second factors</b><span>Can I relay, reuse or skip the code?</span></div>
+      <div><b>5 · Recovery</b><span>Can I take the account by "forgetting" the password?</span></div>
+      <div><b>6 · Changes</b><span>Can I swap the email or phone, then reset?</span></div>
+      <div><b>7 · Deletion</b><span>Can I be sure it's gone, and that nobody else's data went with it?</span></div>
+      <div class="hot"><b>The weakest link</b><span>A strong password and a passkey don't help if recovery is "answer a security question".</span></div>
+    </div>
+    <p class="big-lede">Think of each part as a door. Good locks on one of them don't matter if another opens with a stranger's word.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Most teams spend their time on the login form. Attackers spend theirs on whichever door is cheapest, and that's very often recovery or a change flow. For each part, I'll show the question an attacker asks of it. We'll visit every one in the next hour.</span></li><li><b class="ask">Ask</b><span>Which of the seven does your own project handle worst today? <em>Answer: there isn't a right one, but "deletion" and "changes" are the commonest honest answers.</em></span></li><li><b class="next">Next</b><span>"Starting with the one everyone has: the password."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="storage" data-part="2" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS AND SESSIONS 01</p><h2>Storing passwords: a slow, salted hash, through a library</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table st-table">
+        <thead><tr><th scope="col">Algorithm</th><th scope="col">OWASP's minimum settings</th></tr></thead>
+        <tbody>
+          <tr class="ok"><th scope="row">Argon2id <small>first choice</small></th><td>19 MiB of memory, 2 iterations, 1 thread (or an equivalent trade: 46 MiB and 1 iteration)</td></tr>
+          <tr><th scope="row">scrypt</th><td>N = 2<sup>17</sup> (128 MiB), r = 8, p = 1</td></tr>
+          <tr><th scope="row">bcrypt <small>older systems</small></th><td>work factor 10 or more; only the first 72 bytes count</td></tr>
+          <tr><th scope="row">PBKDF2 <small>when FIPS is required</small></th><td>600,000 iterations with HMAC-SHA-256</td></tr>
+        </tbody>
+      </table>
+      <pre class="term st-phc"><span class="m">stored in one column:</span>
+<span class="k">$argon2id</span>$v=19$<span class="y">m=19456,t=2,p=1</span>$<span class="c">c29tZXNhbHQ</span>$<span class="ok">aGFzaGhlcmU…</span>
+<span class="m">algorithm · settings · random salt · the hash</span></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Call the library's <b>hash</b> and <b>verify</b>. It makes the salt and writes the settings into the string.</li>
+        <li>Because the <b>settings travel with the hash</b>, you can raise them later and spot the old ones.</li>
+        <li>Never a fast hash (SHA-256, MD5), never your own scheme: speed helps the guesser.</li>
+        <li>A <b>pepper</b> kept in a vault or HSM adds depth, not a substitute.</li>
+        <li>Mind the <b>72-byte</b> limit if you must use bcrypt.</li>
+      </ul>
+      <p class="m">Why slow? See <a href="../crypto-101/">Crypto 101</a> and <a href="../passwords-and-accounts/">Passwords and Accounts</a>.</p>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Password Storage</a> · <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>A stolen password table should cost the thief years, not hours. That's what a slow, memory-hungry, salted hash buys. The settings are a floor from OWASP's cheat sheet: tune them on your own servers so a login takes a noticeable fraction of a second, and revisit them every couple of years.</span></li><li><b class="show">Show</b><span>The stored string: algorithm, settings, salt and hash all in one value. That's the PHC format, and it's why upgrades are easy: the record says how it was made.</span></li><li><b class="tip">Tip</b><span>Facts from OWASP's Password Storage cheat sheet as I read it on 11 November 2026: Argon2id minimum m=19456 KiB, t=2, p=1 (equivalent: 46 MiB with t=1, 12 MiB with t=3, 9 MiB with t=4, 7 MiB with t=5); scrypt N=2^17, r=8, p=1; bcrypt cost at least 10 and a 72-byte limit (OWASP calls pre-hashing risky); PBKDF2-HMAC-SHA256 600,000. NIST SP 800-63B-4 asks for a salt of at least 32 bits and suggests a keyed hash step, with the key in a hardware-protected area.</span></li><li><b class="next">Next</b><span>"What if your database already holds old hashes?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="rehash" data-part="2" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS AND SESSIONS 02</p><h2>Rehash on login: upgrade hashes as people sign in</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table rh-table">
+        <thead><tr><th scope="col">User</th><th scope="col">Stored hash</th><th scope="col">Status</th></tr></thead>
+        <tbody id="rh-rows"></tbody>
+      </table>
+      <div class="controls">
+        <label>Log in as<select id="rh-user"></select></label>
+        <label class="grow">Password<input id="rh-pw" class="mono" spellcheck="false" autocomplete="off" maxlength="60"></label>
+        <button type="button" class="btn btn-sm" id="rh-login">Log in</button>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="rh-all">Everyone logs in</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rh-sweep">Expire what's left</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rh-reset">Reset</button>
+      </div>
+      <pre class="term rh-log" id="rh-log"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>On a <b>correct</b> login you briefly hold the plaintext: check the record, and if it's out of date, store a <b>fresh Argon2id hash</b>.</li>
+        <li>No emails, no forced resets: <b>users never notice</b>.</li>
+        <li>Anyone who <b>never logs in</b> keeps the old hash. Expire those accounts (reset on next visit) or wrap the old hash in a stronger one.</li>
+        <li>A wrong password must <b>not</b> upgrade anything.</li>
+      </ul>
+      <p class="comment" id="rh-note"></p>
+      <p class="src">Demo hashes are real: Argon2id from <a href="https://github.com/Daninet/hash-wasm" target="_blank" rel="noopener">hash-wasm</a>, in your browser. Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Password Storage</a>.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Five accounts: two with fast unsalted hashes, one with Argon2id at old, weak settings, one with current settings, and Eve, who hasn't been back in years. The passwords are filled in for you (they're demo passwords). Log Alice in with a wrong password first: nothing changes. Then the right one: the row turns into a current Argon2id hash. Dave needs nothing. "Everyone logs in" runs them all. Then "Expire what's left" deals with Eve.</span></li><li><b class="say">Say</b><span>You can't convert a hash into a stronger hash without the password, and you only have the password at the moment someone types it. So do the upgrade right there. The same trick raises Argon2id settings later. For the people who never come back, you have two honest options: expire the hash and force a reset, or wrap it (for example bcrypt of the old hash) and replace it on next login. Wrapping is quicker but the result is easier to crack than a direct hash.</span></li><li><b class="tip">Tip</b><span>OWASP's cheat sheet describes exactly these two options for legacy hashes (expire and delete, or wrap), and recommends storing the algorithm and work factor with each hash. The "known user takes the same time as an unknown one" detail in the login function comes back in the enumeration slide.</span></li><li><b class="next">Next</b><span>"Which passwords do we even accept?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="pw-rules" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS AND SESSIONS 03</p><h2>Password rules that actually help</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Username<input id="pr-user" class="mono" value="alice" spellcheck="false" autocomplete="off" maxlength="30"></label>
+        <label class="grow">New password<input id="pr-pw" class="mono" value="Password1!" spellcheck="false" autocomplete="off" maxlength="200"></label>
+        <label class="check"><input type="checkbox" id="pr-mfa"> Second factor required</label>
+      </div>
+      <ul class="ck-list" id="pr-list"></ul>
+      <pre class="term pr-range" id="pr-range"></pre>
+      <p class="comment" id="pr-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Length over complexity</b>: at least 15 characters on its own, 8 if a second factor is required.</li>
+        <li>Allow <b>64 or more</b>, spaces and Unicode, and <b>pasting</b> (password managers).</li>
+        <li><b>No composition rules</b> and <b>no forced rotation</b>: change only if there's evidence of compromise.</li>
+        <li><b>Check against a blocklist</b> of common and breached passwords, and say why you rejected one.</li>
+        <li>No security questions and no password hints.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4, section 3.1.1.2</a> · <a href="https://haveibeenpwned.com/API/v3#PwnedPasswords" target="_blank" rel="noopener">Pwned Passwords API</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authentication</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>The starting password, Password1!, ticks every box the old rules ask for: upper case, lower case, digit, symbol. It's also on every blocklist. Type a long passphrase of ordinary words and watch it pass with no symbols at all. Tick the second-factor box and the minimum drops from 15 to 8. The terminal below shows how a breached-password check keeps the password private: only the first five characters of the SHA-1 hash leave your server.</span></li><li><b class="say">Say</b><span>These are the current NIST rules (SP 800-63B-4, final in July 2025): at least 15 characters if the password stands alone, at least 8 if it's one of two factors, accept at least 64, no composition rules, no periodic change, a blocklist check, allow paste. OWASP's Authentication cheat sheet agrees. Complexity rules produce Password1!. Length plus a blocklist produces something a manager or a person can actually remember.</span></li><li><b class="tip">Tip</b><span>The blocklist here is 40 passwords in the page, for the demo. The real thing is the Pwned Passwords range API: you send the first 5 characters of the SHA-1, get back the matching suffixes (about 800–1,000 with the Add-Padding header, which pads with fake entries of count 0), and compare locally; no API key. You can also download the list and self-host it.</span></li><li><b class="show">Check</b><span>NIST's text on context-specific words (the service name, the username) is summarised from the section I read; I did not read every sub-clause of the final 800-63B-4. The "Facts checked" line at the end covers what I did read.</span></li><li><b class="next">Next</b><span>"Once they're in, the session is the login."</span></li></ul></div>
+</section>
+
+<section class="slide" id="cookie" data-part="2" data-num="09" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS AND SESSIONS 04</p><h2>A session is a random ID in a locked cookie</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <pre class="term ck-line"><span class="k">Set-Cookie:</span> <span class="y">__Host-sid</span>=<span class="c">3q2-7wHq…(128 random bits)</span>;
+  <span class="ok">Secure</span>; <span class="ok">HttpOnly</span>; <span class="ok">SameSite=Lax</span>; <span class="ok">Path=/</span></pre>
+      <div class="props props-2">
+        <div><b>Secure</b><span>Only ever sent over HTTPS.</span></div>
+        <div><b>HttpOnly</b><span>Script can't read it, so XSS can't copy it.</span></div>
+        <div><b>SameSite</b><span>Lax or Strict. Never None without Secure.</span></div>
+        <div><b>__Host-</b><span>Browser enforces Secure, no Domain, Path=/.</span></div>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The ID is <b>random from a CSPRNG</b> and means nothing: no user ID or role inside it.</li>
+        <li>Use a <b>generic cookie name</b>, not one that names your framework.</li>
+        <li>Never in <b>localStorage</b>: any script in the page can read it.</li>
+        <li>Send <b>Cache-Control: no-store</b> on pages with session data.</li>
+        <li>Details of every flag are in <a href="../web-app-security/">Web Application Security</a>.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Session Management</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies" target="_blank" rel="noopener">MDN Cookies</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Skippable if you've done the web security talk. After login, the server hands the browser an ID, and from then on that ID is the user as far as the server is concerned. So it must be unguessable, hard to steal, and not reachable from script.</span></li><li><b class="tip">Tip</b><span>OWASP: IDs need at least 64 bits of entropy from a CSPRNG, and 128 bits if you make your own; Secure is mandatory; set SameSite=Strict (preferred) or Lax explicitly; the __Host- prefix is recommended; leave Domain unset. I show Lax because Strict makes the first page after a link from an email look signed-out. MDN says a cookie without SameSite is treated as Lax by default: still set it, since other browsers and older versions differ.</span></li><li><b class="show">Check</b><span>I did not re-verify per-browser SameSite defaults (Safari in particular) beyond MDN's statement; set the flag explicitly instead of relying on it.</span></li><li><b class="next">Next</b><span>"The cookie is one half. The server's session record is the other."</span></li></ul></div>
+</section>
+
+<section class="slide" id="session-demo" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS AND SESSIONS 05</p><h2>Rotate, expire, revoke</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="se-rotate" checked> New session ID at login</label>
+        <button type="button" class="btn btn-ghost btn-sm" id="se-reset">Reset</button>
+      </div>
+      <p class="lr-label">1 · Session fixation</p>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="se-plant">Attacker plants an ID</button>
+        <button type="button" class="btn btn-sm" id="se-victim">Victim logs in</button>
+        <button type="button" class="btn btn-sm" id="se-use">Attacker uses the ID</button>
+      </div>
+      <p class="lr-label">2 · Lifetimes and revocation</p>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="se-laptop">Sign in on laptop</button>
+        <button type="button" class="btn btn-sm" id="se-phone">Sign in on phone</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="se-idle">+31 min idle</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="se-day">+9 hours</button>
+        <button type="button" class="btn btn-sm" id="se-pw">Change password</button>
+        <button type="button" class="btn btn-sm" id="se-out">Sign out everywhere</button>
+      </div>
+      <pre class="term se-table" id="se-table"></pre>
+      <p class="comment" id="se-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Issue a <b>new ID at login</b> and after any privilege change. Kill the old one.</li>
+        <li>Enforce <b>idle and absolute</b> timeouts on the server: a client timer can be skipped.</li>
+        <li>Sign-out must <b>end the session on the server</b>; deleting the cookie isn't enough.</li>
+        <li><b>Password change ends the other sessions.</b> "Sign out everywhere" is a real button.</li>
+        <li>Store a <b>hash of the ID</b>, not the ID: a leaked table can't be used as cookies.</li>
+      </ul>
+      <p class="src">Example lifetimes here: 30 minutes idle, 8 hours absolute. Pick yours by risk. Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Session Management</a>.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>With "New session ID at login" on: plant an ID, let the victim log in, then try the attacker's ID: it's dead. Untick the box and repeat: the attacker now holds a logged-in session. Then the lifetimes: sign in on both devices, move the clock 31 minutes (idle expiry), then 9 hours (absolute expiry). Sign in again and press "Change password": the other device is signed out, and so is the old session on this one. "Sign out everywhere" ends the rest.</span></li><li><b class="say">Say</b><span>Fixation is old and still found in custom code: the attacker gets the victim to arrive with an ID the attacker already knows, then waits for the victim to log in. One line of code stops it: a fresh ID when the privilege level changes. And a session that can't be revoked is a liability: build "sign out everywhere" and make password change use it.</span></li><li><b class="tip">Tip</b><span>OWASP: regenerate the ID after login and any privilege change and destroy the old one; idle timeouts commonly 2–5 minutes for high-value apps and 15–30 minutes for low-risk ones; absolute timeouts such as 4–8 hours for a full-day office application. Storing only a hash of the ID is common practice and my recommendation, not something I found in OWASP's text.</span></li><li><b class="next">Next</b><span>"Some apps don't use cookie sessions. What about tokens?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="tokens" data-part="2" data-num="11" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// PASSWORDS AND SESSIONS 06</p><h2>Tokens vs sessions, and refresh tokens that rotate</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table tk-table">
+        <thead><tr><th scope="col"></th><th scope="col">Server session</th><th scope="col">Self-contained token (JWT)</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Client holds</th><td>A random ID</td><td>Signed claims, readable by the holder</td></tr>
+          <tr><th scope="row">Revoke now</th><td>Delete the row</td><td>Not until it expires, unless you keep a deny list</td></tr>
+          <tr><th scope="row">Each request</th><td>A lookup</td><td>A signature check, no lookup</td></tr>
+          <tr><th scope="row">Fits</th><td>A browser app on your own site</td><td>Short-lived calls between services</td></tr>
+        </tbody>
+      </table>
+      <p class="callout"><b>START HERE</b> For a browser app, start with a server session. A JWT with a deny list is a session with extra steps.</p>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Refresh-token rotation</p>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="rf-legit">App refreshes</button>
+        <button type="button" class="btn btn-sm" id="rf-thief">Thief replays the first token</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rf-reset">Reset</button>
+      </div>
+      <pre class="term rf-log" id="rf-log"></pre>
+      <p class="src">Source: <a href="https://www.rfc-editor.org/rfc/rfc9700" target="_blank" rel="noopener">RFC 9700 (OAuth 2.0 Security BCP), section 4.14</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press "App refreshes": each refresh gives a new token and retires the old one. Then press "Thief replays the first token": the server sees an already-used token, can't tell which party is the real one, and ends the whole grant. The next legitimate refresh also fails and the user signs in again. That's the cost, and the point.</span></li><li><b class="say">Say</b><span>Refresh tokens live for days or weeks, so they're the juicy ones. RFC 9700 says refresh tokens for public clients must be sender-constrained or rotated. With rotation, an old token turning up means a copy exists. Access tokens stay short so that stealing one buys little.</span></li><li><b class="tip">Tip</b><span>RFC 9700 (BCP 240) section 4.14 as I read it: with rotation the server issues a new refresh token on every refresh; on reuse it can't tell which party is legitimate, and it revokes the active token; the grant can be encoded so all tokens of the grant are revoked; sender-constraining alternatives are mutual TLS (RFC 8705) and DPoP (RFC 9449). The demo revokes the whole grant, which matches the "all tokens tied to the grant" implementation note. Where to store a refresh token in a browser is a hard problem on its own: keep it out of localStorage if you can.</span></li><li><b class="next">Next</b><span>Then checkpoint 1.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A user logs in with a password that's stored with an old, fast hash. What should your code do?</p><details><summary>Hint</summary><p>You only have the plaintext at one moment.</p></details><details class="answer"><summary>Answer</summary><p>Verify it against the old hash. If it's right, hash the password just typed with the current settings (Argon2id) and replace the stored value. Do nothing on a wrong password. For accounts that never return, expire the hash and force a reset, or wrap it.</p></details></li>
+      <li><p>Your signup form needs one upper-case letter, one digit, one symbol, and passwords expire every 90 days. What would you change, and why?</p><details><summary>Hint</summary><p>What do people do when forced to change?</p></details><details class="answer"><summary>Answer</summary><p>Require length (15, or 8 with a second factor), allow 64 or more and pasting, check a blocklist, drop the composition rules and the scheduled expiry; force a change only on evidence of compromise. Rules and rotation push people to Password1!, then Password2!.</p></details></li>
+      <li><p>A user clicks "Sign out". What must happen on the server?</p><details><summary>Hint</summary><p>What if someone already copied the cookie?</p></details><details class="answer"><summary>Answer</summary><p>The session record is invalidated, so a copied cookie stops working. Deleting the cookie in the browser isn't enough. Also revoke related sessions on password change.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="totp" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// SECOND FACTORS AND PASSKEYS 01</p><h2>TOTP: the server's side</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Phone's clock<select id="tp-off"><option value="0">exact</option><option value="-30">30 s slow</option><option value="30">30 s fast</option><option value="-90">90 s slow</option><option value="90">90 s fast</option></select></label>
+        <label class="grow">Secret the server stores (Base32)<input id="tp-secret" class="mono" readonly></label>
+      </div>
+      <div class="tp-phone"><small>Your authenticator app shows</small><b id="tp-code">------</b><span id="tp-left" class="m"></span><button type="button" class="btn btn-ghost btn-sm" id="tp-fill">Type it in</button></div>
+      <div class="controls">
+        <label class="grow">Code to submit<input id="tp-in" class="mono" inputmode="numeric" maxlength="8" spellcheck="false" autocomplete="off" placeholder="6 digits"></label>
+        <button type="button" class="btn btn-sm" id="tp-go">Verify</button>
+      </div>
+      <p class="verdict y" id="tp-verdict">Press Verify.</p>
+      <pre class="term tp-log" id="tp-log"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A code comes from a <b>shared secret</b> and the <b>time</b> (30-second steps).</li>
+        <li>Accept <b>one step either side</b>: phone clocks drift. Wider windows help guessers.</li>
+        <li>Accept <b>each code once</b>: remember the last step you accepted.</li>
+        <li>The secret must be <b>recoverable</b>, so it can't be hashed: <b>encrypt it at rest</b>, key held elsewhere.</li>
+        <li><b>Throttle attempts</b>: six digits is only a million options.</li>
+        <li>TOTP codes can be <b>phished in real time</b>. Passkeys can't (next slide).</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc6238" target="_blank" rel="noopener">RFC 6238 (TOTP), sections 5 and 6</a> · <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>The phone shows the code for its own clock. Press "Type it in", then Verify: accepted. Press Verify again with the same code: rejected as already used. Set the phone to 30 seconds fast or slow: accepted, with a note about the drift. Set it 90 seconds off: rejected, the clock is too far out. Try a guess; try 000000.</span></li><li><b class="say">Say</b><span>This is the verifier from the Passwords and Accounts talk, now seen from the server. Three decisions are yours: how much drift to tolerate (RFC 6238 recommends allowing at most one step for network delay), how to stop a code being used twice (RFC 6238: the verifier must not accept a second attempt of the same code), and how to keep the secret. The secret is a key, not a password: you need the original to compute codes, so you can't hash it. Encrypt it, keep the key out of the database, and apply the same care as for any key.</span></li><li><b class="ask">Ask</b><span>An attacker watches you type your code and types it in a second later. Does one-use stop them? <em>Answer: only if you got there first. A real-time phishing site relays the code immediately, so one-use doesn't save you from that: it's why passkeys are better.</em></span></li><li><b class="tip">Tip</b><span>RFC 6238 §5.2: "at most one time step is allowed as the network delay", 30 seconds is the recommended time step, and "the verifier MUST NOT accept the second attempt of the OTP". The RFC's resynchronisation example allows drift of a couple of steps; the demo's ±1 matches the network-delay advice. The demo checks every slot rather than stopping at the first match, and compares byte by byte. The demo's TOTP maths matches RFC 6238's SHA-1 test vectors (the Node tests check them).</span></li><li><b class="show">Check</b><span>Secret length: RFC 4226 asks for at least 128 bits and recommends 160; I did not re-read RFC 4226 and the page I read for RFC 6238 only says keys should be as long as the HMAC output. The demo secret is 160 bits.</span></li><li><b class="next">Next</b><span>"Now the second factor that can't be phished."</span></li></ul></div>
+</section>
+
+<section class="slide" id="webauthn" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// SECOND FACTORS AND PASSKEYS 02</p><h2>Passkeys: what the server sends, receives and keeps</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="wa-reg">1 · Create a passkey</button>
+        <button type="button" class="btn btn-sm" id="wa-login">2 · Log in</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="wa-replay">Replay a captured login</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="wa-phish">Look-alike site asks</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="wa-clone">A copied key signs</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="wa-reset">Reset</button>
+      </div>
+      <pre class="term wa-out" id="wa-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Server stores a <b>credential ID, a public key, a counter</b> and flags. <b>Nothing secret.</b></li>
+        <li>Login = <b>sign a fresh challenge</b>; server checks origin, RP ID, flags, signature.</li>
+        <li>The <b>RP ID</b> (your domain) is bound in: a look-alike site gets nothing signed.</li>
+        <li>Use a <b>maintained WebAuthn library</b> for the checks.</li>
+      </ul>
+      <p class="m">This is a simulation with real P-256 signatures. Try a real passkey on the <a href="../crypto-101/">Crypto 101</a> page.</p>
+      <p class="src">Source: <a href="https://www.w3.org/TR/webauthn-3/" target="_blank" rel="noopener">W3C Web Authentication Level 3</a> (sections 7.1, 7.2)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="show">Show</b><span>Press 1: the authenticator makes a key pair, and the server keeps only the public half, a credential ID, a counter and the hash of your RP ID. Press 2: the server sends a random challenge, the device signs it together with the origin and RP ID, and the server runs its checklist, line by line. "Replay a captured login" sends the same response again: the challenge is already spent. "Look-alike site asks": the browser won't ask the authenticator for your site's key on another site, so nothing is signed. "A copied key signs": its counter isn't above the stored one, which is a signal.</span></li><li><b class="say">Say</b><span>A passkey is a public-key signature in the same shape as Crypto 101's signatures. The server never holds anything that could log in as the user, so a database leak is nearly useless to attackers. And because the browser fills in the site's name, a convincing fake can't get a signature for the real one: that's what "phishing-resistant" means. NIST SP 800-63B-4 requires verifiers at AAL2 to offer a phishing-resistant option.</span></li><li><b class="tip">Tip</b><span>WebAuthn §7.1 (registration) and §7.2 (assertion) steps used here: type, challenge match, origin match, rpIdHash equals the SHA-256 of the RP ID, user-present flag, user-verified flag if required, signature over authData plus the SHA-256 of clientDataJSON, signCount stored and compared. RP ID: by default equal to the origin's effective domain, or a registrable domain suffix of it. The spec's signature-counter text says a counter that doesn't increase means "a cloned authenticator may exist, or the authenticator may be malfunctioning", and many synced passkeys always report 0, so don't treat 0 as a clone. The demo is simplified: no attestation, no attested credential data, no COSE encoding, and a P-256 key in a page (not a hardware authenticator).</span></li><li><b class="show">Check</b><span>The W3C page I read listed Web Authentication Level 3 as a Recommendation dated 25 August 2026; confirm the status and date on the day. I read §7.1's steps and the signature-counter text, but not all of §7.2, so the assertion checklist above is my summary of the spec's sequence.</span></li><li><b class="next">Next</b><span>"How do you roll these out next to passwords?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="rollout" data-part="3" data-num="15" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// SECOND FACTORS AND PASSKEYS 03</p><h2>Offering passkeys alongside passwords</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Offer, don't force</b>: add passkeys next to passwords, and let people choose.</li>
+        <li><b>Prompt after a successful login</b>: "Create a passkey for faster sign-in?"</li>
+        <li><b>Allow several</b> per account, with names ("work laptop"), so one lost device isn't a lockout.</li>
+        <li>Offer <b>passkey autofill</b> in the username field.</li>
+        <li><b>Synced or device-bound?</b> The backup flags tell you which.</li>
+        <li>Keep a <b>recovery path</b> as strong as the thing it replaces.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Why bother</b><span>Passkeys can't be phished, can't be reused across sites, and leave nothing in your database worth stealing.</span></div>
+      <div class="card"><b>What the numbers say</b><span>Microsoft reported in May 2025 that sign-in with a passkey succeeded about 98% of the time against 32% for a password, and was about eight times faster than a password plus a second factor.</span></div>
+      <div class="card card-bad"><b>The trap</b><span>Adding a passkey but leaving "forgot password by email" as the only recovery: the attacker just goes round the front door.</span></div>
+      <p class="src">Sources: <a href="https://www.microsoft.com/en-us/security/blog/2025/05/01/pushing-passkeys-forward-microsofts-latest-updates-for-simpler-safer-sign-ins/" target="_blank" rel="noopener">Microsoft, 1 May 2025</a> · <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a> · <a href="https://www.w3.org/TR/webauthn-3/" target="_blank" rel="noopener">WebAuthn L3</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>You don't have to choose between passwords and passkeys on day one. Add passkeys as an option, nudge people to create one after they've signed in, and let them keep more than one. The one trap is recovery: your account is as strong as its easiest way back in.</span></li><li><b class="tip">Tip</b><span>Microsoft's figures (nearly a million passkeys registered a day, 98% vs 32% success, eight times faster than password plus MFA) are Microsoft's own, from its 1 May 2025 post, and describe its own users; they aren't an industry average. WebAuthn L3 defines the backup-eligible (BE) and backup-state (BS) flags: a multi-device credential is synced; a device-bound one isn't. NIST SP 800-63B-4: syncable authenticators can't be used at AAL3 because their keys are exportable.</span></li><li><b class="show">Check</b><span>Passkey autofill ("conditional UI") and the autocomplete token for it: browser and library support varies by stack; check your platform's current docs. I did not verify library names or versions, so none are named on the slide: choose a maintained one for your language and read its release notes.</span></li><li><b class="next">Next</b><span>Then checkpoint 2.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>You store TOTP secrets in your user table. Why can't you hash them like passwords, and what do you do instead?</p><details><summary>Hint</summary><p>What does the server need to compute a code?</p></details><details class="answer"><summary>Answer</summary><p>The server must compute the same code the app does, so it needs the original secret. Encrypt the secrets with a key held outside the database (a key service or secrets manager), and treat that key with care.</p></details></li>
+      <li><p>Why can't a passkey be phished the way a password or a TOTP code can?</p><details><summary>Hint</summary><p>Who decides which website the signature is for?</p></details><details class="answer"><summary>Answer</summary><p>The browser binds the site's name (RP ID and origin) into what the device signs, and the authenticator only offers keys registered for that site. A look-alike site can't get a signature that the real site will accept, and nothing reusable is typed.</p></details></li>
+      <li><p>Your server sees a passkey login whose signature counter is lower than the stored one. What do you do?</p><details><summary>Hint</summary><p>Is it always an attack?</p></details><details class="answer"><summary>Answer</summary><p>It may mean a cloned key or a fault, so treat it as a risk signal: log it, maybe ask for another factor. Many synced passkeys always report 0, so a counter of 0 on both sides is normal. Decide the policy for your own risk.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="reset" data-part="4" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY AND ABUSE 01</p><h2>Reset links: random, hashed, single-use, short-lived</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="rs-req">Request a reset</button>
+        <button type="button" class="btn btn-sm" id="rs-use">Click the link</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rs-again">Again</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rs-late">+31 min</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rs-reset">Reset</button>
+      </div>
+      <div class="rs-cols">
+        <div><p class="lr-label">Email sent to the user</p><pre class="term rs-mail" id="rs-mail">(nothing yet)</pre></div>
+        <div><p class="lr-label">What the database keeps</p><pre class="term rs-db" id="rs-db">(nothing yet)</pre></div>
+      </div>
+      <p class="verdict y" id="rs-verdict">Press "Request a reset".</p>
+      <pre class="term rs-log" id="rs-log"></pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Long and random</b> from a CSPRNG, tied to one account.</li>
+        <li>Store only a <b>hash</b>: a leaked table can't be used as links.</li>
+        <li><b>Single use</b> and <b>short-lived</b>; a newer request replaces the old.</li>
+        <li><b>Same response</b> whether or not the account exists. Don't build the link from the Host header.</li>
+        <li>On use: set the password, <b>end other sessions</b>, <b>email the user</b>, don't sign them in automatically.</li>
+        <li><b>Rate-limit per account</b>, but don't lock the account because of reset requests.</li>
+        <li>Set <b>Referrer-Policy: no-referrer</b> on the reset page.</li>
+      </ul>
+      <p class="src">Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Forgot Password</a>. The 30-minute lifetime and 3-an-hour limit are this demo's choices.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Request a reset: the email contains the real link token, the database keeps only its SHA-256. Click the link: it works once. Click again: rejected. Request again, move the clock 31 minutes, click: expired. Request a few more times and watch the log: the user always sees the same message, but the server quietly stops sending after the third in an hour.</span></li><li><b class="say">Say</b><span>A reset link is a password that's valid for a short time and sent over email. Treat it like one: random, stored hashed, single use, with a short life. The question on the checkpoint is what an attacker can do with a link that never expires: use it whenever they get hold of an old email, a forwarded message, or a browser history entry.</span></li><li><b class="tip">Tip</b><span>OWASP's Forgot Password cheat sheet as I read it: identical responses and timing for existing and non-existing accounts; tokens from a CSPRNG, "long enough to protect against brute-force attacks", single use, expiring "after an appropriate period"; per-account rate limiting; no-referrer on the reset page; build reset URLs from a trusted value, not the Host header; don't log the user in automatically; send a notification; let the user end other sessions, or end them automatically; don't lock accounts in response to forgotten-password activity. It gives no token length, no lifetime and, in the page I read, no explicit "hash the token" rule: hashing is my recommendation, in the same spirit as the password storage cheat sheet.</span></li><li><b class="show">Check</b><span>Pick your own lifetime: 30 minutes is a demo value, not a standard.</span></li><li><b class="next">Next</b><span>"Reset links need email. What if email is the problem?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="recovery" data-part="4" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY AND ABUSE 02</p><h2>Recovery codes, and recovery as the weakest link</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="rc-gen">Make 10 codes</button>
+        <label class="grow">Use a code<input id="rc-in" class="mono" spellcheck="false" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX"></label>
+        <button type="button" class="btn btn-sm" id="rc-use">Use it</button>
+      </div>
+      <pre class="term rc-out" id="rc-out">Press "Make 10 codes".</pre>
+      <p class="comment" id="rc-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Show the codes <b>once</b>; the server keeps <b>hashes</b>, each <b>single-use</b>.</li>
+        <li>Make them <b>long and random</b> (this demo: 16 characters), so a fast hash is fine.</li>
+        <li>Using one should <b>alert the user</b>, and offer to make new ones.</li>
+        <li>Recovery must be <b>as strong as login</b>. An easier way back in is the real login.</li>
+        <li>Avoid <b>security questions</b> and a help desk that "just resets it" on a phone call.</li>
+      </ul>
+      <div class="callout"><b>RULE</b> Every way back into an account is a way into it. List them all and make the weakest one stronger.</div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Make ten codes: they're random, shown once. Use one: it works, and the count drops. Use it again: rejected. The database holds only hashes. Try a made-up code.</span></li><li><b class="say">Say</b><span>When a user loses their device, you need a way back that you'd trust as much as the login. Recovery codes are one: printed or stored in a manager when the second factor is set up. The wider point is to list every recovery route (email, SMS, codes, support) and notice that the account is exactly as strong as the weakest.</span></li><li><b class="tip">Tip</b><span>NIST SP 800-63B-4 says verifiers must not prompt for knowledge-based authentication or security questions when choosing passwords, and sends account recovery to its section 4.2, which I did not read. OWASP's Authentication cheat sheet says not to use security questions for re-authentication. The 16-character length and the "fast hash is fine for long random codes" claim are my own reasoning (80 random bits can't be guessed through a rate-limited login, and a thief with the table would need to search 2^80 values), not a figure from either source.</span></li><li><b class="show">Check</b><span>Section 4.2 of NIST SP 800-63B-4 (account recovery): not read for this talk. Read it before telling people what the standard requires.</span></li><li><b class="next">Next</b><span>"And when a user changes their email?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="email-change" data-part="4" data-num="19" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY AND ABUSE 03</p><h2>Changing an email or phone: ask, notify, confirm</h2></header>
+  <div class="slide-body stack">
+    <div class="chain-box"><small>The safe order of events</small>
+      <div class="chain"><span>Signed in?<em>valid session</em></span><i></i><span class="hot c">Re-authenticate<em>password or passkey</em></span><i></i><span>Save as pending<em>old address stays active</em></span><i></i><span class="hot">Notify the old address<em>"someone asked to change it"</em></span><i></i><span class="hot c">Confirm the new address<em>time-limited link</em></span><i></i><span>Switch<em>and rotate sessions</em></span></div>
+    </div>
+    <div class="cols-2">
+      <div class="card card-bad"><b>The attack this blocks</b><span>Someone with a stolen session changes the email to their own, then uses "forgot password" to take the account for good. Every step above slows or reveals that.</span></div>
+      <div class="card"><b>Same for everything sensitive</b><span>Password change, phone number, MFA removal, new passkeys: ask for a fresh credential first, tell the user, and rotate sessions afterwards.</span></div>
+    </div>
+    <p class="src">Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authentication, "Changing a registered email address"</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is OWASP's recommended flow: a valid session, then identity verification (MFA if enabled, otherwise the current password), the new address stored as a pending change, a notification-only message to the current address, and a confirmation message to the proposed address before it takes effect, each with time-limited, single-purpose links. The old address getting a heads-up is what lets a real owner react.</span></li><li><b class="ask">Ask</b><span>What other settings turn an account over to someone else? <em>Answer: phone number for SMS codes, recovery email, adding a passkey or an MFA device, removing MFA, API keys.</em></span></li><li><b class="next">Next</b><span>"Now the attacker who isn't targeting one person at all."</span></li></ul></div>
+</section>
+
+<section class="slide" id="stuffing" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY AND ABUSE 04</p><h2>Credential stuffing: layers, and what each costs</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label>Attacker's addresses<select id="st-ips"><option value="1">1</option><option value="50">50</option><option value="500" selected>500</option><option value="5000">5,000</option></select></label>
+        <label>Accounts with MFA<span class="range"><input type="range" id="st-mfa" min="0" max="100" step="10" value="0"><output id="st-mfa-o">0%</output></span></label>
+      </div>
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="st-ipl"> Limit failures per address</label>
+        <label class="check"><input type="checkbox" id="st-breach"> Block breached passwords</label>
+        <label class="check"><input type="checkbox" id="st-risk"> Step up on new devices</label>
+      </div>
+      <div class="stat-row" id="st-stats"></div>
+      <pre class="term st-log" id="st-log"></pre>
+      <p class="comment" id="st-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>MFA</b> is the strongest single control. It's also the one attackers can't route around with more addresses.</li>
+        <li><b>Check passwords against breaches</b> at sign-up and at login.</li>
+        <li><b>Per-address limits</b> fail against many addresses; <b>per-account</b> limits fail against one try each.</li>
+        <li>Prefer <b>throttling and step-up</b> to lockout, which lets an attacker lock others out.</li>
+        <li>Use <b>unpredictable usernames</b> where you can: lists of bare emails are easy to build.</li>
+        <li><b>Log and alert</b> on the failure rate. Defences work in layers.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Credential_Stuffing_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Credential Stuffing Prevention</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authentication</a>. The model's numbers are invented.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>An attacker holds 2,000 stolen email and password pairs and tries each once, spread over some number of addresses. Start with no defences and 500 addresses: every valid pair gets in. Turn on the per-address limit: nothing changes, because each address only tries a few times. Drop the attacker to one address: the limit works. Now turn on breached-password blocking, then MFA at 90%, then step-up on new devices, and watch the takeovers fall, and the friction for honest users rise.</span></li><li><b class="say">Say</b><span>This is a toy model, so the numbers are invented: 20% of the stolen pairs are still valid, 85% of those are in a breach list you can check, honest users are interrupted at made-up rates. What it shows is the shape: the defences that look obvious (blocking addresses, locking accounts) lose to spreading the attack out, while checking breached passwords and requiring MFA go straight to the cause, which is password reuse.</span></li><li><b class="tip">Tip</b><span>OWASP's Credential Stuffing Prevention cheat sheet as I read it: MFA is "by far the best defense against the majority of password-related attacks"; CAPTCHAs aren't perfect; device fingerprints are client-supplied and spoofable; blocking IPs alone is weak against proxy networks, so use a graduated response; check new passwords against breached-password datasets; require unpredictable usernames; each defence should emit metrics. The Authentication cheat sheet adds: count failures per account, not per IP, and take care that lockout can't be used for denial of service. That page also quotes Microsoft's analysis that MFA "would have stopped 99.9% of account compromises": I didn't trace that figure, so it isn't on the slide.</span></li><li><b class="show">Check</b><span>The model is mine, not from any source: say so out loud.</span></li><li><b class="next">Next</b><span>"One last leak, in the words your login page uses."</span></li></ul></div>
+</section>
+
+<section class="slide" id="enum" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// RECOVERY AND ABUSE 05</p><h2>Account enumeration: one answer for every failure</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" id="en-mode" role="group" aria-label="Server behaviour">
+        <button type="button" data-m="naive" aria-pressed="true">Helpful messages</button>
+        <button type="button" data-m="fixed" aria-pressed="false">One answer, same work</button>
+      </div>
+      <div class="controls">
+        <label class="grow">Email<input id="en-user" class="mono" value="nobody@example.test" spellcheck="false" autocomplete="off" maxlength="60"></label>
+        <label>Password<input id="en-pw" class="mono" value="wrong" spellcheck="false" autocomplete="off" maxlength="40"></label>
+        <button type="button" class="btn btn-sm" id="en-send">Send</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="en-probe">Probe 6 names</button>
+      </div>
+      <pre class="term en-out" id="en-out"></pre>
+      <p class="comment" id="en-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Say <b>"Invalid email or password"</b> for every failure: no account, wrong password, locked, disabled.</li>
+        <li>Do the <b>same work</b>: hash a dummy password when the account is missing, or response time gives it away.</li>
+        <li>Keep <b>status codes</b> and page shapes the same too.</li>
+        <li><b>Reset:</b> "If that account exists, we've emailed it." <b>Sign-up:</b> don't say "already registered": send that person an email instead.</li>
+      </ul>
+      <p class="m">Some products must say if a name is taken. Then rate-limit it hard and accept that it's a trade.</p>
+      <p class="src">Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authentication</a>. Timings are real, from Argon2id in your browser.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start on "Helpful messages". Send with nobody@example.test: "No account with that email", and it's fast, because the server never hashes anything. Change it to alice@example.test: "Incorrect password", slower. Probe six names and the list reveals which exist. Switch to "One answer, same work" and probe again: every reply is the same, and the times line up.</span></li><li><b class="ask">Ask</b><span>Which of the two messages leaks? <em>Answer: both help the attacker: the first tells them the account doesn't exist, the second that it does. Also the time: skipping the hash for unknown names makes the unknown ones faster.</em></span></li><li><b class="say">Say</b><span>Enumeration turns "try everything on everyone" into "try only on real accounts", and it leaks who uses your service, which can be private by itself. The fix is boring: one message, one status code, the same amount of work. The same idea applies to reset and sign-up, where the leak hides in a different sentence.</span></li><li><b class="tip">Tip</b><span>OWASP's Authentication cheat sheet: respond with a generic message whatever the cause, equalise processing time (run the hash lookup on every attempt, even for a missing user), keep status codes consistent, and treat registration and reset the same way. The timing numbers on the slide come from your own browser, so they vary; the gap is the point, not the figure.</span></li><li><b class="next">Next</b><span>Then checkpoint 3.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why should "wrong password" and "no such user" look the same?</p><details><summary>Hint</summary><p>What can an attacker do with a list of real accounts?</p></details><details class="answer"><summary>Answer</summary><p>Different answers let an attacker find which accounts exist, so they only attack real ones, and learn who uses your service. Use one message, one status code and the same work (including time), for login, reset and sign-up.</p></details></li>
+      <li><p>What can an attacker do with a password-reset link that never expires?</p><details><summary>Hint</summary><p>Think about old emails and forwarded messages.</p></details><details class="answer"><summary>Answer</summary><p>Use it any time they get hold of it: an old inbox, a forward, a browser history entry or a log. Make links single-use and short-lived, store only their hash, and replace the old one when a new one is sent.</p></details></li>
+      <li><p>You lock an account after five wrong passwords. How could an attacker use that against you?</p><details><summary>Hint</summary><p>They don't need the right password to cause trouble.</p></details><details class="answer"><summary>Answer</summary><p>By failing on purpose they can lock real users out. Prefer throttling and step-up checks, count failures per account, give locked users a way back, and don't lock accounts over reset requests.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP</p><h2>An account-system review checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="own"> Login is a provider or a mature library, not code we invented; authorization is still ours</label>
+      <label><input type="checkbox" data-k="hash"> Passwords use Argon2id (or bcrypt 10+, scrypt, PBKDF2 600k) through a library; old hashes upgrade on login</label>
+      <label><input type="checkbox" data-k="rules"> Length 15 (8 with MFA), 64+ allowed, paste allowed, blocklist check, no complexity rules or scheduled expiry</label>
+      <label><input type="checkbox" data-k="cookie"> Session cookie: random ID, Secure, HttpOnly, SameSite, ideally <code>__Host-</code></label>
+      <label><input type="checkbox" data-k="rotate"> New session ID at login and password change; idle and absolute expiry; sign-out ends it on the server</label>
+      <label><input type="checkbox" data-k="refresh"> Refresh tokens rotate with reuse detection (or are sender-constrained); access tokens are short</label>
+      <label><input type="checkbox" data-k="totp"> TOTP: one step of drift, each code once, secrets encrypted at rest, attempts throttled</label>
+      <label><input type="checkbox" data-k="pk"> Passkeys offered beside passwords, several per account, with a recovery path as strong as login</label>
+      <label><input type="checkbox" data-k="reset"> Reset links: random, hashed, single-use, short-lived; no auto-login; the user is emailed</label>
+      <label><input type="checkbox" data-k="codes"> Recovery codes: shown once, hashed, single-use; no security questions</label>
+      <label><input type="checkbox" data-k="change"> Email, phone and MFA changes need a fresh credential, notify the old address and confirm the new one</label>
+      <label><input type="checkbox" data-k="stuff"> Breached-password checks, MFA, throttling and step-up in layers; no lockout an attacker can aim at others</label>
+      <label><input type="checkbox" data-k="enum"> One answer and the same work for unknown users on login, reset and sign-up</label>
+      <label><input type="checkbox" data-k="log"> Failed logins, resets and MFA changes are logged and watched; passwords, tokens and codes never are</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what your current project already does, and treat each unticked box as a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list. The last line is the Twitter and Facebook lesson: the thing you shouldn't log is the password.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a flow in your own product you're unsure about. (Keep real user data, passwords and tokens out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://cheatsheetseries.owasp.org/" target="_blank" rel="noopener">OWASP Cheat Sheet Series</a><span>Authentication, Session Management, Password Storage, Forgot Password and Credential Stuffing.</span></li>
+        <li><a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a><span>The current guidance on passwords, authenticators and recovery.</span></li>
+        <li><a href="../passwords-and-accounts/">Passwords and Accounts</a><span>The user's side of this talk.</span></li>
+        <li><a href="../web-app-security/">Web Application Security Essentials</a><span>Sessions, cookies and CSRF in more depth.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no server, no database, no real requests, and nothing you type is sent anywhere. Password hashes use <a href="https://github.com/Daninet/hash-wasm" target="_blank" rel="noopener">hash-wasm</a> (MIT). Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe a flow from their own product (with names removed): recovery is usually the best one to walk through.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="../../shared/vendor/hash-wasm-4.12.0.umd.min.js"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
