@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Secrets Management</title>
+<meta name="description" content="Secrets Management: where API keys, passwords and signing keys leak, where they should live, how to rotate them without drama, and what to do when one escapes. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/secrets-management/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Secrets Management">
+<meta property="og:description" content="Where secrets leak, where they should live, how to rotate them routinely, and a runbook for the day one escapes, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/secrets-management/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/secrets-management/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Secrets Management in neon, beside a terminal that scans a pasted string and flags what looks like a key.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Ccircle cx='12' cy='16' r='5' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M17 16h10M23 16v5M27 16v4' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "secrets-management", "title": "Secrets Management", "footer": "SECRETS", "subtitle": "DEVELOPER TRACK · 07",
+  "parts": [{ "name": "Where secrets leak", "minutes": 24 }, { "name": "Where secrets live", "minutes": 29 }, { "name": "Rotation and incidents", "minutes": 28 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">SECRETS<span>MGMT</span></a>
+  <div class="scroll-parts">
+    <a href="#leaks" data-part="1"><b>01</b>Where they leak</a>
+    <a href="#ladder" data-part="2"><b>02</b>Where they live</a>
+    <a href="#rotation" data-part="3"><b>03</b>Rotation</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 07 · FOR DEVELOPERS, DEVOPS AND IT · INTERMEDIATE</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Secrets Management">Secrets Management</span></h1>
+      <p class="lede">API keys, database passwords and signing keys: where they leak, where they should live, how to rotate them without drama, and what to do on the day one escapes.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/secrets-management/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ scan "<input id="hero-in" value="AKIAIOSFODNN7EXAMPLE" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes with two checkpoints, for anyone who writes, deploys or runs software. No real keys, no real cloud: every demo is a simulation in this page, and every key in it is made up.</span></li><li><b class="show">Show</b><span>The terminal is a toy secret scanner. It measures how random-looking the text is (Shannon entropy, in bits per character) and checks it against a few well-known key formats. Paste anything. Formats with fixed prefixes get caught easily; a plain password only gets caught if it is assigned to a telling name. That gap is the theme of part 1.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try AKIAIOSFODNN7EXAMPLE (the default), hunter2, password, correct horse battery staple, a ghp_ prefix, 123456, or an empty input; in the leak map, open all eight places; in the Git demo, delete a key in a new commit, rewrite history, or revoke it; in the image demo, pick the secret mount; in the scanner, run the false-positive preset; in the key service demo, change a record's context label; in the ceremony, pick exactly two shares, or all five; in the token demo, run a forged token; in the rotation demo, retire a key too early; in the tabletop, choose to wait for the 16:00 meeting, or to find out who did it; and tick all twelve boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#leaks"><small>PART 1 · 24 MIN</small><b>Where secrets leak</b></a><span>The usual suspects</span><span>Container images and builds</span><span>Why deleting the commit isn't enough</span><span>Secret scanning</span></li>
+      <li><a href="#ladder"><small>PART 2 · 29 MIN</small><b>Where secrets should live</b></a><span>A ladder of options</span><span>Envelope encryption and key services</span><span>HSMs and key ceremonies</span><span>Short-lived credentials</span></li>
+      <li><a href="#rotation"><small>PART 3 · 28 MIN</small><b>Rotation and incidents</b></a><span>Rotation with two keys</span><span>Rotation in practice</span><span>A leaked-secret runbook</span><span>Tabletop, habits and a checklist</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 2: 5 minutes to discuss with a neighbour. The tabletop in part 3 is the third.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>First, where secrets actually end up, because most of it is not clever. Then where they should live instead, from a simple secret manager up to hardware. Last, how to make replacing a secret a routine chore, and what to do when one gets out anyway.</span></li><li><b class="next">Next</b><span>"Why this talk?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Secrets leak constantly, and stay valid</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stat-row stat-row-3">
+        <div class="stat"><b>28.65M</b><span>new hard-coded secrets added to public GitHub commits in 2025, up 34%.</span></div>
+        <div class="stat"><b>64%</b><span>of secrets confirmed valid in 2022 still worked when retested in January 2026.</span></div>
+        <div class="stat"><b>~28%</b><span>of leak incidents came entirely from outside repositories: chat, tickets, wikis.</span></div>
+      </div>
+      <ul class="rules">
+        <li>A secret is <b>a string that opens something</b>. Leaking one is easy, noticing is slow, and replacing it is the part most teams never practised.</li>
+        <li>So the goal isn't "never leak". It's <b>fewer secrets, shorter lives, and a rehearsed response</b>.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://blog.gitguardian.com/the-state-of-secrets-sprawl-2026/" target="_blank" rel="noopener">GitGuardian, State of Secrets Sprawl 2026</a> · <a href="https://circleci.com/blog/jan-4-2023-incident-report" target="_blank" rel="noopener">CircleCI</a> · <a href="https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers" target="_blank" rel="noopener">Wiz</a> · <a href="https://blog.gitguardian.com/toyota-accidently-exposed-a-secret-key-publicly-on-github-for-five-years/" target="_blank" rel="noopener">GitGuardian on Toyota</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Toyota, 2017 to 2022 · a key in public code</b><span>A subcontractor put part of the T-Connect source code, with an access key to a customer-data server, on public GitHub in December 2017. About 296,000 people's emails and customer numbers were exposed. Noticed in September 2022; no misuse detected.</span></div>
+      <div class="card"><b>Microsoft AI research, 2023 · a token that was too much</b><span>A storage link in a public repository carried a Shared Access Signature token with full control of the whole storage account and an expiry in 2051. Wiz reported it on 22 June 2023; it was revoked two days later.</span></div>
+      <div class="card"><b>CircleCI, 2022 to 2023 · the platform holds your secrets</b><span>Malware on one engineer's laptop stole a 2FA-backed session. The attacker took customers' stored tokens, keys and environment variables, and customers were told to rotate everything.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three different stories with one shape: a string that opens something ended up where it shouldn't, and it kept working. The statistic to remember is the 64%: leaks are rarely cleaned up by the people who made them, because nobody is sure it's safe to revoke.</span></li><li><b class="tip">Tip</b><span>GitGuardian's 2026 report (published 17 March 2026): 28.65 million new hard-coded secrets in public GitHub commits in 2025, a 34% increase; secrets confirmed valid in 2022 were still above 64% valid when retested in January 2026; about 28% of incidents came entirely from outside repositories. These are a vendor's own measurements of what its scanner can see, so treat them as indicative. Toyota: the account here comes from GitGuardian's write-up of Toyota's notice (repository public from December 2017, noticed 15 September 2022, 296,019 customers' emails and customer IDs, Toyota replaced the credentials and made the repository private, no unauthorised use detected). Microsoft: Wiz's write-up (full-control account-level SAS token, expiry first 5 October 2021 then 6 October 2051, 38 TB, 359 employees' Teams messages in workstation backups; reported 22 June 2023, revoked 24 June). CircleCI's own incident report: compromise on 16 December 2022, customers alerted 4 January 2023, encryption keys were extracted from a running process so stored secrets had to be treated as exposed.</span></li><li><b class="show">Check</b><span>Toyota's own notice and Microsoft's own MSRC post were not read directly (the Toyota page wasn't found; MSRC's link redirected), so those two rest on the secondary write-ups named here. Read them before presenting if you want primary sources.</span></li><li><b class="next">Next</b><span>"Part 1: where do secrets actually leak?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="leaks" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LEAK 01</p><h2>The usual suspects</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Open each place and ask: <b>could a secret of ours be there right now?</b></p>
+      <ul class="lk-grid" id="lk-grid"></ul>
+      <p class="lk-count" id="lk-count"></p>
+    </div>
+    <div class="stack">
+      <div class="lk-detail" id="lk-detail"><b>Pick a place</b><span>Eight places, none of them exotic. Most leaks are a secret in an ordinary place, not a clever attack.</span></div>
+      <p class="comment" id="lk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Be honest in your head as you click: every one of these is somewhere in a typical company. The pattern is that a secret is created in one place for one reason, and then gets copied wherever is convenient. Convenience is the leak.</span></li><li><b class="ask">Ask</b><span>Which of the eight do you not currently look at? That's your first project.</span></li><li><b class="tip">Tip</b><span>Sources behind the details: GitGuardian (about 28% of incidents entirely outside repositories, such as Slack, Jira and Confluence; Claude-Code-assisted commits leaked at 3.2% against a 1.5% baseline across public commits; the report doesn't say why, so don't claim cause). Docker's build-secrets page (build arguments and environment variables persist in the final image). GitHub's secrets page (secrets aren't passed to workflows triggered from forks, except GITHUB_TOKEN; Base64 is not encryption). Command-line arguments are readable by other local users on a default Linux system through the process list; shell history files keep what you typed.</span></li><li><b class="show">Check</b><span>The claim that CI masking misses transformed copies of a secret (encoded or split) is how masking works in general (it matches known values), but GitHub's page doesn't say it in so many words. Read the page's current masking section before stating it as GitHub's own rule.</span></li><li><b class="next">Next</b><span>"Container images are the sneakiest, so let's look inside one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="images" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LEAK 02</p><h2>What a container build leaves behind</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">You need a private npm token while building an image. How do you pass it in?</p>
+      <div class="seg-pick" role="group" aria-label="How the secret reaches the build" id="im-pick">
+        <button type="button" data-m="arg" aria-pressed="true">ARG</button>
+        <button type="button" data-m="env">ENV</button>
+        <button type="button" data-m="copy">COPY .env, then rm</button>
+        <button type="button" data-m="mount">Secret mount</button>
+      </div>
+      <small class="lr-label">Dockerfile</small>
+      <pre class="term im-file" id="im-file"></pre>
+      <small class="lr-label">What anyone who can pull the image sees</small>
+      <pre class="term im-hist" id="im-hist"></pre>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="im-verdict"></p>
+      <p class="im-why" id="im-why"></p>
+      <ul class="rules">
+        <li>Images are <b>copied everywhere</b>: registries, laptops, caches, customers.</li>
+        <li>Pass build secrets with <b>mounts</b>, and runtime secrets at <b>run time</b> from the platform, not baked in.</li>
+        <li>Scan images too: secrets hide in layers that no one reads.</li>
+      </ul>
+      <p class="comment" id="im-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start on ARG, which feels harmless: the secret isn't in the Dockerfile. Then look at the right-hand pane: the build argument's value is recorded in the image history, which is public to anyone who can pull the image. ENV is worse because it stays in every container. COPY then rm shows that layers are additive: deleting a file in a later layer hides it, it doesn't remove it from the earlier one. The secret mount is the only option where the secret never becomes part of the image.</span></li><li><b class="say">Say</b><span>The same shape as the Git slide that follows: history is permanent, and deleting later is not the same as never having stored it.</span></li><li><b class="tip">Tip</b><span>Docker's build-secrets page says build arguments and environment variables are inappropriate for secrets because they persist in the final image, and recommends secret or SSH mounts, which are available only for the duration of the instruction. The exact text of the history lines in the demo is simplified; the real `docker history` output differs in format. The secret in the demo is made up.</span></li><li><b class="next">Next</b><span>"The same lesson in Git: why deleting the commit isn't enough."</span></li></ul></div>
+</section>
+
+<section class="slide" id="git-history" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LEAK 03</p><h2>"I deleted it" is not the same as "it's gone"</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A teammate committed an API key. Try the usual fixes, in any order:</p>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="gh-del">Delete it in a new commit</button>
+        <button type="button" class="btn btn-sm" id="gh-rewrite">Rewrite history + force-push</button>
+        <button type="button" class="btn btn-sm" id="gh-revoke">Revoke the key at the provider</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="gh-reset">Reset</button>
+      </div>
+      <small class="lr-label">The repository (commit IDs are SHA-1 hashes of each commit)</small>
+      <pre class="term gh-log" id="gh-log"></pre>
+      <p class="gh-key" id="gh-key"></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Can someone still find the key here?</small>
+      <ul class="gh-where" id="gh-where"></ul>
+      <p class="verdict" id="gh-verdict"></p>
+      <p class="comment" id="gh-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Click "Delete it in a new commit". The latest file is clean, but the earlier commit still holds the key and still shows in the log. Then "Rewrite history": the repository's own history is clean, but clones, forks and cached views are not under your control, and the key still works. Only "Revoke" turns the status line green, whichever order you clicked in.</span></li><li><b class="say">Say</b><span>The order of operations is: revoke or rotate first, then think about cleaning up. Cleaning history is optional once the key is dead, and it is hard to make complete. GitHub's own guide says the same: as a first step revoke or rotate, and after that a history rewrite "may not be warranted".</span></li><li><b class="ask">Ask</b><span>A secret was committed and then deleted in the next commit. Is it safe? <em>Answer: no. It's in history, in clones, possibly in forks, and it still works.</em></span></li><li><b class="tip">Tip</b><span>GitHub's "Removing sensitive data" guide: commits may remain reachable by SHA in cached views, commits stay accessible in any fork, other clones can't be cleaned by you, and GitHub Support will only help remove cached views where the risk can't be mitigated by rotating the credentials. Sharon Brizinov's research (Truffle Security guest post) scanned force-push events in GH Archive since 2020 and reported about $25k in bug bounties from secrets found in commits that had been force-pushed over; Truffle's advice is that a committed secret should be treated as compromised and revoked. The repository model here is a simplification: real Git commit IDs hash a tree and metadata, and the demo's IDs hash the content shown.</span></li><li><b class="next">Next</b><span>"So catch it before it's pushed: secret scanning."</span></li></ul></div>
+</section>
+
+<section class="slide" id="scanning" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LEAK 04</p><h2>Secret scanning: what it catches and what it can't</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Sample diff" id="sn-presets">
+        <button type="button" data-p="leaky" aria-pressed="true">A leaky diff</button>
+        <button type="button" data-p="noise">False alarms</button>
+        <button type="button" data-p="miss">What it misses</button>
+      </div>
+      <small class="lr-label">Paste a diff or any text (nothing is sent anywhere)</small>
+      <textarea id="sn-in" rows="8" spellcheck="false" aria-label="Text to scan"></textarea>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="sn-scan">Scan</button>
+        <span class="note" id="sn-count"></span>
+      </div>
+      <pre class="term sn-out" id="sn-out"></pre>
+    </div>
+    <div class="stack">
+      <ul class="sc-list" id="sn-list"><li class="m">Press "Scan".</li></ul>
+      <ul class="rules">
+        <li><b>Three places:</b> in the editor or a pre-commit hook, at the push (push protection), and in CI and on the platform for what slipped past.</li>
+        <li>Known formats are easy; <b>plain passwords and odd keys are not</b>. Pattern plus entropy gives false alarms and misses both.</li>
+        <li>Some tools <b>test whether a finding is live</b>. A live key is the urgent one.</li>
+        <li>Scan <b>history</b> and <b>other places</b> (chat, wikis, images), not just the latest commit.</li>
+      </ul>
+      <p class="comment" id="sn-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Press Scan on the leaky diff: a cloud key ID, a token with a known prefix, a database URL with a password in it, and a plain password assignment, each found by a different kind of rule (the AWS documentation example key is shown in green because it's harmless). Switch to "False alarms": a commit ID and a package integrity hash look random enough to flag. Switch to "What it misses": a password in a variable with an innocent name, and a short base64 value, are invisible.</span></li><li><b class="say">Say</b><span>Scanners are a net, not a wall. Use all three layers, treat a finding as an incident (revoke, don't just remove), and tune the false alarms down so people keep trusting the alerts. The best defence against the misses is to have fewer secrets in code at all, which is part 2.</span></li><li><b class="tip">Tip</b><span>Tools worth naming: GitHub secret scanning and push protection (the billing page says all public repositories get secret scanning; repository-level push protection needs GitHub Secret Protection and is off until enabled; user-level push protection on public repos is on by default, and a bypass needs a stated reason and creates an alert), Gitleaks (scans git history, directories and stdin, has a pre-commit hook and a baseline option for ignoring old findings), and TruffleHog (classifies and can log in to check whether a credential is live, across Git, Docker images, S3 and more). The demo's rules are a tiny teaching subset: a few well-known prefixes, a regex for secret-looking names, and an entropy cut-off.</span></li><li><b class="show">Check</b><span>Gitleaks' README now says the project is feature-complete and its maintainer is moving to a successor (Betterleaks), with future Gitleaks releases being security fixes only: check before recommending it as your only option. TruffleHog's README gives two different detector counts (over 700 with verification, over 800 types classified), so say "hundreds". GitHub Secret Protection's per-committer price came from a GitHub changelog seen in search, not from the docs page: confirm current pricing before quoting it. Which pushes bypass push protection depend on org settings.</span></li><li><b class="next">Next</b><span>Checkpoint 1.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A secret was committed, and then deleted in the next commit. Is it safe?</p><details><summary>Hint</summary><p>Who else has a copy of the first commit, and does the key still work?</p></details><details class="answer"><summary>Answer</summary><p>No. It's still in history, in every clone, possibly in forks and cached views, and the key still works. Revoke or rotate it first; cleaning history is optional afterwards.</p></details></li>
+      <li><p>A scanner flags a 40-character hex string in your repo, and has never flagged the database password stored in a variable called <code>greeting</code>. What does that tell you?</p><details><summary>Hint</summary><p>What does the scanner actually look at: meaning, or shape?</p></details><details class="answer"><summary>Answer</summary><p>Scanners match shapes: known prefixes, secret-looking names, randomness. A commit ID looks random (false alarm); a plain password with an innocent name has no shape (miss). So keep secrets out of code entirely and treat scanning as a safety net.</p></details></li>
+      <li><p>You need an npm token while building a Docker image. How do you pass it in, and why not <code>ARG</code>?</p><details><summary>Hint</summary><p>Where does a build argument's value end up?</p></details><details class="answer"><summary>Answer</summary><p>Use a build secret mount (<code>RUN --mount=type=secret</code>), which exposes the secret only while that instruction runs. Build arguments and environment variables persist in the final image.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="ladder" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LIVE 01</p><h2>A ladder of options, and what each one protects against</h2></header>
+  <div class="slide-body">
+    <div class="seg-pick" role="group" aria-label="Pick a threat" id="ld-pick"></div>
+    <div class="ld-grid" id="ld-grid"></div>
+    <p class="ld-q" id="ld-q"></p>
+    <ul class="rules ld-rules">
+      <li>Climb only as far as the secret's value requires. A well-run secret manager beats a badly used HSM.</li>
+      <li>The big jump is from "the secret sits in the app" to <b>"the app asks for what it needs, as itself, and it's logged"</b>.</li>
+      <li>Using a key isn't the same as <b>stealing</b> it: that difference is what the top rungs buy you.</li>
+    </ul>
+    <p class="comment" id="ld-note"></p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Pick a threat and the five rungs light up: ✓ helps, ~ partly, ✗ doesn't. Walk the first few: a repository leak is solved by anything that isn't in the repo. A shell on the server is where environment variables and files give out, and where the lower rungs start to differ in a new way: with a key service the attacker can ask for operations while they're on the box, but can't take the key away.</span></li><li><b class="say">Say</b><span>These are rules of thumb, not a ranking of products: a well-run secret manager beats a badly used HSM. Climb only as far as the secret's value requires, and notice that the big jump is from "the secret sits in the app" to "the app asks for what it needs, as itself, and it's logged".</span></li><li><b class="tip">Tip</b><span>Options named: secret managers (AWS Secrets Manager, Azure Key Vault, Google Secret Manager, HashiCorp Vault and its open-source fork OpenBao), cloud key services (AWS KMS and equivalents), and HSMs. Kubernetes Secrets are, by default, stored unencrypted in etcd and readable by anyone who can create a Pod in the namespace, so enable encryption at rest, tight RBAC, and consider an external store (from the Kubernetes docs). Environment variables are inherited by child processes, appear in crash and debug output, and can be read through the process's environment by anyone with the right access on the host.</span></li><li><b class="show">Check</b><span>Product names and features here are names only: check each current feature list before recommending one. Vault is BUSL-licensed since August 2023, OpenBao forked from the last MPL release (1.14) and is MPL 2.0; it started under LF Edge and joined the OpenSSF as a sandbox project in June 2025 (OpenSSF's own blog announced OpenBao v2.6 in August 2026), so say "a Linux Foundation project under the OpenSSF".</span></li><li><b class="next">Next</b><span>"The key service rung: envelope encryption."</span></li></ul></div>
+</section>
+
+<section class="slide" id="envelope" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LIVE 02</p><h2>Envelope encryption: the key never leaves</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">New record<input id="ev-in" class="mono" value="card ending 4242" spellcheck="false" autocomplete="off" maxlength="60"></label>
+        <button type="button" class="btn btn-sm" id="ev-add">Encrypt it</button>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="ev-new">New master key (no rewrap)</button>
+        <button type="button" class="btn btn-sm" id="ev-rewrap">Rewrap to latest</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ev-retire">Retire old master keys</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ev-tamper">Change a context label</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ev-reset">Reset</button>
+      </div>
+      <p class="ev-keys" id="ev-keys"></p>
+      <div class="table-wrap"><table class="grid-table ev-table" id="ev-table" aria-label="Encrypted records"></table></div>
+    </div>
+    <div class="stack">
+      <div class="chain chain-sm"><span>data key (one per record)</span><i></i><span class="hot">encrypts the data</span></div>
+      <div class="chain chain-sm"><span>master key (stays in the service)</span><i></i><span class="hot">wraps the data key</span></div>
+      <p class="verdict" id="ev-verdict"></p>
+      <ul class="rules">
+        <li>Store the <b>wrapped data key next to the data</b>. Ask the key service to unwrap it when needed.</li>
+        <li>Rotating the master key means <b>rewrapping small keys</b>, not re-encrypting all the data.</li>
+        <li>Tie each record to a <b>context</b> (here: the user), so a ciphertext can't be moved to another record.</li>
+      </ul>
+      <p class="comment" id="ev-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>The page starts with two encrypted records. Add your own. The table shows, for each, the ID of the master key that wraps its data key, a short piece of the wrapped data key, and a short piece of the ciphertext. Press "New master key (no rewrap)": new records use it, old ones still point at the old one. Press "Retire old master keys" now and Decrypt fails for the old records. That is rotation going wrong. Reset, add records, then "New master key", "Rewrap to latest": the wrapped keys change but the ciphertext doesn't, and nothing was re-encrypted.</span></li><li><b class="say">Say</b><span>This is what AWS KMS and the other key services do. The service never gives you the master key; it generates data keys, hands you one in the clear for immediate use plus an encrypted copy to store, and later unwraps the copy on request. The data never goes to the service, only small keys do. Real KMS calls limit direct encryption to 4,096 bytes, one practical reason for data keys.</span></li><li><b class="tip">Tip</b><span>The demo uses this deck's from-scratch AES-256-GCM: the data key encrypts the record with the context as authenticated data; the master key wraps the data key with the context in the associated data too, so changing the label makes both decryption steps fail. It's a teaching model, not a library to use: in real code use your cloud's SDK or a vetted library (see the Crypto in Code talk). Facts: AWS KMS docs (data keys: plaintext copy for immediate use plus an encrypted copy; the service doesn't store or use data keys; remove the plaintext key from memory as soon as possible; symmetric ciphertext carries the key ID; Encrypt takes up to 4,096 bytes; an encryption context is recommended and may appear in logs, so keep secrets out of it).</span></li><li><b class="next">Next</b><span>"What about the hardware, and who holds the master key in the first place?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="hsm" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LIVE 03</p><h2>HSMs and key ceremonies: what they guarantee, and what they don't</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="props props-2">
+        <div><b>Guarantees</b><span>The key is generated and used inside tamper-resistant hardware, isn't exportable in the clear, and every use can be limited and logged.</span></div>
+        <div><b>Doesn't guarantee</b><span>That a compromised caller can't misuse it while it has access, that the software around it is bug-free, or that the key was <em>generated well</em>.</span></div>
+      </div>
+      <div class="card card-bad"><b>eMudhra, October 2026 · a CA key that wasn't random enough</b><span>Google reports that private keys for eight eMudhra intermediate CA certificates were "generated with insufficient randomness". Chrome blocked them the same day it was told. The lesson: protecting a key is only as good as how it was made.</span></div>
+      <ul class="rules">
+        <li>Ceremonies exist so <b>no one person</b> can make or use the master key alone.</li>
+        <li>Script it, witness it, record it, and <b>practise the recovery</b>.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <p class="m">A tiny key ceremony. The key is split into <b>5 shares</b>; any <b>3</b> can recover it.</p>
+      <p class="hsm-key" id="hs-key"></p>
+      <div class="hs-shares" id="hs-shares" role="group" aria-label="Pick shares to combine"></div>
+      <p class="verdict" id="hs-verdict"></p>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="hs-new">New key and shares</button></div>
+      <p class="comment" id="hs-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Tick shares. With one or two, the recovered value is meaningless; with any three, it matches the key. Try different trios: it works for every trio. This is Shamir's secret sharing, and it's what makes "no single person can unlock the master key" real. Two shares don't just make the key hard to find: they leave every possible key equally likely.</span></li><li><b class="say">Say</b><span>An HSM or key service protects a key you've already got. A ceremony covers the moment of creation and the recovery path: who attends, what's checked, what's recorded. And as eMudhra shows, even strong hardware can't rescue a key that started life without enough randomness.</span></li><li><b class="tip">Tip</b><span>eMudhra: Google's post says the keys for eight subordinate CA certificates were generated with insufficient randomness, received by the Chrome Root Program on Saturday 17 October 2026 at 18:05 UTC, blocked by a CRLSet update at 19:45 UTC the same day, with Android covered by a later Play Services update; Mozilla's post is linked in the PKI talk. IANA's DNS root signing key ceremonies are a public example: usually four times a year, with Trusted Community Representatives. The demo uses Shamir sharing over the field of integers modulo 2^255 - 19 with a 128-bit key; real ceremonies use vetted tools and hardware, not a web page.</span></li><li><b class="show">Check</b><span>Google's post says "eight" intermediate CA certificates in its introduction but "these six intermediate CAs" later, without explaining the difference: say "eight" as the PKI talk does, and attribute it. Neither Google nor Mozilla has published how the keys were generated beyond "insufficient randomness", so don't speculate on the cause. The IANA page doesn't say who holds or witnesses each ceremony in detail: read the ceremony pages themselves before describing them.</span></li><li><b class="next">Next</b><span>"The best secret is the one that expires by itself."</span></li></ul></div>
+</section>
+
+<section class="slide" id="short-lived" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// WHERE SECRETS LIVE 04</p><h2>Short-lived credentials: identity instead of passwords</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">1 · A CI job asks its platform for a signed identity token</small>
+      <div class="seg-pick" role="group" aria-label="Which job" id="tk-job">
+        <button type="button" data-j="main" aria-pressed="true">our repo, main branch</button>
+        <button type="button" data-j="env">our repo, production environment</button>
+        <button type="button" data-j="pr">our repo, a pull request</button>
+        <button type="button" data-j="evil">someone else's repo</button>
+        <button type="button" data-j="forged">forged token</button>
+        <button type="button" data-j="old">expired token</button>
+      </div>
+      <pre class="term tk-token" id="tk-token"></pre>
+      <small class="lr-label">2 · The cloud's trust policy decides what to accept</small>
+      <div class="seg-pick" role="group" aria-label="Trust policy" id="tk-policy">
+        <button type="button" data-p="none">No condition</button>
+        <button type="button" data-p="repo">Repository only</button>
+        <button type="button" data-p="branch" aria-pressed="true">Repo + main</button>
+        <button type="button" data-p="env">Repo + production</button>
+      </div>
+      <p class="tk-rule" id="tk-rule"></p>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="tk-verdict"></p>
+      <p class="tk-why" id="tk-why"></p>
+      <ul class="rules">
+        <li>No stored cloud password: the job <b>proves who it is</b> each run, and the credential lasts about <b>an hour</b>.</li>
+        <li>A stolen long-lived key is a <b>standing</b> key. A stolen short-lived one <b>expires on its own</b>.</li>
+        <li>The trust policy is the lock: <b>always a condition</b> on repository, and on branch or environment for anything valuable.</li>
+      </ul>
+      <p class="comment" id="tk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Start with "our repo, main branch" and the "Repo + main" policy: allowed. Move through the jobs. A pull request token has a different subject, so it's refused. Switch to "No condition": now someone else's repo is accepted, which is the mistake to avoid. Pick the forged token: the signature check fails before the policy is even looked at. The tokens are really signed here with the deck's own ECDSA P-256 code.</span></li><li><b class="say">Say</b><span>This is the idea behind GitHub Actions' OpenID Connect support, workload identity on the major clouds, and Kubernetes service accounts: replace "a secret we store" with "a proof of who is asking, valid for minutes". It shrinks the blast radius of a leak from "until someone notices" to "until it expires". It doesn't remove the need to scope the role to what the job needs.</span></li><li><b class="ask">Ask</b><span>Why is a short-lived credential better than a well-protected long-lived one? <em>Answer: protection can fail, and when it does the long-lived key keeps working for the thief; the short one doesn't. And there's nothing to store, rotate or leak.</em></span></li><li><b class="tip">Tip</b><span>From GitHub's OIDC docs: the workflow needs the id-token: write permission; the cloud checks the token's subject and other claims against conditions you set; you must define at least one condition so untrusted repositories can't request tokens; scope to a repository and, where possible, an environment or branch; the subject formats are repo:ORG/REPO:ref:refs/heads/BRANCH, repo:ORG/REPO:environment:NAME and repo:ORG/REPO:pull_request. AWS STS: temporary credentials from AssumeRoleWithWebIdentity last one hour by default, from 15 minutes up to the role's maximum session (1 to 12 hours). GitHub's secrets page notes that, apart from GITHUB_TOKEN, secrets aren't passed to workflows triggered from forks. The cloud and issuer names in the demo are fictional.</span></li><li><b class="show">Check</b><span>GitHub's OIDC page says repositories created after 15 July 2026 use an immutable subject format with owner and repository IDs (repo:OWNER@OWNER-ID/REPO@REPO-ID:…); the demo uses the older name-based format for readability. Check which your repositories use before writing real trust policies. The page doesn't state the OIDC token's lifetime, and the demo doesn't claim one.</span></li><li><b class="next">Next</b><span>Checkpoint 2.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is a short-lived credential better than a well-protected long-lived one?</p><details><summary>Hint</summary><p>Think about what happens when the protection fails.</p></details><details class="answer"><summary>Answer</summary><p>When protection fails, a long-lived key keeps working for whoever took it. A short-lived credential expires on its own, and there's no stored secret to rotate or leak. Protection still matters, but expiry limits the damage.</p></details></li>
+      <li><p>An attacker with a shell on your app server can still ask the key service to decrypt. So what did envelope encryption buy you?</p><details><summary>Hint</summary><p>What can they do with the key, and what can't they do?</p></details><details class="answer"><summary>Answer</summary><p>They can use the key only while they have the app's access, every use is logged, and cutting that access ends it. They can't take the key away. A stolen database backup or disk is useless without the key service.</p></details></li>
+      <li><p>Where does your team's most valuable secret live today, and who could read it?</p><details><summary>Hint</summary><p>Think about all the copies: laptops, CI, chat, backups.</p></details><details class="answer"><summary>Answer</summary><p>There's no single right answer. A good one names the secret manager or key service, the identity that may read it, and the log that shows who did. If the honest answer is "a shared document", that's the first ticket.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="rotation" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// ROTATION AND INCIDENTS 01</p><h2>Rotation without an outage: two keys at once</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <ol class="rt-steps" id="rt-steps">
+        <li><button type="button" class="btn btn-sm" id="rt-1">1 · Publish key B</button><span>Verifiers learn to trust A and B.</span></li>
+        <li><button type="button" class="btn btn-sm" id="rt-2">2 · Sign with key B</button><span>New tokens carry B's key ID.</span></li>
+        <li><button type="button" class="btn btn-sm" id="rt-3">3 · Wait 60 minutes</button><span>Tokens signed with A reach their expiry.</span></li>
+        <li><button type="button" class="btn btn-sm" id="rt-4">4 · Retire key A</button><span>Remove A from the verifiers.</span></li>
+      </ol>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="rt-issue">Issue a token (60 min)</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rt-wait">+15 min</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rt-reset">Reset</button>
+      </div>
+      <p class="rt-ring" id="rt-ring"></p>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table rt-table" id="rt-table" aria-label="Tokens and whether they verify"></table></div>
+      <p class="verdict" id="rt-verdict"></p>
+      <p class="comment" id="rt-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Press "Issue a token" (signed with key A), then step 1, step 2, issue another (signed with B). Both verify, because the verifier trusts both. Now press step 4 right away: the old token fails with "unknown key", though it hasn't expired. That's an outage caused by rotating too eagerly. Reset and do it in order, with step 3 in between, and nothing ever fails. Real ECDSA signatures from this deck's code sign each token.</span></li><li><b class="say">Say</b><span>The trick that makes rotation routine is overlap: two valid keys at the same time, and every signature carrying a key ID so the verifier knows which to use. The retire step waits for the longest-lived thing signed by the old key to expire. This is exactly how JWKS key sets, certificate renewals and database credential rotation work.</span></li><li><b class="tip">Tip</b><span>The same shape with other secrets: database passwords (create a second valid credential, switch the app over, remove the old one), webhook signing secrets (accept both for a window), and encryption keys (new data uses the new key, old data keeps its key ID until rewrapped, as on the previous slide).</span></li><li><b class="next">Next</b><span>"How the big platforms do this for you."</span></li></ul></div>
+</section>
+
+<section class="slide" id="rotation-practice" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// ROTATION AND INCIDENTS 02</p><h2>Rotation in practice</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="card"><b>Versions and labels</b><span>Secret managers keep versions with labels. AWS Secrets Manager, for example, marks the live version <code>AWSCURRENT</code>, a candidate <code>AWSPENDING</code>, and the last good one <code>AWSPREVIOUS</code>, so a failed rotation can fall back.</span></div>
+      <div class="card"><b>Two identities, taking turns</b><span>For databases, the "alternating users" pattern keeps two users: rotate the one that isn't in use, then switch the app to it. No moment where the password in use is wrong.</span></div>
+      <div class="card"><b>Key IDs travel with the data</b><span>Put the key ID or version in every ciphertext, token and signature header. Then old and new can coexist, and you can see what still uses the old key.</span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Rotate <b>on events</b>: a leak, a person leaving, a vendor incident, a dependency compromise.</li>
+        <li>Rotate <b>on a schedule</b> only if it's automatic. A manual yearly rotation is an outage waiting for a date.</li>
+        <li>For <b>people's passwords</b>, don't force periodic changes: NIST says verifiers shall not, but shall force a change on evidence of compromise.</li>
+        <li><b>Practise</b> rotating every secret once, before the day you need it. The first rotation always finds a hidden dependency.</li>
+        <li>Know <b>who uses each secret</b>. A secret with no owner can never be safely revoked.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotation-strategy.html" target="_blank" rel="noopener">AWS Secrets Manager</a> · <a href="https://pages.nist.gov/800-63-4/sp800-63b.html" target="_blank" rel="noopener">NIST SP 800-63B-4</a> · <a href="https://docs.aws.amazon.com/kms/latest/APIReference/API_Encrypt.html" target="_blank" rel="noopener">AWS KMS</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>You don't have to build rotation yourself: managers and clouds do the dance for supported services. What you do have to do is design your own code so it tolerates two valid secrets at once, and read the secret at use rather than caching it for the life of the process.</span></li><li><b class="tip">Tip</b><span>NIST SP 800-63B-4: "Verifiers and CSPs SHALL NOT require subscribers to change passwords periodically" and "verifiers SHALL force a change if there is evidence that the authenticator has been compromised." That's about people's passwords: machine secrets are different because automation makes rotation cheap. The alternating-users strategy and the AWSCURRENT and AWSPREVIOUS labels were confirmed against AWS's rotation-strategy page on 11 November 2026 (the rotation function clones the user on the first rotation, then alternates which user's password it updates); AWSPENDING is the label the rotation function uses for the candidate version.</span></li><li><b class="next">Next</b><span>"And when one leaks anyway: the runbook."</span></li></ul></div>
+</section>
+
+<section class="slide" id="runbook" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// ROTATION AND INCIDENTS 03</p><h2>The leaked-secret runbook</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <ol class="rb-list">
+      <li><b>Confirm and scope.</b><span>What is it? What can it do? Who owns it? Where else is it used?</span></li>
+      <li><b>Revoke or rotate now.</b><span>Create the replacement, deploy it, revoke the old one. Minutes, not days.</span></li>
+      <li><b>Read the logs, from the first exposure.</b><span>From when it was committed or pasted, not from when you noticed. Unfamiliar IPs, new users, keys or roles, unusual reads.</span></li>
+      <li><b>Contain what you find.</b><span>End sessions, delete anything the attacker created, and rotate whatever the key could read.</span></li>
+      <li><b>Find the leak path and close it.</b><span>How did it get there? Add the control that would have stopped it.</span></li>
+      <li><b>Clean up, tell people, learn.</b><span>Tidy history if worthwhile, notify as your obligations require, and hold a review that looks at systems, not blame.</span></li>
+    </ol>
+    <div class="stack">
+      <div class="callout"><b>RULE</b>Rotate first, clean up later. A revoked key sitting in public history is harmless; an unrevoked one in a private repo isn't.</div>
+      <div class="card"><b>The first thing to do</b><span>Revoke or rotate the secret. Everything else (history, blame, write-ups) can wait the extra ten minutes; the key can't.</span></div>
+      <div class="card"><b>Have it ready before you need it</b><span>Know who can revoke each secret, where its usage logs are, and how long they're kept. Test it with a made-up key.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Order matters because time matters: every minute the key works is a minute someone else can use it. Notice that "look at the logs" starts at the time of exposure, which is often hours before the alert, as the tabletop will show.</span></li><li><b class="ask">Ask</b><span>What's the very first thing you do when a production key leaks? <em>Answer: revoke or rotate it. If revoking would break production, create and deploy the replacement first, then revoke straight away.</em></span></li><li><b class="tip">Tip</b><span>GitHub's own guide: as a first step revoke or rotate the secret, and rewriting history "may not be warranted" afterwards. CircleCI's January 2023 guidance to customers is a worked example: rotate everything stored on the platform, review activity from 16 December 2022 until your rotation was complete, and treat secrets entered after 5 January 2023 as safe. How long logs are kept, and who may notify regulators or customers, differs by cloud, country and contract: this slide doesn't give legal advice.</span></li><li><b class="next">Next</b><span>"Let's run one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tabletop" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// ROTATION AND INCIDENTS 04</p><h2>Tabletop: "an API key just appeared in a public repo"</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="tt-scene" id="tt-scene"></p>
+      <div class="tt-opts" id="tt-opts"></div>
+      <p class="tt-fb" id="tt-fb"></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">The timeline so far (invented numbers)</small>
+      <ol class="tt-time" id="tt-time"></ol>
+      <p class="verdict" id="tt-verdict"></p>
+      <p class="comment" id="tt-note"></p>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="tt-reset">Start again</button></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>Run it as a room: read each round, take a show of hands, then reveal the feedback. Three rounds: the first move, how far back to read the logs, and what to do about the cause. Pick the weaker options on purpose at least once so the feedback shows why.</span></li><li><b class="say">Say</b><span>Scene: a cloud key that can read the customer-exports bucket was committed to a public repository at 09:40. A scanner emailed the team at 14:02. The numbers are invented; the order of operations is the point.</span></li><li><b class="ask">Ask</b><span>Who in your organisation could revoke this key at 14:05, and do they know it's theirs?</span></li><li><b class="tip">Tip</b><span>The kind-feedback rule: ask what the system allowed, not who did it. A review that finds a person to blame teaches everyone to hide the next mistake.</span></li><li><b class="next">Next</b><span>"Habits that make all this quieter."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// ROTATION AND INCIDENTS 05</p><h2>Everyday habits, beyond the incidents</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>In your code and tools</h3>
+      <ul class="rules">
+        <li><b>Add <code>.env</code> to <code>.gitignore</code> before the first commit</b>, and commit a <code>.env.example</code> with placeholders.</li>
+        <li><b>One secret per purpose and per environment.</b> A leaked dev key should open nothing in production.</li>
+        <li><b>Least privilege.</b> A key that can only read one bucket is a smaller incident.</li>
+        <li><b>Never put secrets in URLs or command-line arguments:</b> they end up in logs, history and process lists. Use a file or stdin.</li>
+        <li><b>Scrub what you log</b>, and don't log whole requests or environments.</li>
+        <li><b>Label every secret</b> with an owner and what it's for, so it can be revoked without a search.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>With people</h3>
+      <ul class="rules">
+        <li><b>Share credentials through a password manager or secret manager,</b> never chat, email, tickets or screenshots.</li>
+        <li><b>Make reporting easy and blame-free.</b> "I pasted a key in the wrong channel" should get a thank-you and a rotation.</li>
+        <li><b>Treat laptops as leaky:</b> keep production secrets off them; fetch development secrets on demand.</li>
+        <li><b>Offboard secrets, not just people:</b> when someone leaves, rotate what they could read.</li>
+        <li><b>Prefer to have no secret at all:</b> an identity, a short-lived token, or a managed service, instead of a string.</li>
+      </ul>
+      <p class="comment" id="hb-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>None of this is dramatic, which is why it works. Each habit removes a place a secret can be, or limits what it can do once it's out. And the best secret is the one you never had to store.</span></li><li><b class="tip">Tip</b><span>These are widely recommended practices (see the OWASP Secrets Management Cheat Sheet linked on the last slide) rather than claims from one source. The point about command-line arguments: on a default Linux system any local user can see other users' process arguments, and shell history files keep what you typed.</span></li><li><b class="next">Next</b><span>"A checklist to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// ROTATION AND INCIDENTS 06</p><h2>A secrets checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="inv"> We know what secrets we have, what each opens, and who owns it</label>
+      <label><input type="checkbox" data-k="repo"> No secrets in source code, container images, CI logs or front-end bundles</label>
+      <label><input type="checkbox" data-k="scan"> Scanning runs in the editor or pre-commit, at push, and on the platform, including history</label>
+      <label><input type="checkbox" data-k="mgr"> Secrets live in a secret manager or key service, not in config files or chat</label>
+      <label><input type="checkbox" data-k="id"> Workloads get short-lived credentials through an identity, not stored cloud keys</label>
+      <label><input type="checkbox" data-k="scope"> Each secret is separate per environment and has the least privilege it needs</label>
+      <label><input type="checkbox" data-k="env"> Data keys wrap data and a master key wraps them, so keys can be rotated without re-encrypting</label>
+      <label><input type="checkbox" data-k="two"> Verifiers and apps accept two valid secrets at once, and key IDs travel with data</label>
+      <label><input type="checkbox" data-k="auto"> Rotation is automated for what supports it, and rehearsed for what doesn't</label>
+      <label><input type="checkbox" data-k="logs"> Secret use is logged, and we know how long those logs are kept</label>
+      <label><input type="checkbox" data-k="run"> There's a leaked-secret runbook that starts with "revoke", and people know where it is</label>
+      <label><input type="checkbox" data-k="blame"> Reporting a leak is easy and blame-free, and every incident ends with a fix to the system</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what your team does today and treat every unticked box as a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box would have shortened your last incident the most?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a secret in your own setup you're not sure how to handle. (Describe it, don't paste it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Secrets Management Cheat Sheet</a><span>A practical checklist for the whole lifecycle.</span></li>
+        <li><a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository" target="_blank" rel="noopener">GitHub: removing sensitive data</a><span>What a leak guide looks like, from the platform itself.</span></li>
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>Nonces, key derivation and the misuses behind the demos.</span></li>
+        <li><a href="../cloud-security/">Cloud Security Fundamentals</a><span>Roles, identities and the metadata service.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no cloud, no repository, no real keys, and nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe a secret from their own setup (without pasting it) and walk down the ladder together: where does it live, who can read it, how would we rotate it?</span></li><li><b class="show">Check</b><span>The OWASP cheat-sheet URL was fetched on 11 November 2026 and resolves to the Secrets Management Cheat Sheet. The Cloud Security, Git and GitHub, and Crypto in Code talks are linked rather than repeated.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="secrets.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
