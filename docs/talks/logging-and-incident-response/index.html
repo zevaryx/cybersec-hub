@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Logging, Monitoring and Incident Response</title>
+<meta name="description" content="Logging, Monitoring and Incident Response: what to log, what to alert on, and how to run the first hours of an incident. A talk by zevaryx, with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/logging-and-incident-response/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Logging, Monitoring and Incident Response">
+<meta property="og:description" content="What to log, what to alert on, and how to run the first hours of an incident. Live demos run in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/logging-and-incident-response/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/logging-and-incident-response/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "logging-and-incident-response", "title": "Logging, Monitoring and Incident Response", "footer": "IR", "subtitle": "SECURITY TRACK · 05",
+  "parts": [{ "name": "Logging that helps", "minutes": 23 }, { "name": "Detection", "minutes": 20 },
+            { "name": "Responding", "minutes": 20 }, { "name": "Tabletop exercise", "minutes": 23 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Logging, Monitoring and Incident Response</a>
+  <div class="scroll-parts">
+    <a href="#questions-5w" data-part="1"><b>01</b>Logging</a>
+    <a href="#signal" data-part="2"><b>02</b>Detection</a>
+    <a href="#lifecycle" data-part="3"><b>03</b>Responding</a>
+    <a href="#tt-setup" data-part="4"><b>04</b>Tabletop</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 05 · FOR IT, OPS AND ENGINEERING</p>
+      <h1><span class="pre">Logging, Monitoring and</span> <span class="glitch" data-text="Incident">Incident</span> <span class="pre">Response</span></h1>
+      <p class="lede">You can only investigate what you recorded, and only respond as fast as you notice. What to log, what to alert on, and how to run the first hours of an incident, with a tabletop exercise to finish.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/logging-and-incident-response/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>log linter</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ lint-log&nbsp;"<input id="hero-in" value="Jan 5 03:12:44 login failed" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes, four parts, three checkpoints and a tabletop exercise at the end. For anyone who has to answer "what happened?" at an awkward hour: IT and operations, engineers who carry a pager, and the people who lead them.</span></li><li><b class="show">Show</b><span>The linter: a log line is only useful if it answers five questions. This one has a time with no year or zone, no account, no source address. Edit it into something better and watch the score. A toy: it looks for shapes, not truth.</span></li><li><b class="tip">Eggs</b><span>Title slide: an empty line, "1102", "4624", "4625", "0", 1700000000, 2147483647, "taxi", a password in a line (the warning), a perfect 5-of-5 line, or "hello world". Elsewhere: untick everything or tick everything on the log-source and coverage slides; view all three clock modes; search the explorer for "taxi" or "1=1", flag all eight steps with no false flags, or flag everything; try Rewrite the chain on the plain and keyed chains, and Cut last two with the anchor off; get 6 of 6 on the leaks quiz and the roles quiz; in the tuning lab pick "Every failure pages", "Both: 10 in 3 h", or two accounts from one address; finish a tabletop with every meter healthy; tick all 12 on the first-hour checklist. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#questions-5w"><small>PART 1 · 23 MIN</small><b>Logging that helps</b></a><span>The five questions</span><span>What to log first</span><span>Clocks and one place</span><span>Tamper-evident logs</span><span>Secrets in logs</span></li>
+      <li><a href="#signal"><small>PART 2 · 20 MIN</small><b>Detection</b></a><span>Alerts, dashboards, hunts</span><span>Good first alerts</span><span>Tuning and fatigue</span><span>Coverage and ATT&amp;CK</span></li>
+      <li><a href="#lifecycle"><small>PART 3 · 20 MIN</small><b>Responding</b></a><span>The lifecycle</span><span>Roles</span><span>Containing, preserving</span><span>Telling people</span><span>Blameless reviews</span></li>
+      <li><a href="#tt-setup"><small>PART 4 · 23 MIN</small><b>Tabletop exercise</b></a><span>How it works</span><span>Two scenarios, random injects</span><span>Your first hour</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour. Then we play.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is what you record, because everything else depends on it. Part 2 is turning records into a signal a person can act on. Part 3 is what to do once the signal is real. Part 4 is practice: you'll make the decisions, and a deck full of invented consequences will push back.</span></li><li><b class="next">Next</b><span>"Why start with logs?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Finding out sooner, and knowing what happened</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stats stats-3">
+        <div class="stat"><b>52%</b><span>of intrusions Mandiant investigated in 2025 were first noticed by the victim (43% in 2024).</span></div>
+        <div class="stat"><b>34%</b><span>were reported by an outside party, and in <b>14%</b> the attacker announced themselves.</span></div>
+        <div class="stat fast"><b>14 days</b><span>global median dwell time, up from 11. Espionage and North Korean IT-worker cases had a median of 122 days.</span></div>
+      </div>
+      <p class="big-lede">Logs are how you notice, and the only way to learn afterwards what happened.</p>
+      <ul class="rules">
+        <li>You can only investigate what was <b>recorded</b>, and kept long enough.</li>
+        <li>Attackers <b>delete</b> or switch off logs. Mandiant's own advice: forward them somewhere else, immediately.</li>
+        <li>An alert nobody looks at is not detection.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Summer 2023: the log State could see</b><span>The US State Department was first to spot an intrusion into Exchange Online mailboxes, using a custom alert on a log called <code>MailItemsAccessed</code>. That log needed a premium licence, which few victims had, and those who bought it afterwards couldn't look back at earlier activity. The Cyber Safety Review Board recommended that security logging stop being a paid add-on, with customer access logs available at no extra charge and kept for at least six months by default (recommendations 4 and 10).</span></div>
+      <p class="note">The point isn't blame. It's that the log you need is decided long before the incident.</p>
+      <p class="src">Sources: <a href="https://services.google.com/fh/files/misc/m-trends-2026-executive-edition-en.pdf" target="_blank" rel="noopener">M-Trends 2026, executive edition</a> (investigations 1 Jan to 31 Dec 2025) · <a href="https://www.cisa.gov/sites/default/files/2025-03/CSRBReviewOfTheSummer2023MEOIntrusion508.pdf" target="_blank" rel="noopener">CSRB report</a> (20 Mar 2024), §1.3.1, §1.3.2.2, recs 4 and 10</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three numbers from M-Trends. About half the time, the victim noticed first. A third of the time someone outside told them. And the median attacker had been there two weeks. Then one story, told carefully: in 2023 the only reason one agency caught a major intrusion was a log most victims didn't have.</span></li><li><b class="say">Say</b><span>Careful framing: logging was sold as a premium add-on, and the Board's recommendation was that cloud providers make security logging a core part of the service. It's about where the decision gets made, not about customers doing something wrong.</span></li><li><b class="tip">Tip</b><span>Ransomware cases look different: the attacker notified the victim 44% of the time, internal detection 41%, and an outside party 15%. Mandiant's guidance for the long-dwell cases: standard 90-day retention is insufficient, forward logs to central long-term storage, and alert on unexpected log termination.</span></li><li><b class="tip">Check</b><span>All M-Trends figures are from the executive edition (PDF, read in full for these passages): 52% internal vs 43%; 34% external vs 43%; 14% adversary; ransomware 44/41/15; median dwell 14 days vs 11; espionage and DPRK IT-worker median 122 days; BRICKSTORM average 393 days. The CSRB details are from the report text: State detected on 15 and 16 June 2023; 22 organisations and over 500 individuals affected; Microsoft couldn't give historical logs to customers who didn't already hold the premium licence.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="questions-5w" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// LOGGING THAT HELPS 01</p><h2>Every log line should answer five questions</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="q5">
+        <div><b>Who</b><span>The account or service, not only an address</span></div>
+        <div><b>What</b><span>The action, in words a tired person can read</span></div>
+        <div><b>When</b><span>A full date and time, with a zone, from a clock that's right</span></div>
+        <div><b>Where from</b><span>The source address or device, and which system wrote the line</span></div>
+        <div><b>Outcome</b><span>Did it work? A denied request matters as much as an allowed one</span></div>
+      </div>
+      <p class="src">Based on the event-log baseline in <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ASD's ACSC and CISA, Best practices for event logging and threat detection</a> (21 Aug 2024), which cites OMB M-21-31's list: timestamp, event type, device, session, source and destination, user ID, command run, a unique event ID.</p>
+    </div>
+    <div class="stack">
+      <div class="samples" id="q-samples">
+        <div class="sample" data-line="Failed login"><pre></pre><span class="score"></span></div>
+        <div class="sample" data-line="Nov 9 03:12:44 vpn-gw login failed for dana from 203.0.113.7"><pre></pre><span class="score"></span></div>
+        <div class="sample" data-line="2026-11-09T03:12:44Z host=vpn-gw user=dana src=203.0.113.7 action=login outcome=failure"><pre></pre><span class="score"></span></div>
+      </div>
+      <div class="controls"><label class="grow">Try your own line<input id="q-in" class="mono" value="2026-11-09T03:12:44Z dana logged in" spellcheck="false" autocomplete="off"></label></div>
+      <div class="chips" id="q-chips" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Three versions of the same event. "Failed login" tells you something happened. The syslog line is far better, and still has no year or time zone. The structured line answers everything, and a machine can search it. Type your own line in the box and watch which question you've left unanswered.</span></li><li><b class="say">Say</b><span>The linter is a toy: it matches shapes. A line can pass it and still be wrong. What matters is the habit: when you add a log message, ask whether a stranger could use it at 3 a.m.</span></li><li><b class="tip">Tip</b><span>Structured logs (key=value or JSON) beat free text: you can filter on <code>user=</code> without writing a parser. ACSC's note: "Where possible, all data should be formatted as key-value-pairs to allow for easier extraction", and millisecond timestamps are ideal.</span></li><li><b class="next">Next</b><span>"Which systems should write these lines first?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="what-to-log" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// LOGGING THAT HELPS 02</p><h2>What to log first, and what it costs to keep</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table wl-table" aria-label="Log sources">
+        <thead><tr><th></th><th>Source</th><th>Answers</th><th class="num">GB/day*</th></tr></thead>
+        <tbody id="wl-body"></tbody>
+      </table>
+      <div class="wl-ctl">
+        <label>Staff<input id="wl-staff" type="number" min="50" max="20000" step="50" value="500"></label>
+        <label>Searchable: <output id="wl-hot-o">90</output> days<input id="wl-hot" type="range" min="14" max="365" step="1" value="90"></label>
+        <label>Kept: <output id="wl-total-o">365</output> days<input id="wl-total" type="range" min="30" max="730" step="1" value="365"></label>
+      </div>
+      <p class="fine">*GB per day per 1,000 staff: invented for scale, and real volumes vary tenfold either way. Measure yours.</p>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3">
+        <div class="stat"><b id="wl-day">1.2 GB</b><span>a day</span></div>
+        <div class="stat"><b id="wl-hotgb">108 GB</b><span>hot, searchable</span></div>
+        <div class="stat"><b id="wl-totalgb">438 GB</b><span>kept in total</span></div>
+      </div>
+      <div class="steps6" id="wl-steps" aria-label="Attack steps you can reconstruct"></div>
+      <p class="comment" id="wl-note"></p>
+      <ul class="rules rules-sm">
+        <li>Start with <b>identity, the cloud control plane, and endpoints</b>: who signed in, who changed what, what ran.</li>
+        <li>Add <b>network and DNS</b> to see data leave, and cover edge devices, hypervisors and authentication systems, where EDR doesn't reach.</li>
+        <li>Default retention is rarely enough: CloudTrail's event history covers 90 days.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="src slide-src">Sources: <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a> · <a href="https://services.google.com/fh/files/misc/m-trends-2026-executive-edition-en.pdf" target="_blank" rel="noopener">M-Trends 2026</a> · <a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events.html" target="_blank" rel="noopener">AWS CloudTrail event history</a> · <a href="https://www.whitehouse.gov/wp-content/uploads/2026/05/M-26-14-Ensuring-Effective-and-Efficient-Agency-Logging-and-Network-Visibility-to-Defend-Against-Evolving-Cyber-Threats.pdf" target="_blank" rel="noopener">OMB M-26-14</a> (US federal baseline, for reference)</p>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Tick identity, cloud and endpoint (the default): five of the six steps of an intrusion can be reconstructed, and "what left the building" is dark. Add network or DNS and it lights up. Then push the retention sliders: the volume is arithmetic, and the question of what to keep is a decision.</span></li><li><b class="say">Say</b><span>Nobody can log everything and nobody should try. Start from questions you'll have to answer: who got in, what did they change, where did they go, what did they take. Pick the sources that answer those, then spend your storage on keeping the important ones longer. ACSC's advice is to forward the valuable logs to analysis tools and keep the rest in cheaper cold storage.</span></li><li><b class="tip">Tip</b><span>A reference point, not a rule for you: the US federal logging memo M-26-14 (22 May 2026, replacing M-21-31) sets a baseline of logs actively searchable for six months and retrievable for a year, with accurate timestamps and NTP time. It applies to federal agencies. Many other frameworks set minimums too: ask whoever owns your compliance, and check the current text.</span></li><li><b class="tip">Check</b><span>The GB/day figures are invented, only to show scale: the slide says so. The step mapping (which source helps with which step) is a judgement. ACSC: log all cloud control-plane operations (read and write, administrative changes, authentication); on Windows, capture command execution, PowerShell script-block and module logging; on Linux, the use of curl, systemctl and python and similar tools. Mandiant lists edge devices, hypervisors and authentication protocols as blind spots for EDR. AWS: CloudTrail is on by default with an event history of the past 90 days of management events; for a longer record, create a trail or an event data store.</span></li></ul></div>
+</section>
+
+<section class="slide" id="clocks" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// LOGGING THAT HELPS 03</p><h2>One clock, one format, one place</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <div class="seg-pick" role="group" aria-label="How the events are read" id="ck-mode"><button type="button" data-v="raw" aria-pressed="true">As written</button><button type="button" data-v="zone">Fix the time zones</button><button type="button" data-v="drift">Also fix the slow clock</button></div>
+      </div>
+      <ol class="clk" id="ck-list" aria-label="Six events, sorted by their timestamp"></ol>
+      <p class="verdict" id="ck-verdict"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Record in <b>UTC</b>, in one format: <code>2026-11-09T03:12:44.649Z</code>. No zones to convert, no daylight saving.</li>
+        <li>Sync every clock to a trusted source (more than one, in case one fails), and <b>check that they stay in sync</b>.</li>
+        <li>Classic syslog (RFC 3164) timestamps have <b>no year and no zone</b>. RFC 5424 uses RFC 3339 timestamps, with a full date and zone.</li>
+        <li>Send logs to <b>one central place</b>, so a deleted local log isn't the only copy.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a> (timestamp consistency) · <a href="https://www.rfc-editor.org/rfc/rfc5424" target="_blank" rel="noopener">RFC 5424</a> · <a href="https://www.rfc-editor.org/rfc/rfc3164" target="_blank" rel="noopener">RFC 3164</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Logging Cheat Sheet</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Six events from one intrusion, sorted by whatever their logs say. "As written": a file is copied before anyone logs in, and the VPN session appears five hours early. "Fix the time zones" repairs one source. "Also fix the slow clock" (the file server's clock is seven minutes slow) finally gives the true order. Same events, three stories.</span></li><li><b class="say">Say</b><span>A timeline is the first thing an incident needs, and clock errors make it lie. The fix is boring: one time standard, one format, synchronised sources, one central store. And while you're at it, note which hosts are known to drift.</span></li><li><b class="tip">Tip</b><span>OWASP's cheat sheet suggests, where you can't fix a clock, to measure the offset or record a confidence level in the event timestamp. RFC 5424 has a <code>timeQuality</code> field for exactly that.</span></li><li><b class="tip">Check</b><span>The events, hosts and offsets are invented. ACSC: "Using Coordinated Universal Time (UTC) has the advantage of no time zones as well as no daylight savings, and is the preferred time standard", ISO 8601 with milliseconds, and multiple accurate time sources. RFC 3164 timestamps are local time, "Mmm dd hh:mm:ss"; RFC 5424 (which obsoletes 3164) derives its TIMESTAMP from RFC 3339.</span></li></ul></div>
+</section>
+
+<section class="slide" id="explorer" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// LOGGING THAT HELPS 04</p><h2>Find the attacker's path in a small log</h2></header>
+  <div class="slide-body cols-2 cols-explorer">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow">Search <input id="lx-q" class="mono" placeholder="try  outcome:failure   or   src:203.0.113.50   or   -geo:HQ" spellcheck="false" autocomplete="off"></label>
+        <button type="button" class="btn btn-ghost btn-sm" id="lx-clear">Clear</button>
+      </div>
+      <div class="chips" id="lx-chips"><button type="button" class="chip" data-q="outcome:failure">failed sign-ins</button><button type="button" class="chip" data-q="action:role">admin changes</button><button type="button" class="chip" data-q="-geo:HQ -geo:home">not from HQ or home</button><button type="button" class="chip" data-q="logging">logging</button><button type="button" class="chip" data-q="src:203.0.113.50">one address</button></div>
+      <div class="lx-wrap" id="lx-wrap"><table class="lx" aria-label="Log events"><thead><tr><th></th><th>time (UTC)</th><th>host</th><th>user</th><th>action</th><th>outcome</th><th>from</th><th>detail</th></tr></thead><tbody id="lx-rows"></tbody></table></div>
+      <p class="fine" id="lx-count"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Your case file</b><span>Click rows to flag what looks like part of one attack. Ordinary night-shift activity is mixed in, including a few things that look odd and aren't.</span></div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="lx-check">Check my case</button><span class="note" id="lx-flags">0 flagged</span></div>
+      <div class="lx-result" id="lx-result" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Search failed sign-ins: one address trying twelve accounts, once each. Then look at what that address did next. Search "not from HQ or home" and "logging". Flag rows as a group, then press "Check my case": it finds eight steps of one attack, and counts anything you flagged that wasn't one.</span></li><li><b class="say">Say</b><span>The story: a password spray (no account failed more than once, so a per-account lockout never noticed), one guess worked on an account that signs in without MFA over a legacy protocol, a new account with no change ticket, made an administrator, logging switched off, a burst of file reads, and 4.2 GB out. Notice the red herrings: the priya hotel sign-in from a new city had an approved travel ticket and MFA, and the ops-admin account creation had a change ticket. Good analysts check context before escalating.</span></li><li><b class="ask">Ask</b><span>Which single log source would have shown you the first step? Which would have shown the last? <em>Answer: the identity provider for the first; the firewall or network flow for the last, and the cloud audit log tells you that logging was disabled.</em></span></li><li><b class="tip">Tip</b><span>The search language is deliberately small: words match anywhere, field:value matches one field, a leading minus excludes, quotes keep a phrase. Real tools have richer queries, and the habit is the same: narrow, pivot on a value, widen again.</span></li><li><b class="tip">Check</b><span>Everything here is invented: names, hosts and addresses (documentation ranges 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24). The "no MFA over a legacy protocol" detail is a common real-world pattern, not a claim about a specific product.</span></li></ul></div>
+</section>
+
+<section class="slide" id="integrity" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// LOGGING THAT HELPS 05</p><h2>Tamper-evident logs: a hash chain</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <div class="seg-pick" role="group" aria-label="Chain type" id="ch-kind"><button type="button" data-v="plain" aria-pressed="true">Plain SHA-256</button><button type="button" data-v="hmac">Keyed (HMAC)</button></div>
+        <label class="check"><input type="checkbox" id="ch-anchor" checked> Keep the latest hash somewhere else</label>
+      </div>
+      <table class="grid-table chn" aria-label="A hash-chained log"><thead><tr><th>#</th><th>entry</th><th>previous</th><th>hash</th><th></th></tr></thead><tbody id="ch-rows"></tbody></table>
+      <div class="controls" id="ch-acts">
+        <button type="button" class="btn btn-ghost btn-sm" data-act="edit">Edit #3</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-act="fix">Edit #3 + fix its hash</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-act="rewrite">Rewrite the chain</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-act="delete">Delete #3</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-act="cut">Cut last two</button>
+        <button type="button" class="btn btn-sm" data-act="reset">Reset</button>
+      </div>
+      <p class="verdict" id="ch-verdict" aria-live="polite"></p>
+      <p class="comment" id="ch-egg"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules rules-sm">
+        <li>Each entry's hash covers its text <b>and the hash before it</b>. Change anything and every later link breaks.</li>
+        <li>An attacker who can write the file can <b>recompute the whole chain</b>. Only a copy of the latest hash kept elsewhere (an <b>anchor</b>), or a secret key they don't have, exposes that.</li>
+        <li>A chain shows what was <b>changed or removed from the middle</b>. It can't prove the <b>end</b> is complete without an anchor.</li>
+        <li>The simplest defence is still <b>forwarding logs off the machine</b> as they're written.</li>
+      </ul>
+      <div class="card"><b>Same idea, bigger scale</b><span>Certificate Transparency logs are tamper-evident for the same reason, with signed heads that anyone can check. See <a href="../pki-in-depth/">PKI in Depth</a>.</span></div>
+    </div>
+  </div>
+  <p class="src slide-src">Sources: <a href="https://www.schneier.com/academic/archives/1998/01/cryptographic_suppor.html" target="_blank" rel="noopener">Schneier &amp; Kelsey, Secure Logs on Untrusted Machines</a> (USENIX Security 1998) · <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Logging Cheat Sheet</a></p>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>With the anchor ticked, try each attack. "Edit entry 3": the entry itself fails. "Edit and fix its hash": entry 4's link breaks. "Rewrite the whole chain": on a plain chain it is internally perfect, and only the anchor exposes it. Switch to Keyed (HMAC) and try again: without the key, the attacker's recomputed hashes don't verify. "Cut off the last two": still a valid chain; only the anchor notices. Untick the anchor to see what disappears.</span></li><li><b class="say">Say</b><span>This is the real SHA-256 and HMAC from the Crypto 101 code, applied to a six-line log. Three lessons: a chain makes edits visible; it needs something the attacker can't rewrite (a stored head, a key); and none of it replaces shipping logs off the box.</span></li><li><b class="tip">Tip</b><span>In real systems the anchor might be a periodically signed hash sent to a separate service, or written to append-only (write-once) storage. The ACSC guide recommends cryptographic verification of integrity in transit and at rest, and keeping logs in a separate, segmented network with tight delete and modify permissions.</span></li><li><b class="tip">Check</b><span>Teaching code: the demo chains by hashing "previous hash | text", and the HMAC variant keys each link. It is not a production audit-log design. Schneier and Kelsey's 1998 paper describes a more careful scheme (forward-secure keys and hash chains) so that entries written before a compromise can't be altered undetected.</span></li></ul></div>
+</section>
+
+<section class="slide" id="leaks" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// LOGGING THAT HELPS 06</p><h2>Keep secrets and personal data out of logs</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="lk-list" id="lk-list"></div>
+      <div class="note-panel" id="lk-panel" aria-live="polite"></div>
+      <p class="verdict" id="lk-score" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Don't log:</b> passwords, access tokens, session IDs, encryption keys, connection strings, payment card data, and sensitive personal data. Remove, mask, hash or encrypt them.</li>
+        <li><b>Encode what users type</b> before logging it, so a newline can't forge a second line. Prefer structured logs.</li>
+        <li><b>Log events, not contents:</b> "bob exported 1,200 rows", not the rows.</li>
+        <li><b>Protect the logs like the data:</b> restrict who can read them, and review that access. Logs often outlive and out-spread the systems they describe.</li>
+      </ul>
+      <p class="src">Source: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Logging Cheat Sheet</a> ("Data to exclude", "Log Injection") · <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="show">Show</b><span>Six lines: four to flag, two that are fine. Make the room call each before you reveal it. The failed login with a password is the one that surprises people: a failed attempt very often holds the real password with a single typo.</span></li><li><b class="say">Say</b><span>Logs are a second copy of your data with weaker protection and a much wider audience. The cheapest fix is at the point of writing: don't put the secret in the line. The log-injection example matters for the earlier slide too: a forged line is a way to put false evidence in your own logs.</span></li><li><b class="tip">Tip</b><span>OWASP's list of data to exclude: session IDs (a hash can track a session's events), access tokens, authentication passwords, encryption keys and other primary secrets, sensitive personal data, bank account or card data, database connection strings, application source code. And "Never log data unless it is legally sanctioned."</span></li><li><b class="tip">Check</b><span>The lines are invented; the card number is a standard test number. Your country's rules on personal data in logs vary: ask your privacy owner.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is a log kept only on the server it describes a weak witness?</p><details><summary>Hint</summary><p>Who can write to that server after a break-in?</p></details><details class="answer"><summary>Answer</summary><p>An attacker can edit or delete it, and a rebuilt server loses it. Forward logs to a separate, protected store as they're written.</p></details></li>
+      <li><p>One server logs an event at 03:12, another at 04:12. What do you check first?</p><details><summary>Hint</summary><p>Two common causes, neither is a mystery.</p></details><details class="answer"><summary>Answer</summary><p>Time zones (one may log local time) and clock drift. Use UTC with a zone, and synchronise clocks.</p></details></li>
+      <li><p>A failed login attempt: what should the log record, and what should it never record?</p><details><summary>Hint</summary><p>Think about what a person types when they mistype.</p></details><details class="answer"><summary>Answer</summary><p>Record who, from where, when, and that it failed (and why, in words). Never the password typed: a failed attempt often holds the real one with a typo.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="signal" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// DETECTION 01</p><h2>Alerts, dashboards and hunts do different jobs</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-3">
+      <div class="card"><b>Alert</b><span>A person must look <b>now</b>. It needs an owner, a first step, and a rate people can sustain. An alert nobody acts on is noise with a pager.</span></div>
+      <div class="card"><b>Dashboard</b><span>Trends and context, read when someone chooses to. Good for "is this normal?", poor for waking anyone up.</span></div>
+      <div class="card"><b>Hunt</b><span>A person asks the data a question nobody has written a rule for. ACSC and Mandiant both recommend routine hunting, especially for attackers using normal admin tools.</span></div>
+    </div>
+    <div class="cols-2">
+      <ul class="rules">
+        <li>Before an alert goes live, answer: <b>Who gets it? What do they do first? How often does it fire, and how many are real? What does it miss?</b></li>
+        <li>Write the <b>first look</b> next to the rule, so the person on call at 3 a.m. isn't guessing.</li>
+        <li>Review each alert on a schedule. Retire or retune the ones that never lead to action.</li>
+      </ul>
+      <div class="card"><b>"Big Yellow Taxi"</b><span>State's custom alert on mailbox access had fired false positives before. The CSRB notes that analysts investigated anyway, triaged it as a moderate-level event, and contacted Microsoft that same day. A noisy rule that people still trust and follow up is worth more than a quiet one nobody reads. (It shares a name with a Joni Mitchell song about not knowing what you've got till it's gone, which is also true of logs.)</span></div>
+    </div>
+    <p class="src">Sources: <a href="https://www.cisa.gov/sites/default/files/2025-03/CSRBReviewOfTheSummer2023MEOIntrusion508.pdf" target="_blank" rel="noopener">CSRB report</a>, §1.3.1 · <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a> (detection strategy, threat hunting) · <a href="https://services.google.com/fh/files/misc/m-trends-2026-executive-edition-en.pdf" target="_blank" rel="noopener">M-Trends 2026</a></p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Three tools for three jobs. People build dashboards and call them detection, and nobody looks at the dashboard at 3 a.m. An alert is a promise that a human will look, now, and that promise has to be one you can keep.</span></li><li><b class="say">Say</b><span>The State Department example is worth a second look: their alert on a log that most victims couldn't see had produced false alarms before, they investigated anyway, and that's how a major intrusion was found. The CSRB also notes that few organisations analysed that voluminous log in depth: buying the log wasn't enough, the custom alerting was the difference.</span></li><li><b class="tip">Check</b><span>The CSRB text: State's SOC "observed multiple alerts from the 'Big Yellow Taxi' custom alert rule" on 16 June 2023; "State had seen false positive Big Yellow Taxi detections in the past—State investigated these incidents and ultimately determined that the alert indicated malicious activity"; triaged "as a moderate-level event". The CSRB doesn't say why the rule was named that, so the song reference is only about the name.</span></li></ul></div>
+</section>
+
+<section class="slide" id="first-alerts" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// DETECTION 02</p><h2>Good first alerts</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack"><div class="fa-list" id="fa-list" role="group" aria-label="Alerts"></div></div>
+    <div class="stack"><div class="fa-detail" id="fa-detail" aria-live="polite"></div></div>
+  </div>
+  <p class="src slide-src">Sources: <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a> (examples to alert on) · <a href="https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/appendix-l--events-to-monitor" target="_blank" rel="noopener">Microsoft, Events to Monitor</a> · <a href="https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_StopLogging.html" target="_blank" rel="noopener">AWS CloudTrail StopLogging</a> · ATT&amp;CK <a href="https://attack.mitre.org/techniques/T1078/" target="_blank" rel="noopener">T1078</a>, <a href="https://attack.mitre.org/techniques/T1136/" target="_blank" rel="noopener">T1136</a>, <a href="https://attack.mitre.org/techniques/T1110/003/" target="_blank" rel="noopener">T1110.003</a>, <a href="https://attack.mitre.org/techniques/T1685/002/" target="_blank" rel="noopener">T1685.002</a>, <a href="https://attack.mitre.org/techniques/T1685/005/" target="_blank" rel="noopener">T1685.005</a>, <a href="https://attack.mitre.org/techniques/T1486/" target="_blank" rel="noopener">T1486</a></p>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click each alert. For each: what it catches, the log it needs (tie back to "what to log first"), when it's usually a false alarm, and the first look. The same five show up in the explorer's attack: spray, sign-in from somewhere new, new admin, logging off, and bulk file reads.</span></li><li><b class="say">Say</b><span>Start with a handful you understand. ACSC's guide lists nearly all of these as examples: logins from impossible travel, many failed attempts from one address against different users, accounts created or re-enabled (especially administrators), unexpected clearing of logs, configuration changes to security and logging software, and large downloads or exports.</span></li><li><b class="ask">Ask</b><span>Which of these would you page someone for, and which would you send to a morning queue? <em>Answer: logging disabled or cleared, and an unexplained new admin, are the page-now ones. Mass file changes depends on how fast it grows. Impossible travel and sprays are often daytime queue unless an account also succeeded.</em></span></li><li><b class="tip">Check</b><span>Windows event IDs, from Microsoft's "Events to Monitor": 1102 audit log cleared (Medium to High), 4719 audit policy changed (High), 4720 user account created, 4728 and 4732 member added to a security-enabled global or local group, 4624 and 4625 account logged on or failed. CloudTrail: <code>StopLogging</code> is the only way to stop a trail recording, and <code>DeleteTrail</code> and <code>UpdateTrail</code> can reduce coverage. ATT&amp;CK technique names as of v20.1 (13 Oct 2026): T1078 Valid Accounts, T1136 Create Account, T1110.003 Password Spraying, T1685.002 Disable or Modify Cloud Log and T1685.005 Clear Windows Event Logs (both under T1685, Disable or Modify Tools; ATT&amp;CK v19 renumbered these from T1562 and T1070), T1486 Data Encrypted for Impact.</span></li></ul></div>
+</section>
+
+<section class="slide" id="tuning" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// DETECTION 03</p><h2>Tuning an alert, and alert fatigue</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <div class="seg-pick" role="group" aria-label="Rule" id="tu-rule"><button type="button" data-v="account" aria-pressed="true">One account: failures</button><button type="button" data-v="source">One address: different accounts</button><button type="button" data-v="both">Both rules</button></div>
+      </div>
+      <div class="controls">
+        <label class="grow"><span id="tu-n-l">Alert at <output id="tu-n-o">15</output> failures</span><input id="tu-n" type="range" min="1" max="30" value="15"></label>
+        <label class="grow"><span>within <output id="tu-w-o">10 minutes</output></span><input id="tu-w" type="range" min="1" max="360" value="10"></label>
+      </div>
+      <p class="fine" id="tu-rule-note"></p>
+      <div class="chips" id="tu-presets"></div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="tu-caught">1 of 3</b><span id="tu-caught-l">real attacks caught</span></div>
+        <div class="stat"><b id="tu-false">0</b><span>false alerts this week</span></div>
+        <div class="stat"><b id="tu-hours">0 h</b><span>analyst time on false alerts</span></div>
+      </div>
+      <div class="days" id="tu-days" aria-label="Alerts per day"></div>
+      <p class="verdict" id="tu-verdict" aria-live="polite"></p>
+      <p class="comment" id="tu-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>The week has <b>three real attacks</b> buried in ordinary failures: a spray, a brute force on one account, and a spray slowed to six hours.</li>
+        <li>Per-account rules see <b>brute force</b>. A spray tries each account <b>once</b>, so only a per-address rule sees it. In practice you need <b>both</b>.</li>
+        <li>A <b>long window</b> catches the slow spray, and a shared kiosk can look like one too. Add context (known scanners, kiosk addresses) instead of raising thresholds until it's blind.</li>
+        <li>Count what matters: <b>how many alerts led to action</b>, and what the rule misses.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://attack.mitre.org/techniques/T1110/003/" target="_blank" rel="noopener">ATT&amp;CK T1110.003, Password Spraying</a> · <a href="https://www.cisa.gov/resources-tools/resources/best-practices-event-logging-and-threat-detection" target="_blank" rel="noopener">ACSC/CISA logging guide</a> ("a single IP address attempting to authenticate as multiple different users") · simulated week</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start with "One account", 15 failures in 10 minutes: quiet, and it catches only the brute force. Lower it to 3: dozens of false alerts, from people forgetting their password and a broken service account, and still no spray. Switch to "One address": 10 different accounts in 15 minutes catches the fast spray quietly. Widen to three hours to catch the slow one, and a kiosk starts to look like an attacker.</span></li><li><b class="say">Say</b><span>There are two separate lessons. One: the rule has to match the behaviour (a spray is about the address, not the account). Two: thresholds trade false alarms for blind spots, and every false alarm costs a person's attention. Alert fatigue isn't weakness: it's what happens when the cost of looking exceeds the value.</span></li><li><b class="ask">Ask</b><span>What would you add to the rule so the kiosk stops alerting? <em>Answer: exclude or label known shared addresses, or require a successful sign-in after the failures. The aim is context that separates the cases, not a higher number.</em></span></li><li><b class="tip">Check</b><span>The week is simulated: 300 accounts, roughly 1,100 failed sign-ins, fixed so everyone sees the same numbers. The 10 minutes per false alert and the quiet/heavy/fatigue labels are invented, only to give the numbers a scale. Defaults: per-account 15 in 10 minutes catches the brute force with zero false alerts; per-address 10 accounts in 15 minutes catches the spray; 10 accounts in 3 hours catches both sprays with one false alert (the kiosk). No single rule catches all three: "Both rules" (the per-address rule you set, plus 15 in 10 minutes per account) with a 3-hour window catches all three with one false alert.</span></li></ul></div>
+</section>
+
+<section class="slide" id="coverage" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// DETECTION 04</p><h2>ATT&amp;CK as a map of what you can't see</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="cv-src" id="cv-src" role="group" aria-label="Log sources you collect"></div>
+      <div class="cv-grid" id="cv-grid" aria-label="Enterprise ATT&amp;CK tactics and your view of them"></div>
+      <p class="comment" id="cv-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>ATT&amp;CK is a catalogue of <b>attacker behaviour</b>. Use it to ask "which of these would I see?", not as a score to maximise.</li>
+        <li><b>Coverage isn't detection.</b> A technique is covered when the data exists, a rule uses it, the rule was tested, and someone knows what to do.</li>
+        <li>Log tampering lives under <b>Defense Impairment</b>, a tactic added in v19: <a href="https://attack.mitre.org/techniques/T1685/002/" target="_blank" rel="noopener">T1685.002</a> (cloud logs) and <a href="https://attack.mitre.org/techniques/T1685/005/" target="_blank" rel="noopener">T1685.005</a> (Windows event logs).</li>
+        <li>Reconnaissance and resource development mostly happen <b>outside your systems</b>. Logs can't see them.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://attack.mitre.org/resources/updates/updates-april-2026/" target="_blank" rel="noopener">ATT&amp;CK v19 (28 Apr 2026) release notes</a> · <a href="https://attack.mitre.org/tactics/enterprise/" target="_blank" rel="noopener">Enterprise tactics</a> (v20.1, 13 Oct 2026). The coverage map is a simplification.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start with the three sources from earlier: most of the map has something, and Command and Control, Exfiltration and Discovery are thin. Add network and DNS. Then tick everything: only Reconnaissance and Resource Development stay dark, because most of that happens before the attacker touches your systems.</span></li><li><b class="say">Say</b><span>The map doesn't tell you what you've detected: it tells you where you can't see anything. Use it to choose the next log source, then pick the techniques that matter for your own threats and write and test a detection for each.</span></li><li><b class="tip">Check</b><span>The tactic list is Enterprise ATT&amp;CK as of v20.1 (13 October 2026): 15 tactics, including Stealth (TA0005) and Defense Impairment (TA0112), which replaced Defense Evasion in v19 (28 April 2026). The mapping of sources to tactics is an illustrative judgement, not MITRE data: ATT&amp;CK has its own data-source model. Old technique IDs (T1562.x, T1070.x for log tampering) were revoked and replaced by T1685.x in v19; use the current IDs if you cite them.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>An attacker often turns off logging first. How would you notice?</p><details><summary>Hint</summary><p>Two kinds of signal: an event, and an absence.</p></details><details class="answer"><summary>Answer</summary><p>Alert on the event (a trail stopped, a log cleared) and on silence: a source that stops sending.</p></details></li>
+      <li><p>An alert fires 200 times a day and is ignored. Name two fixes besides turning it off.</p><details><summary>Hint</summary><p>Think context, and what the alert really asks.</p></details><details class="answer"><summary>Answer</summary><p>Add context (known scanners, a success after the failures), change what it measures, or send it to a daily queue.</p></details></li>
+      <li><p>You have a detection rule for a technique on the ATT&amp;CK matrix. Are you covered?</p><details><summary>Hint</summary><p>What has to be true for the rule to fire?</p></details><details class="answer"><summary>Answer</summary><p>Not necessarily: the data must reach the rule, the rule must be tested, and someone must know what to do.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="lifecycle" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// RESPONDING 01</p><h2>The incident response lifecycle</h2></header>
+  <div class="slide-body stack">
+    <div class="lc-steps" id="lc-steps" role="group" aria-label="Phases"></div>
+    <div class="cols-2 cols-wide-left">
+      <div class="lc-detail" id="lc-detail" aria-live="polite"></div>
+      <div class="stack">
+        <table class="grid-table lc-map" aria-label="Phases and NIST CSF 2.0 functions"><thead><tr><th>Classic phase (SP 800-61 r2)</th><th>CSF 2.0 function(s), SP 800-61 r3</th></tr></thead><tbody>
+          <tr><td>Preparation</td><td>Govern, Identify, Protect</td></tr>
+          <tr><td>Detection &amp; Analysis</td><td>Detect (+ Identify: Improvement)</td></tr>
+          <tr><td>Containment, Eradication &amp; Recovery</td><td>Respond, Recover (+ Improvement)</td></tr>
+          <tr><td>Post-Incident Activity</td><td>Identify: Improvement</td></tr>
+        </tbody></table>
+        <p class="fine">Revision 3 (April 2025) treats Govern, Identify and Protect as preparation that supports response, and learning as continuous: lessons are shared as they appear, not saved for the end.</p>
+      </div>
+    </div>
+    <p class="src">Sources: <a href="https://csrc.nist.gov/pubs/sp/800/61/r3/final" target="_blank" rel="noopener">NIST SP 800-61 Rev. 3</a> (April 2025), §2.1 and Table 1 · <a href="https://www.cisa.gov/sites/default/files/2024-08/Federal_Government_Cybersecurity_Incident_and_Vulnerability_Response_Playbooks_508C.pdf" target="_blank" rel="noopener">CISA incident and vulnerability response playbooks</a> · <a href="https://www.ncsc.gov.uk/collection/incident-management" target="_blank" rel="noopener">NCSC incident management</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click through the six steps. Prepare, detect, contain, eradicate, recover, learn is the teaching version of the classic model. The table on the right shows how NIST's 2025 revision recasts those phases as the six functions of the Cybersecurity Framework 2.0.</span></li><li><b class="say">Say</b><span>Two points. First, the lifecycle isn't a straight line: new evidence sends you back to analysis, and the CISA playbook says so ("if new signs of compromise are found, return to the technical analysis step to re-scope"). Second, NIST's newer model says preparation and learning aren't phases at the edges: Govern, Identify and Protect are everyday risk management, and lessons feed back continuously.</span></li><li><b class="tip">Check</b><span>NIST SP 800-61 Rev. 3 (final, April 2025) supersedes Rev. 2 (August 2012). Its Table 1 maps Preparation to Govern, Identify (all categories) and Protect; Detection &amp; Analysis to Detect and Identify (Improvement); Containment, Eradication &amp; Recovery to Respond, Recover and Improvement; Post-Incident Activity to Improvement. The CISA playbooks still use the Rev. 2 phase names. Splitting Containment and Eradication on this slide is a teaching choice. The NCSC collection is dated 2019 (v1.0) and is still a good practical read.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roles" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// RESPONDING 02</p><h2>Roles: someone has to be the one not typing</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="roles-grid">
+        <div class="card"><b>Incident lead</b><span>Decides, keeps the big picture, assigns work. Doesn't run the commands.</span></div>
+        <div class="card"><b>Technical lead</b><span>Directs the hands-on investigation and containment. The only people changing systems.</span></div>
+        <div class="card"><b>Communications lead</b><span>Updates staff, leadership and, with counsel, outsiders. One voice.</span></div>
+        <div class="card"><b>Scribe</b><span>Keeps the timeline: UTC times, decisions, who did what. Makes handovers possible.</span></div>
+      </div>
+      <p class="fine">Also consulted: legal counsel, your insurer, HR, and an executive sponsor. In a small team, one person wears several hats, but write down who is wearing which.</p>
+      <p class="src">Sources: <a href="https://sre.google/sre-book/managing-incidents/" target="_blank" rel="noopener">Google SRE book, Managing Incidents</a> (command, operations, communications, planning) · <a href="https://www.ncsc.gov.uk/collection/incident-management" target="_blank" rel="noopener">NCSC incident management</a> (response team roles)</p>
+    </div>
+    <div class="stack">
+      <h3>Whose job is it?</h3>
+      <div class="rl-tasks" id="rl-tasks"></div>
+      <div class="note-panel" id="rl-note" aria-live="polite"></div>
+      <p class="verdict" id="rl-score" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The classic incident failure isn't lack of skill, it's everyone doing everything: the best engineer is also the one explaining things to the CEO and nobody wrote down what happened at 03:41. Four hats, even if you only have three people. The lead's job is to not be the one with their hands on the keyboard.</span></li><li><b class="show">Show</b><span>Six tasks: pick the role whose job each is. Reveal shows the usual owner and why. Some have more than one reasonable answer: that's a good discussion.</span></li><li><b class="tip">Check</b><span>Google's SRE chapter, for reliability incidents, names incident command, operations (only they change the system), communications and planning. The scribe role is our addition from common practice: Google's "keep the incident document accurate and up to date" is part of communications. Role names vary by organisation.</span></li></ul></div>
+</section>
+
+<section class="slide" id="contain" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// RESPONDING 03</p><h2>Containing, eradicating, and keeping the evidence</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table ct" aria-label="Containment choices"><thead><tr><th>Action</th><th>Stops them</th><th>Keeps evidence</th><th>Tips them off</th><th>Hurts the business</th></tr></thead><tbody id="ct-rows"></tbody></table>
+      <div class="ct-note" id="ct-note" aria-live="polite"></div>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Contain ≠ eradicate</b><span><b>Contain:</b> stop it getting worse (isolate, disable, revoke). Often temporary. <b>Eradicate:</b> remove their way in and every foothold (patch, rebuild, rotate every secret they could have seen). If new signs appear, you re-scope.</span></div>
+      <div class="card"><b>Collect the volatile first</b><span>RFC 3227's example order: registers and cache; routing and ARP tables, processes, memory; temporary files; disk; remote logs; configuration and topology; archives. Its warning: "Don't shutdown until you've completed evidence collection."</span></div>
+      <p class="fine">That RFC dates from 2002 and was written for one machine. With ransomware spreading, isolating from the network usually beats powering off: it stops the damage and keeps memory. CISA's playbook lists capturing forensic images among key containment activities.</p>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc3227" target="_blank" rel="noopener">RFC 3227</a> (Feb 2002, BCP 55) · <a href="https://www.cisa.gov/sites/default/files/2024-08/Federal_Government_Cybersecurity_Incident_and_Vulnerability_Response_Playbooks_508C.pdf" target="_blank" rel="noopener">CISA playbooks</a>, Containment</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click each action. There's no free lunch: the options that stop the attacker fastest tend to cost evidence or business time. The table's dots are judgement, not measurement. Revoking sessions and isolating a host are usually the best first moves; pulling the plug costs the most evidence.</span></li><li><b class="say">Say</b><span>Containment is about the smallest action that stops the harm. Eradication is a bigger job: if you remove one foothold and miss another, they're back. CISA's playbook warns about "tipping off" the adversary and says to scope containment to all related activity. And save the evidence before you change things: logs, memory if you can, a disk image if it matters.</span></li><li><b class="tip">Check</b><span>RFC 3227 section 2.1 gives the order of volatility (read in full) and section 2.2 the line "Don't shutdown until you've completed evidence collection. Much evidence may be lost and the attacker may have altered the startup/shutdown scripts/services to destroy evidence." The CISA playbook's key containment activities include isolating systems, capturing forensic images, blocking and logging unauthorised access, changing admin passwords and rotating keys and service secrets. It describes watching an actor in a sandbox as limited to advanced SOCs with mature capabilities.</span></li></ul></div>
+</section>
+
+<section class="slide" id="comms" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// RESPONDING 04</p><h2>Telling people: inside, customers, regulators</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Inside:</b> short, regular updates with a time for the next one. Say what you know, what you don't, what you're doing, and what you need from people.</li>
+        <li><b>Outside:</b> one voice, with counsel. Facts only. "We don't know yet" is fine when it comes with a plan.</li>
+        <li><b>Out of band:</b> if your email or chat may be compromised, coordinate somewhere else (a phone bridge, a separate tenant). CISA's playbook includes out-of-band coordination in preparation.</li>
+        <li><b>Write down</b> the time you became aware. Several clocks start there.</li>
+      </ul>
+      <div class="card"><b>Internal update template</b><span>Status, as of [UTC time]. <b>Known:</b> … <b>Unknown:</b> … <b>Doing:</b> … <b>Need from you:</b> … <b>Next update:</b> [time].</span></div>
+    </div>
+    <div class="stack">
+      <table class="grid-table clk-t" aria-label="Examples of notification clocks"><thead><tr><th>Example</th><th>The clock</th></tr></thead><tbody>
+        <tr><td>EU GDPR, Art. 33</td><td>Tell the supervisory authority "without undue delay and, where feasible, not later than 72 hours" after becoming aware of a personal data breach (unless unlikely to risk people's rights). Information may follow in stages.</td></tr>
+        <tr><td>US SEC, Form 8-K Item 1.05</td><td>Public companies: generally within four business days of determining that an incident is <i>material</i>.</td></tr>
+        <tr><td>US CIRCIA</td><td>Proposed: 72 hours for covered incidents, 24 hours for ransom payments. Not final: CISA says reporting isn't required until the final rule takes effect.</td></tr>
+      </tbody></table>
+      <p class="callout"><b>YOURS</b> Your country, sector, contracts and insurance policy may all set clocks. Find them <i>before</i> an incident, and ask counsel.</p>
+      <p class="src">Sources: <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng" target="_blank" rel="noopener">GDPR (EUR-Lex)</a>, Art. 33 · <a href="https://www.sec.gov/files/33-11216-fact-sheet.pdf" target="_blank" rel="noopener">SEC fact sheet</a> · <a href="https://www.cisa.gov/topics/cyber-threats-and-advisories/information-sharing/cyber-incident-reporting-critical-infrastructure-act-2022-circia" target="_blank" rel="noopener">CISA CIRCIA</a> (checked 9 Nov 2026) · <a href="https://www.edpb.europa.eu/system/files/2023-04/edpb_guidelines_202209_personal_data_breach_notification_v2.0_en.pdf" target="_blank" rel="noopener">EDPB guidelines 9/2022</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>These are examples, not legal advice and not a list. The lesson is that notification clocks exist, they start at different moments (awareness, materiality, payment), and you don't want to discover them mid-incident. Find your contracts, your insurance policy's notice requirement, and your regulator's own page now. A good internal update is the same every time: known, unknown, doing, need, next update.</span></li><li><b class="tip">Check</b><span>GDPR Art. 33(1), (2) and (4) read from the regulation's text: 72 hours "where feasible", reasons required for delay, processors tell controllers "without undue delay", phased information allowed. EDPB: awareness depends on the circumstances, and an initial investigation should start as soon as possible. SEC fact sheet: "generally within four business days" of the materiality determination, which must itself be made "without unreasonable delay following discovery"; disclosure may be delayed in limited cases. CIRCIA: CISA's page (9 Nov 2026) says the rule is still proposed, citing the April 2024 proposal, with 72 hours for covered incidents and 24 hours for ransom payments, and that reports aren't required yet. Other secondary sources describe a final rule going to review; I didn't confirm that from a primary source, so check the page on the day.</span></li></ul></div>
+</section>
+
+<section class="slide" id="blameless" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// RESPONDING 05</p><h2>Blameless reviews, and the numbers that matter</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>Hold a review within days, while it's fresh. Walk the <b>timeline</b>, in UTC, from the scribe's notes.</li>
+        <li>Ask <b>what we knew when</b>, and why each decision made sense <i>at the time</i>. "Human error" is where an investigation stops, not where it ends.</li>
+        <li>Leave with <b>changes that have an owner and a date</b>: a log source added, an alert retuned, a runbook written.</li>
+        <li>Share lessons as you find them, not only at the end.</li>
+      </ul>
+      <div class="card"><b>Why blameless?</b><span>"You can't 'fix' people, but you can fix systems and processes." And where blame prevails, "people will not bring issues to light for fear of punishment", so the next incident starts with less information. Google's SRE book, Postmortem Culture.</span></div>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3">
+        <div class="stat"><b>time to detect</b><span>from first attacker action to someone noticing</span></div>
+        <div class="stat"><b>time to contain</b><span>from noticing to the harm stopping</span></div>
+        <div class="stat"><b>time to recover</b><span>from containment to normal</span></div>
+      </div>
+      <ul class="rules">
+        <li>Record all three <b>for every incident</b>, and look at the median <i>and</i> the worst case.</li>
+        <li>For scale: Mandiant's 2025 median dwell time was 14 days, and 52% of the time the victim noticed first.</li>
+        <li>Track <b>who found it</b>: you, a vendor, a customer, the attacker. The trend is the real score.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://sre.google/sre-book/postmortem-culture/" target="_blank" rel="noopener">Google SRE book, Postmortem Culture</a> · <a href="https://csrc.nist.gov/pubs/sp/800/61/r3/final" target="_blank" rel="noopener">NIST SP 800-61 r3</a> (continuous improvement) · <a href="https://services.google.com/fh/files/misc/m-trends-2026-executive-edition-en.pdf" target="_blank" rel="noopener">M-Trends 2026</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Blameless doesn't mean nobody is accountable. It means the review asks what made the mistake easy and the detection slow, because the next person will be just as human. If people fear punishment, they'll hide the near-miss that would have saved you next time.</span></li><li><b class="tip">Tip</b><span>A useful review question: "what would have made this easier to spot or stop?" The answers are almost always logs, alerts, access limits or documentation.</span></li><li><b class="tip">Check</b><span>The Google SRE quotes are from the "Postmortem Culture" chapter ("Best Practice: Avoid Blame and Keep It Constructive" and "Google's Postmortem Philosophy"). The measures are common practice; names vary (MTTD, MTTC, MTTR). Dwell time and the share found internally are M-Trends 2026 for 2025 investigations.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What's the difference between containing an incident and eradicating it?</p><details><summary>Hint</summary><p>One stops it getting worse. The other makes sure it can't come back.</p></details><details class="answer"><summary>Answer</summary><p>Containing stops the harm now (isolate, revoke). Eradicating removes their access and root cause. Contain without eradicating and they return.</p></details></li>
+      <li><p>Why should post-incident reviews be blameless?</p><details><summary>Hint</summary><p>What happens to information when people fear punishment?</p></details><details class="answer"><summary>Answer</summary><p>Blame makes people hide near-misses, so you learn less. You can fix systems; the next person repeats the mistake if the system allows it.</p></details></li>
+      <li><p>The CEO asks "was customer data taken?" and you don't know. What do you say?</p><details><summary>Hint</summary><p>Truthful, useful, and not a guess.</p></details><details class="answer"><summary>Answer</summary><p>What you know, what you don't, what you're checking, and when you'll update them. Involve counsel and your insurer early: clocks may be running.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="tt-setup" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// TABLETOP EXERCISE 01</p><h2>How the exercise works</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li>Work in <b>small groups</b>, with roles: lead, technical, comms, scribe.</li>
+        <li>Each round shows a situation. <b>Discuss for about three minutes</b>, agree what you'd do, then choose.</li>
+        <li>Two <b>surprises</b> are drawn at random, like real life.</li>
+        <li>There's <b>no winning</b>. The meters on the side are a prompt for discussion, and invented. What matters is what you talked about.</li>
+        <li>A <b>scribe</b> notes each decision with its time, because the debrief starts there.</li>
+      </ul>
+      <p class="fine">Run your own: <a href="https://www.ncsc.gov.uk/section/exercise-in-a-box/overview" target="_blank" rel="noopener">NCSC Exercise in a Box</a> (free, UK) and <a href="https://www.cisa.gov/resources-tools/services/cisa-tabletop-exercise-packages" target="_blank" rel="noopener">CISA Tabletop Exercise Packages</a> (scenarios, slides, an after-action report template).</p>
+    </div>
+    <div class="stack">
+      <h3>Pick a scenario</h3>
+      <div class="tt-pick" id="tt-pick" role="group" aria-label="Scenario"></div>
+      <div class="card" id="tt-intro"></div>
+      <button type="button" class="btn" id="tt-start">Deal the surprises, then go to the exercise ›</button>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>Pick a scenario for the room. Form groups of three or four and hand out the four hats. Be explicit that the numbers are a conversation starter: a high score isn't the goal, and an exercise where nothing goes wrong teaches nothing. The scribe's notes feed the debrief.</span></li><li><b class="show">Show</b><span>Choose "3 a.m., a new country" for a group that knows identity and cloud, or "The Monday-morning note" for a general IT audience. "Deal the surprises" draws two at random from six, using the browser's secure random generator, and moves to the exercise.</span></li><li><b class="tip">Check</b><span>Both scenarios and all consequences are invented. The meters (reach, evidence, disruption, clarity) are qualitative and not from a standard. The NCSC resource is described by the NCSC as free and for organisations of all sizes. CISA's packages (undated page) include scenarios, discussion questions, a slide deck, a feedback form and an after-action report template.</span></li></ul></div>
+</section>
+
+<section class="slide" id="tabletop" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow" id="tt-eyebrow">// TABLETOP EXERCISE 02</p><h2 id="tt-title">The exercise</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="tt-head"><span id="tt-head">Round 1 of 3</span><button type="button" class="btn btn-ghost btn-sm" id="tt-timer" title="Click to start, pause or reset the discussion timer">Discuss: 3:00</button></div>
+      <p class="tt-text" id="tt-text"></p>
+      <div class="tt-opts" id="tt-opts" role="group" aria-label="Choices"></div>
+      <div class="tt-result" id="tt-result" aria-live="polite"></div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="tt-next" hidden>Next ›</button><button type="button" class="btn btn-ghost btn-sm" id="tt-again" hidden>Play again</button></div>
+    </div>
+    <div class="stack">
+      <div class="meters" id="tt-meters" aria-label="Meters"></div>
+      <div class="tt-log" id="tt-log" aria-label="Decisions so far"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="show">Show</b><span>Read the situation aloud and start the three-minute timer. Groups discuss, then call out their choice: click it and read the consequence. Each option teaches something, and none is a trap with one right answer. Rounds two and three each bring a random surprise. At the end, the summary lists every decision with its reasoning.</span></li><li><b class="ask">Ask</b><span>After each choice: "who would you have called first, and what would you have written in the log?" and "what did you need to know that you didn't?" The second question usually points to a missing log source or a missing contact.</span></li><li><b class="tip">Tip</b><span>If you're short of time, skip the timers and have the room vote. If you've got longer, make groups defend their choices against each other. Keep a note of every "we'd need to find out": that's the exercise's real output.</span></li><li><b class="tip">Check</b><span>Facts used in the consequences: RFC 3227 (collect volatile evidence before shutting down); CISA's playbook (containment, "tipping off", watching an actor is for advanced SOCs, and re-scoping when new signs appear); the GDPR and SEC clock starts (awareness; materiality); NIST on continuous improvement. The scenarios, injects, and effects are invented.</span></li></ul></div>
+</section>
+
+<section class="slide" id="first-hour" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// TABLETOP EXERCISE 03</p><h2>Debrief, and your first hour</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="plan" id="fh-plan"></div>
+      <p class="verdict" id="fh-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3>Debrief questions</h3>
+      <ul class="rules">
+        <li>What did we decide first, and why?</li>
+        <li>What did we need that we didn't have? Which <b>log</b> would have answered it?</li>
+        <li>Who did we forget to tell, or forget to ask?</li>
+        <li>What would we do differently with a rested team and a better runbook?</li>
+        <li>What will we change <b>before next quarter</b>, with an owner and a date?</li>
+      </ul>
+      <p class="fine">The checklist is a starting point: adapt it to your systems, and put your real contacts next to it. Ticks are remembered in this browser only.</p>
+      <p class="src">Sources: <a href="https://www.cisa.gov/sites/default/files/2024-08/Federal_Government_Cybersecurity_Incident_and_Vulnerability_Response_Playbooks_508C.pdf" target="_blank" rel="noopener">CISA playbooks</a> (Appendix C, preparation checklist) · <a href="https://www.rfc-editor.org/rfc/rfc3227" target="_blank" rel="noopener">RFC 3227</a> · <a href="https://www.ncsc.gov.uk/collection/incident-management" target="_blank" rel="noopener">NCSC</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The debrief is the exercise's real value. Give groups two minutes on the questions, then collect the "we'd need to find out" items. Those become tickets: a log source, an alert, a contact list, a decision about who can authorise isolating a server at 3 a.m.</span></li><li><b class="show">Show</b><span>The first-hour checklist: the ticks stay in this browser, so people can come back to it. It isn't a standard: it pulls the exercise's lessons into steps (a scribe, out-of-band coordination, preserving evidence, containing the smallest thing, checking logging still works, rest and handover).</span></li><li><b class="tip">Check</b><span>Written for this talk from the sources on the slide. Your real runbook needs your real names, numbers and decision rights.</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="25">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything about what to log, what to alert on, or what you'd do at 3 a.m.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos stay live, and the sources are on each slide.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../identity-and-access/">Identity and Access Management</a><span>The sign-in logs this talk keeps asking for, and the MFA behind them.</span></li>
+        <li><a href="../cloud-security/">Cloud Security Fundamentals</a><span>Control-plane logging, roles and the misconfigurations worth alerting on.</span></li>
+        <li><a href="../vulnerability-management/">Vulnerability and Patch Management</a><span>The other half of "are we affected?".</span></li>
+        <li><a href="../pki-in-depth/">PKI in Depth</a><span>Certificate Transparency: tamper-evident logs at internet scale.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. The logs, accounts, addresses, attacks and incidents in the demos are invented, and the hash chain is teaching code, not a way to protect real logs. Nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. A good last question to leave with them: if an incident started tonight, what's the first log you'd wish you had?</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="logs.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
