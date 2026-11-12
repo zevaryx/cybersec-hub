@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory Safety</title>
+<meta name="description" content="Memory Safety: why most serious bugs in big C and C++ codebases are memory bugs, what mitigations buy you, how to find the bugs early, and how to move to memory-safe languages. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/memory-safety/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Memory Safety">
+<meta property="og:description" content="Out-of-bounds writes, use after free and friends: watch memory go wrong in a toy heap, see what mitigations really do, read a real sanitizer report, and plan a realistic move to memory-safe code.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/memory-safety/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/memory-safety/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Memory Safety in neon, beside a terminal that copies a string into an eight-byte buffer and shows it spilling into the next variable.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Crect x='4' y='11' width='6' height='10' fill='%2300f0ff'/%3E%3Crect x='11' y='11' width='6' height='10' fill='%2300f0ff'/%3E%3Crect x='18' y='11' width='6' height='10' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "memory-safety", "title": "Memory Safety", "footer": "MEMORY SAFETY", "subtitle": "DEVELOPER TRACK · 14",
+  "parts": [{ "name": "The problem", "minutes": 25 }, { "name": "Mitigations", "minutes": 20 }, { "name": "Finding bugs early", "minutes": 20 }, { "name": "Memory-safe languages", "minutes": 20 }, { "name": "Wrap-up", "minutes": 5 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">MEMORY<span>SAFETY</span></a>
+  <div class="scroll-parts">
+    <a href="#why" data-part="1"><b>01</b>The problem</a>
+    <a href="#stack" data-part="2"><b>02</b>Mitigations</a>
+    <a href="#sanitizers" data-part="3"><b>03</b>Finding bugs</a>
+    <a href="#languages" data-part="4"><b>04</b>Safe languages</a>
+    <a href="#checklist" data-part="5"><b>05</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 14 · FOR SYSTEMS DEVELOPERS AND SECURITY ENGINEERS · ADVANCED</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Memory Safety">Memory Safety</span></h1>
+      <p class="lede">Most of the serious bugs in big C and C++ codebases are about memory. Why, what the mitigations really buy you, how to catch the bugs early, and how to move to code that can't have them.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/memory-safety/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>toy memory · 12 cells</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ strcpy(buf, <input id="hero-in" value="hello" spellcheck="false" autocomplete="off" aria-label="A string to copy into an 8-byte buffer">)</label>
+      <div class="hero-cells" id="hero-cells" aria-live="polite"></div>
+      <p class="hero-key"><span class="sw k-buf"></span> buf[8] <span class="sw k-ne"></span> retries (the next variable) <span class="sw k-hit"></span> changed by the copy</p>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes with three checkpoints. This is a prevention talk: I'll show what goes wrong in memory and why it's dangerous, using toy models, and I won't show how to exploit anything. The rest is about what you can do: mitigations, tools and languages.</span></li><li><b class="show">Show</b><span>The terminal copies your text into an 8-byte buffer with no length check, and the next variable, retries, sits right behind it. Type hello, then 12345678 (eight characters, and it still overflows), then something long.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try an empty string, exactly 8 characters, hunter2, heartbleed, rust, segfault, or UB. In the memory machine, run all six bugs unchecked, or all six checked, or watch the double free; in the careful-reviewer quiz, get all six right; in the tagging demo, pick 2-bit tags and run the trials, or 8-bit tags; in the fuzzer, let random fuzzing run out of tries, or find the bug in under a thousand tries; in the sanitizer slide, read every part of the report; in the where-to-start slide, pick the best three, or pick the settings UI; and tick all ten boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap">
+      <li><a href="#why"><small>PART 1 · 25 MIN</small><b>The problem</b></a><span>The numbers</span><span>The bug classes, in a toy heap</span><span>Why C and C++ allow them</span></li>
+      <li><a href="#stack"><small>PART 2 · 20 MIN</small><b>Mitigations</b></a><span>What each layer does</span><span>Same bug, different shield</span><span>Hardware memory tagging</span></li>
+      <li><a href="#sanitizers"><small>PART 3 · 20 MIN</small><b>Finding bugs early</b></a><span>Sanitizers</span><span>Fuzzing</span><span>Static analysis, and its limits</span></li>
+      <li><a href="#languages"><small>PART 4 · 20 MIN</small><b>Safe languages</b></a><span>How they prevent the classes</span><span>Where to start</span><span>What the guidance says</span></li>
+      <li><a href="#checklist"><small>PART 5 · 5 MIN</small><b>Wrap-up</b></a><span>A checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 4: 5 minutes to discuss with a neighbour. Everything here is a simulation or a captured tool report: no real memory is harmed, and nothing here teaches exploitation.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one: how big the problem is, and what the bugs actually are. Part two: the mitigations on top of the bugs, and what they can and can't do. Part three: tools that find the bugs before an attacker does. Part four: what changes when the language stops the bug from existing, and a realistic way to get there.</span></li><li><b class="next">Next</b><span>"First, how big is the problem?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="why" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// THE PROBLEM 01</p><h2>How much of the trouble is memory?</h2></header>
+  <div class="slide-body stack">
+    <div class="stats ms-stats">
+      <div class="stat"><b>~70%</b><span>of the vulnerabilities Microsoft fixes and assigns a CVE, as it reported in 2019: "memory safety issues"</span></div>
+      <div class="stat"><b>~70%</b><span>of Chromium's high-severity bugs, on its own memory-safety page: 912 high or critical bugs since 2015</span></div>
+      <div class="stat hl"><b>&lt;20%</b><span>of Android's vulnerabilities in 2025, the first year below 20%, as new code moved to Rust (Google, November 2025)</span></div>
+    </div>
+    <div class="cards-3">
+      <div class="card"><b>Read the number carefully</b><span>Each vendor counts something different: CVEs, high-severity bugs, all vulnerabilities. They're vendor-reported figures about their own big, old C and C++ codebases. The pattern is consistent. Your share could be higher or lower.</span></div>
+      <div class="card"><b>Why they rank so high</b><span>A memory bug often lets an attacker influence what the program does next, not just crash it. That's why so many of them are rated serious.</span></div>
+      <div class="card"><b>The Android result</b><span>Google reports a 1000× lower density of memory-safety vulnerabilities in its Rust code than in its C and C++ (an estimate: 0.2 per million lines against about 1,000).</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three numbers from three vendors, each about its own code. Microsoft's July 2019 MSRC post says the root cause of approximately 70% of the vulnerabilities it fixes and assigns a CVE is memory safety. Chromium's page says around 70% of its high-severity bugs are memory unsafety problems, from 912 high or critical bugs since 2015. And the interesting one is Android: in November 2025 Google reported memory-safety vulnerabilities fell below 20% of the total for the first time, while the amount of new Rust code now rivals new C++.</span></li><li><b class="ask">Ask</b><span>If your project were in a report like this, what do you think the share would be, and how would you find out? <em>Answer: count by root cause when you triage. Most trackers don't record it, so ask for a "bug class" field.</em></span></li><li><b class="show">Check</b><span>Microsoft: MSRC blog "A proactive approach to more secure code" by Gavin Thomas, 16 July 2019; its chart caption reads "~70% of the vulnerabilities Microsoft assigns a CVE each year continue to be memory safety issues", citing Matt Miller's 2019 BlueHat IL presentation (which covered roughly 2006 to 2018; I didn't open the slides). The figure has not been formally refreshed in the sources I found, so say "reported in 2019". Chromium: the memory-safety page on chromium.org says "around 70%" and "912 high or critical severity security bugs since 2015"; the page has no date I could read. Android: Jeff Vander Stoep, Google Security Blog, 13 November 2025. The post says the 2025 data is near-final (Android's 90-day patch window) and gives the 1000× as an estimate, from about 5 million lines of Rust with one potential vulnerability against closer to 1,000 per million lines in C and C++. It also says about 4% of that Rust code is in unsafe blocks.</span></li><li><b class="next">Next</b><span>"So what are these bugs, actually? Let's watch memory go wrong."</span></li></ul></div>
+</section>
+
+<section class="slide" id="classes" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE PROBLEM 02</p><h2>The bug classes, in a toy heap</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Kind of bug" id="ms-pick"></div>
+      <pre class="term ms-code" id="ms-code" aria-label="The code in this scenario"></pre>
+      <div class="ms-ctl">
+        <div class="seg-pick" role="group" aria-label="How the program runs" id="ms-mode">
+          <button type="button" data-m="unchecked" aria-pressed="true">Unchecked (C-like)</button>
+          <button type="button" data-m="checked" aria-pressed="false">Checked</button>
+        </div>
+        <div class="seg-pick" role="group" aria-label="Step through">
+          <button type="button" id="ms-step">Step ▸</button>
+          <button type="button" id="ms-run">Run all</button>
+          <button type="button" id="ms-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="mem-grid" id="ms-grid" aria-label="The toy heap: 24 cells"></div>
+      <p class="mem-key" id="ms-key"></p>
+      <p class="verdict" id="ms-text" aria-live="polite"></p>
+      <p class="reply" id="ms-reply"></p>
+      <p class="comment" id="ms-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~10 min</p><ul><li><b class="say">Say</b><span>This is a pretend heap: 24 cells and an allocator that reuses freed space, like a real one. Pick a bug and press Step. Start with the write past the end: scores has four cells, the loop writes five, and cell 4 belongs to limit. Nothing crashes. Nothing says anything. limit is now 50. That is what "undefined behaviour" looks like in practice: usually silence. Now flip to Checked and run it again: the same program stops at the bad write, before anything changes. That's all a sanitizer, a bounds-checked library or a memory-safe language does.</span></li><li><b class="show">Show</b><span>Walk all six, one minute each. Out-of-bounds write (CWE-787). Out-of-bounds read: a length that came from outside was believed; this is the shape of Heartbleed (CVE-2014-0160), where up to 64 KB of neighbouring memory could be returned. Use after free (CWE-416): p outlives the memory, and the allocator gives the cells to token. Double free (CWE-415): the second free releases cells that someone else now owns. Uninitialised memory (CWE-908): malloc doesn't clear, so the new block still shows the old letters. Type confusion (CWE-843): a Cat read as a Dog.</span></li><li><b class="ask">Ask</b><span>In the use-after-free, which line is the bug: the free, the reuse, or the read? <em>Answer: the read. The free and the reuse are both fine; the bug is the pointer that outlived the memory.</em></span></li><li><b class="show">Check</b><span>The heap is a toy: cells, not bytes, a first-fit allocator, no real addresses. Real allocators differ in layout and in how soon they reuse freed memory, which is why real use-after-free bugs are flaky. The CWE numbers are the standard ones: 787, 125, 416, 415, 908 and 843. Heartbleed: the OpenSSL advisory of 7 April 2014 says "a missing bounds check in the handling of the TLS heartbeat extension" can expose up to 64k of memory; affected the 1.0.1 and 1.0.2-beta releases (1.0.1 through 1.0.1f, and 1.0.2-beta1); fixed in 1.0.1g; credited to Neel Mehta of Google Security, with the fix by Adam Langley and Bodo Moeller.</span></li><li><b class="next">Next</b><span>"Why do these keep happening in C and C++?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="careful" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE PROBLEM 03</p><h2>Why "just be careful" doesn't scale</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="m">Be the reviewer. Is each snippet fine, or what's wrong with it?</p>
+      <p class="lr-label" id="cq-n">Snippet 1 of 6</p>
+      <pre class="term cq-code" id="cq-code" aria-label="A code snippet to review"></pre>
+      <div class="seg-pick" role="group" aria-label="Your verdict" id="cq-opts">
+        <button type="button" data-a="fine">Fine</button>
+        <button type="button" data-a="spatial">Out of bounds</button>
+        <button type="button" data-a="temporal">Used after its lifetime</button>
+        <button type="button" data-a="uninit">Uninitialised</button>
+      </div>
+      <p class="verdict" id="cq-fb" aria-live="polite"></p>
+      <div class="seg-pick"><button type="button" id="cq-next" disabled>Next snippet ▸</button><span class="m" id="cq-score"></span></div>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Spatial: where?</b><span>Does the access stay inside the object? Indexes, lengths, copies.</span></div>
+      <div class="card"><b>Temporal: when?</b><span>Is the object still alive, and still the same one? Free, reuse, moves, a container that grew.</span></div>
+      <div class="card"><b>The compiler trusts you</b><span>In C and C++ an out-of-range access is undefined behaviour: no promise at all. The compiler may assume it never happens.</span></div>
+      <div class="card card-bad"><b>Careful doesn't scale</b><span>Every access is a promise, across millions of lines and years of change. The tool should check, not the tired reviewer.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Six snippets, none of them exotic. Click your verdict and read the explanation. The point isn't to catch you out: it's that two are fine, four aren't, and the bad ones look completely reasonable in review. Spatial bugs ask "where does this access land?". Temporal bugs ask "is this object still the one I think it is?". Then the awkward part: C and C++ leave out-of-range access undefined, so even the compiler may assume you never do it.</span></li><li><b class="ask">Ask</b><span>Which snippet would you have missed on a Friday afternoon in a 500-line diff? <em>Answer: usually the vector one: the reference looks harmless, and the push_back is on a different line.</em></span></li><li><b class="show">Check</b><span>All six snippets are mine, written for this talk. "Undefined behaviour" and the compiler's right to assume it can't happen are the language standards' rules; the 1992 "nasal demons" newsgroup joke is folklore (the title-slide egg), not a standard.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What's the difference between a spatial and a temporal memory bug? Give one example of each.</p><details><summary>Hint</summary><p>One is about where an access lands; the other is about when.</p></details><details class="answer"><summary>Answer</summary><p>A spatial bug accesses memory outside the object it was meant to use: a write past the end of an array, a copy with the wrong length. A temporal bug uses an object outside its lifetime: use after free, double free, a reference to something that moved or was destroyed. Uninitialised reads and type confusion are related cousins.</p></details></li>
+      <li><p>Why isn't "we just need to be more careful" a plan for a codebase of millions of lines?</p><details><summary>Hint</summary><p>Think about how many accesses there are, how many people touch them, and how long.</p></details><details class="answer"><summary>Answer</summary><p>Every access to memory is a small promise (in range, still alive, right type) that has to hold on every path, forever, through every refactor by every author. Reviews catch some, but the bugs look reasonable, and the 70% figures come from teams that were careful. A plan needs the machine to check, or the language to make the bug impossible.</p></details></li>
+      <li><p>How would you find out what share of your own project's serious bugs are memory-safety bugs?</p><details><summary>Hint</summary><p>What does your bug tracker record about root cause?</p></details><details class="answer"><summary>Answer</summary><p>Add a root-cause or bug-class field (or a label) when triaging, tag the last year or two of security fixes by hand, and count. Sanitizer and fuzzer reports already name the class: "heap-use-after-free" is a label you can keep.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="stack" data-part="2" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// MITIGATIONS 01</p><h2>The stack of mitigations: what each one does</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Pick a bug, and see what each mitigation does to it:</p>
+      <div class="seg-pick" role="group" aria-label="Kind of bug" id="mi-pick"></div>
+      <p class="mi-lesson" id="mi-lesson"></p>
+      <p class="comment" id="mi-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="tm-grid" id="mi-grid" aria-live="polite"></ul>
+      <p class="mi-detail" id="mi-detail"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>These are the defences that sit on top of a bug that already exists. Three levels: it catches the bug, it makes the bug harder to use, or it does nothing for that class. Read across the rows: the canary, ASLR, NX and CFI are about making a corrupted program harder to steer; none of them detects an out-of-bounds read, and an attacker with a read bug can often learn what ASLR was hiding. The ones that actually catch bugs are the allocator checks, memory tagging and bounds-checked code, and each covers only some classes. Click a row for what it does and where it stops.</span></li><li><b class="ask">Ask</b><span>Which of these would you turn on in a debug build, and which in production? <em>Answer: anything that catches the bug is wonderful in debug builds. In production you also care about speed and false crashes, which is why sampled or hardware-assisted checks matter.</em></span></li><li><b class="show">Check</b><span>The dots are my rule of thumb, not a measurement: real effectiveness depends on the implementation and the platform. Zero-initialisation is the compiler's automatic-variable option; heap memory from malloc is separate. The hardened-allocator row is a generic description: guard pages, delayed reuse and free checks vary by allocator. I didn't test the mitigations here; the tag details come from Android's MTE documentation and Apple's Memory Integrity Enforcement post (next slide but one).</span></li><li><b class="next">Next</b><span>"Now watch the same bug meet different shields."</span></li></ul></div>
+</section>
+
+<section class="slide" id="samebug" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// MITIGATIONS 02</p><h2>The same bug, different shields</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lr-label">The bug</p>
+      <div class="seg-pick" role="group" aria-label="Which bug" id="sb-bug"></div>
+      <p class="lr-label">The protection</p>
+      <div class="seg-pick" role="group" aria-label="Which protection" id="sb-prot"></div>
+      <p class="verdict" id="sb-verdict" aria-live="polite"></p>
+      <p class="comment" id="sb-text"></p>
+    </div>
+    <div class="stack">
+      <div class="mem-grid" id="sb-grid" aria-label="The toy heap after the program has run"></div>
+      <p class="mem-key" id="sb-key"></p>
+      <div class="card"><b>Raising the cost isn't removing the bug</b><span>With ASLR on, the write still lands in limit. ASLR only changes where things live. It changes what an attacker can <em>do next</em>, and that's useful. The bug is still there.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Same program as the toy heap, run again with a protection chosen. With none, or with ASLR plus NX, or with a canary that only guards stack frames, look at the grid: the same corruption, silently. Those mitigations don't notice the bug; they make it harder to build something on. Switch to a hardened allocator for the double free: it's stopped at the second free, which is exactly what those checks are for. Memory tagging stops the overflow and the use after free, probabilistically. And the checked language stops all four at the bad access.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question) Why doesn't ASLR fix the underlying bug? <em>Answer: the bug is the missing check or the dangling pointer; ASLR only changes the addresses. The write still happens, the data is still wrong, and any leak can undo the randomisation.</em></span></li><li><b class="show">Check</b><span>The results come from the rule-of-thumb table on the previous slide, played through the toy heap: ratings of "catches the bug" stop the run at the bad access, the others leave the corruption. A canary or ASLR on a heap bug really does nothing, but in a real program the damage depends on the layout; this is a teaching model.</span></li><li><b class="next">Next</b><span>"The hardware version of 'catch it at the bad access'."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tagging" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// MITIGATIONS 03</p><h2>Hardware help: memory tagging</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Memory gets a small tag, and so does every pointer to it. A mismatch on access stops the program.</p>
+      <div class="tg-heap" id="tg-heap" aria-label="Five memory granules, each with a tag"></div>
+      <p class="lr-label">Tag size</p>
+      <div class="seg-pick" role="group" aria-label="Tag size in bits" id="tg-bits">
+        <button type="button" data-bits="2" aria-pressed="false">2 bits</button>
+        <button type="button" data-bits="4" aria-pressed="true">4 bits</button>
+        <button type="button" data-bits="8" aria-pressed="false">8 bits</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="What the code does" id="tg-act">
+        <button type="button" data-act="own">A reads its own memory</button>
+        <button type="button" data-act="past">A reads one granule past its end</button>
+        <button type="button" data-act="free">Free A, then use A</button>
+        <button type="button" data-act="inside">Overflow by 3 bytes, inside the granule</button>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="tg-verdict" aria-live="polite"></p>
+      <p class="comment" id="tg-note"></p>
+      <div class="card"><b>1,000 stale-pointer trials</b><span>Free A and retag it at random, then use the old pointer. How often does the tag happen to match?</span><button type="button" class="btn btn-ghost btn-sm" id="tg-run">Run 1,000 trials</button><output id="tg-trials"></output></div>
+      <div class="card"><b>Where it ships</b><span>Arm's Memory Tagging Extension (MTE). Apple turned an enhanced version on by default in iPhone 17 and iPhone Air (Memory Integrity Enforcement); Android offers MTE as an option.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The idea: when memory is allocated, give it a small random tag, and put the same tag in the pointer. On every access the hardware compares the two. Walk the four buttons. A reading its own memory: tags match. One granule past its end: that memory belongs to B and the tags differ (allocators usually give neighbours different tags), so it stops. Free A and use it: the memory was retagged, so the old pointer no longer matches: usually. "Usually" is the trade-off: with 4-bit tags a random new tag equals the old one one time in sixteen. Run the trials: about 6%. Pick 2-bit tags and it's a quarter; 8-bit, well under 1%. And the last button: an overflow inside the same 16-byte granule isn't seen at all.</span></li><li><b class="show">Show</b><span>Apple's version adds secure typed allocators and keeps the tags confidential from side channels, and runs the check synchronously, so the program stops at the bad access. Apple's own post says some classes, such as overflows inside a single allocation, survive.</span></li><li><b class="show">Check</b><span>From Android's MTE documentation I verified: a tag granule is a 16-byte aligned chunk; MTE can't detect an overflow within the same granule; synchronous mode stops at the faulting access, asynchronous mode only later; it targets use after free and buffer overflow. The 4-bit tag size is confirmed by the Linux kernel's arm64 MTE documentation: "a 4-bit allocation tag for each 16-byte granule", with the pointer's tag in bits 59 to 56 of the address. Apple (security.apple.com, Memory Integrity Enforcement, 9 September 2025): all models of iPhone 17 and iPhone Air, A19 and A19 Pro, EMTE in synchronous mode; "minimal performance impact" is Apple's own claim, not independently measured here, and the surviving class it names is "intra-allocation buffer overflows". Whether every allocator gives neighbouring allocations different tags is an implementation choice that I haven't verified for each; the demo assumes it. The trials use a seeded random generator, so the same button gives the same numbers each time unless you change the tag size.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why doesn't ASLR fix the underlying bug?</p><details><summary>Hint</summary><p>What does ASLR change, and what does it leave alone?</p></details><details class="answer"><summary>Answer</summary><p>ASLR randomises where things are; it doesn't change what the code does. The out-of-bounds write or the dangling pointer still happens and still corrupts data. It only makes the next step harder for someone who needs to know addresses, and a bug that leaks an address can undo it.</p></details></li>
+      <li><p>Which mitigations would you want in a debug build, and which in production? Why might they differ?</p><details><summary>Hint</summary><p>Think speed, memory, and what you want to happen on a mistake.</p></details><details class="answer"><summary>Answer</summary><p>Debug and test builds want the strongest detection (sanitizers, tagging in synchronous mode) because the cost is paid once by developers and every report is a bug found early. Production wants cheap, always-on hardening (zero-initialisation, a hardened allocator or standard library, canaries, CFI), plus hardware tagging where the platform provides it, because speed matters and a crash is a user-visible event.</p></details></li>
+      <li><p>With 4-bit tags, one stale pointer in sixteen is missed by chance. Why can that still be a very good deal?</p><details><summary>Hint</summary><p>What happens to an attacker who has to guess, and fails?</p></details><details class="answer"><summary>Answer</summary><p>A miss on a failed guess is usually a crash, and a crash is noisy, so exploiting a tagged bug reliably is much harder. And for developers, tagging turns a large share of silent corruption into immediate, reproducible reports. It's a probabilistic catch, not a proof, which is why it complements safe languages instead of replacing them.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="sanitizers" data-part="3" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// FINDING BUGS EARLY 01</p><h2>Sanitizers: turn silent into loud</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which program" id="sn-pick"></div>
+      <pre class="term sn-code" id="sn-code" aria-label="The program"></pre>
+      <p class="sn-cmd"><code id="sn-cmd"></code></p>
+      <div class="seg-pick" role="group" aria-label="Which build" id="sn-view">
+        <button type="button" data-v="plain" aria-pressed="false">Normal build</button>
+        <button type="button" data-v="san" aria-pressed="true">With the sanitizer</button>
+      </div>
+    </div>
+    <div class="stack">
+      <pre class="term sn-out" id="sn-out" aria-label="The program's output"></pre>
+      <p class="mi-detail" id="sn-ann" aria-live="polite"></p>
+      <p class="comment" id="sn-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>These are real outputs, captured from tiny buggy programs on my laptop with Clang 23.1.4 on 11 November 2026 and trimmed for the slide. In a normal build, the heap overflow prints 0 and exits cleanly: the bug is silent. Compile the same file with -fsanitize=address and it stops with a report. Click the lines of the report to read it: what happened, the exact line, where the memory came from, and for the use after free, who freed it. A good report names the class, the line, and both ends of the lifetime. UBSan does the same for undefined behaviour such as signed overflow.</span></li><li><b class="show">Show</b><span>Click the "With the sanitizer" view, then each line. For the heap overflow: "0 bytes after 16-byte region" is the sentence that tells you it's an off-by-one: the write landed exactly at the end. The shadow bytes at the bottom are how the tool knows: 8 bytes of your memory get 1 byte of shadow; "fa" is a poisoned red zone around the allocation, "fd" is freed memory.</span></li><li><b class="say">Say</b><span>Practical points. Clang's docs say typical slowdown is 2x, and more memory is used, so run your unit and integration tests under ASan and UBSan in CI. They're for test builds, not a production shield. There is a sampled variant for production, GWP-ASan, and hardware-assisted variants, which I mention from background knowledge. A sanitizer only reports bugs your tests actually reach: that is why fuzzing is the next slide.</span></li><li><b class="show">Check</b><span>Outputs are real, trimmed: long addresses shortened with "…", build IDs removed, libc frames dropped, file paths shortened. The plain-run results: oob exits 0 and prints 0; the use-after-free printed unpredictable bytes (they vary run to run); ovf printed -2147483648. All three outputs were re-captured with clang 23.1.4 on 11 November 2026 and match. The Clang AddressSanitizer page (clang.llvm.org) says typical slowdown is 2x and stack memory up to 3x, and lists heap, stack and global out-of-bounds, use after free, use after return, use after scope, double and invalid free and (experimental) leaks. Flags: -fsanitize=address, -O1 or higher, -fno-omit-frame-pointer. GWP-ASan and HWASan: background knowledge, not checked here.</span></li><li><b class="next">Next</b><span>"What if the bug isn't in a path your tests reach?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="fuzzing" data-part="3" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// FINDING BUGS EARLY 02</p><h2>Fuzzing: let the machine find the input</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <pre class="term fz-code" id="fz-code" aria-label="The toy parser"></pre>
+      <div class="seg-pick" role="group" aria-label="Fuzzing strategy" id="fz-mode">
+        <button type="button" data-f="random" aria-pressed="false">Random bytes</button>
+        <button type="button" data-f="guided" aria-pressed="true">Coverage-guided</button>
+      </div>
+      <div class="seg-pick">
+        <button type="button" id="fz-run">Run up to 100,000 tries</button>
+        <button type="button" id="fz-seed">Another seed</button>
+        <span class="m" id="fz-seedlabel"></span>
+      </div>
+      <p class="comment" id="fz-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="fz-branches" id="fz-branches" aria-label="Branches of the parser reached so far"></ul>
+      <div class="stats fz-stats">
+        <div class="stat"><b id="fz-tries">–</b><span>tries</span></div>
+        <div class="stat"><b id="fz-cov">–</b><span>branches reached</span></div>
+        <div class="stat"><b id="fz-corpus">–</b><span>kept inputs</span></div>
+      </div>
+      <p class="verdict" id="fz-result" aria-live="polite"></p>
+      <div class="card"><b>Fuzzer and sanitizer: different jobs</b><span>The fuzzer finds an <em>input</em> that makes the program misbehave. The sanitizer makes the misbehaviour <em>loud</em> and explains it. Together: input plus report.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>A fuzzer runs your code over and over on mutated inputs, and watches for crashes and sanitizer reports. This is a toy: a tiny parser for an invented record format, with a planted bug (the length check says 16 but the buffer holds 8). Random bytes have to guess the magic byte R and the version 2 before the interesting code is even reached: here it almost never gets there. A coverage-guided fuzzer keeps any input that reaches new branches and mutates that: so it starts from a well-formed record, learns the gates, and steps toward the bug. Run it a few times with different seeds: it usually finds it, sometimes not, and random almost never.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question, preview) What's the difference between what a fuzzer finds and what a sanitizer reports? <em>Answer: the fuzzer finds the input that reaches a failure; the sanitizer is what turns a silent memory error into a failure and says what and where. A fuzzer without a sanitizer misses silent corruption.</em></span></li><li><b class="show">Check</b><span>The parser, the numbers and the seeds are invented: this is not a benchmark, and real random fuzzers do better on simple formats than the toy suggests. The gate bytes (magic, version) are chosen to make the point; real formats have the same kind of gates: magic numbers, checksums, length fields. Real engines are libFuzzer, AFL++ and Honggfuzz (OSS-Fuzz's README names these); as of May 2025 OSS-Fuzz's README says it has helped identify and fix over 13,000 vulnerabilities and 50,000 bugs across 1,000 projects: figures from the README (re-read 11 November 2026), which I haven't cross-checked. Developer 17 in this series, Fuzzing for Developers, covers fuzzing in depth.</span></li><li><b class="next">Next</b><span>"And the tools that don't run your code at all."</span></li></ul></div>
+</section>
+
+<section class="slide" id="static" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// FINDING BUGS EARLY 03</p><h2>Static analysis, and its limits</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table sa-table">
+        <caption class="m">Four small C programs, checked four ways (my machine, 11 November 2026)</caption>
+        <thead><tr><th>Program</th><th>Compiler warnings</th><th>gcc analyzer</th><th>ASan, normal run</th><th>ASan, right input</th></tr></thead>
+        <tbody>
+          <tr><th>1 · constant index past the end</th><td class="mix">clang yes, gcc no</td><td class="yes">caught</td><td class="no">no report</td><td class="no">no report</td></tr>
+          <tr><th>2 · loop with <code>&lt;= n</code>, heap</th><td class="no">missed</td><td class="no">missed</td><td class="no">no report</td><td class="yes">caught</td></tr>
+          <tr><th>3 · free in a helper, use later</th><td class="no">missed</td><td class="yes">caught</td><td class="yes">caught</td><td class="yes">caught</td></tr>
+          <tr><th>4 · length checked against the input, not the buffer</th><td class="no">missed</td><td class="no">missed</td><td class="no">no report</td><td class="yes">caught</td></tr>
+        </tbody>
+      </table></div>
+      <p class="fine" id="sa-fine">gcc 16.2.1 and clang 23.1.4, -Wall -Wextra -O2; "analyzer" is gcc -fanalyzer; ASan at -O1. "Right input" means an argument that makes the bug happen. In program 1 ASan saw nothing: probably the compiler had already removed the dead write. gcc -fanalyzer's other alerts on programs 2 and 4 were not the bug (one looked like a false alarm).</p>
+    </div>
+    <div class="stack">
+      <div class="card card-ok"><b>Good at</b><span>Constant indexes, the obvious use after free, uninitialised variables, unbounded copy functions. Cheap, no tests needed: turn on the compiler warnings first.</span></div>
+      <div class="card card-bad"><b>Struggles with</b><span>Values that only exist at run time, pointers that may alias, many paths, code in another file. Each gap is a miss, or a false alarm someone has to read.</span></div>
+      <div class="card"><b>Use all three</b><span>Warnings and static analysis while you write; sanitizers over your tests; fuzzers with sanitizers for the inputs you didn't think of.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>I ran four tiny programs through what a developer would actually run. Read down the columns, not across. The compiler warned about the constant index in clang, but gcc's -Wall didn't flag the overflow in my run. The gcc analyzer found the stack overflow in program 1 and the use after free in program 3. The two bugs that depend on a value at run time, programs 2 and 4, were missed by everything static, and caught by ASan only when the input made them happen. That's the argument for fuzzing: something has to find the input.</span></li><li><b class="ask">Ask</b><span>If a tool says "no warnings", what has it told you? <em>Answer: only that it didn't find any of the patterns it knows. Absence of a warning is not a proof.</em></span></li><li><b class="show">Check</b><span>These are real runs, but of four small programs: a demonstration, not a tool comparison. Versions: gcc 16.2.1, clang 23.1.4. I also ran clang-tidy and scan-build on program 3, and both flagged the use after free; I didn't run them on the others. "Right input" for programs 2 and 4 is an argument that makes the bug happen (extra arguments for program 2, a length of 12 for program 4). In program 1 gcc -Wall -Wextra -O2 printed only an uninitialised-variable warning, not an out-of-bounds one. The one alert on program 4 that I called a false alarm was an uninitialised-value warning on an array that is zero-initialised: that is my reading of it.</span></li><li><b class="next">Next</b><span>"Now: what if the bug couldn't exist?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="languages" data-part="4" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// MEMORY-SAFE LANGUAGES 01</p><h2>How safe languages stop the bug</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which bug" id="lg-pick"></div>
+      <div class="lg-cols">
+        <div class="lg-col"><h3>C and C++</h3><pre class="term lg-out" id="lg-c"></pre></div>
+        <div class="lg-col"><h3>Go, Java, C# …</h3><pre class="term lg-out" id="lg-m"></pre></div>
+        <div class="lg-col"><h3>Rust</h3><pre class="term lg-out" id="lg-r"></pre></div>
+      </div>
+      <p class="comment" id="lg-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Managed languages</b><span>A garbage collector frees memory only when nothing refers to it, and every index is checked. The price: some speed and memory, and less control.</span></div>
+      <div class="card"><b>Rust</b><span>No collector. Ownership and borrowing are checked when you compile, so a use after free or an invalidated reference doesn't build. Indexes are still checked at run time.</span></div>
+      <div class="card card-bad"><b>"unsafe" is still there</b><span>Rust has an escape hatch for the places that need it. In Android's Rust, about 4% of the code is in unsafe blocks: a small area to review hard, instead of everything.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Same three bugs, in three families of language. The C column is real captured output: the normal build is silent (and for the use-after-free cases the values are garbage), the sanitizer catches it. The Rust column is the real compiler or run-time output: an out-of-range index panics with a clear message; a use after a move, or a reference held across a push, doesn't compile. The middle column, from the languages' documented behaviour, is that you can't free memory manually, and indexes are checked. The categories aren't ranked by quality: it's a question of when the mistake is found: never, at run time, or before the program exists.</span></li><li><b class="show">Show</b><span>Pick "Reference held across a push": the C++ code is the same pattern as the earlier use-after-free: a vector grows, moves, and the reference dangles. The Rust compiler says "cannot borrow names as mutable because it is also borrowed as immutable", and points at both lines.</span></li><li><b class="show">Check</b><span>C and C++ outputs and Rust outputs are real, from rustc 1.99.1 and clang 23.1.4 on my machine on 11 November 2026, trimmed. The Go and Java lines are from their documented behaviour and I did not run them here (neither is installed): Go's run-time panic reads "index out of range [4] with length 4" and Java's ArrayIndexOutOfBoundsException says "Index 4 out of bounds for length 4"; check the exact words before quoting. Google's "about 4% in unsafe blocks" is from the 13 November 2025 post.</span></li><li><b class="next">Next</b><span>"You can't rewrite everything. So where do you start?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="start" data-part="4" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// MEMORY-SAFE LANGUAGES 02</p><h2>Where to start in a big C++ codebase</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">An invented codebase. Pick the three components you'd move first:</p>
+      <div class="st-list" id="st-list" role="group" aria-label="Components to move first"></div>
+      <p class="verdict" id="st-result" aria-live="polite"></p>
+      <p class="comment" id="st-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card card-ok"><b>New code first</b><span>Stop adding to the pile: write new components in a memory-safe language. Most of your future bugs live in code you haven't written yet.</span></div>
+      <div class="card"><b>Then the riskiest parsers</b><span>Code that reads untrusted input and has a bug history: file and network parsers, decoders. Small and self-contained wins first.</span></div>
+      <div class="card"><b>Keep the border small</b><span>Safe and unsafe code talk through a narrow, reviewed interface, with binding tools to help. Fuzz that boundary.</span></div>
+      <div class="card card-bad"><b>Not a big-bang rewrite</b><span>Rewriting everything stalls features and adds new bugs. The goal is a falling curve, not a flag day.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Tick three. The scoring rule is mine and deliberately simple: how much untrusted input reaches the component counts double, its history of memory bugs counts once, and a small component gets a small bonus because it is cheaper to move. You'll see your score against the best three. The image decoder, the network handler and the font code win because attackers can feed them anything. The settings UI loses because nobody sends a hostile file to a button. Crypto routines score low here not because they don't matter but because they're small, reviewed, and handle little untrusted input.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question, preview) Where would you start in your own codebase? <em>Answer: wherever untrusted bytes are parsed in C or C++, and any new component.</em></span></li><li><b class="show">Check</b><span>The codebase, the scores and the weights are invented for teaching, not a standard method. The ONCD report (February 2024) suggests rewriting the critical functions and libraries most at risk and building new products in memory-safe languages; I read that through press coverage and the report's own title, not the full PDF. Binding tools (bindgen, cxx and similar) are mentioned from background knowledge, not checked here.</span></li><li><b class="next">Next</b><span>"What are the governments and big vendors asking for?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="guidance" data-part="4" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// MEMORY-SAFE LANGUAGES 03</p><h2>What the guidance says, and what's already moving</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <ol class="guide-list" aria-label="Milestones, oldest first">
+      <li><time>Feb 2024</time><b>White House ONCD</b><span>"Back to the Building Blocks": memory-safe languages for new products, memory-safe hardware, better metrics.</span></li>
+      <li><time>Jan 2025</time><b>CISA and FBI</b><span>Product Security Bad Practices v2.0: manufacturers of critical-infrastructure software should publish a memory-safety roadmap by the end of 2025. Voluntary.</span></li>
+      <li><time>Jun 2025</time><b>CISA and NSA</b><span>"Memory Safe Languages: Reducing Vulnerabilities in Modern Software Development": memory-safe languages as the most comprehensive mitigation.</span></li>
+      <li><time>Sep 2025</time><b>Apple</b><span>Memory Integrity Enforcement: always-on hardware tagging and typed allocators on iPhone 17 and iPhone Air.</span></li>
+      <li><time>Nov 2025</time><b>Google, Android</b><span>Memory-safety vulnerabilities below 20% of the total for the first time.</span></li>
+      <li><time>Dec 2025</time><b>Linux kernel</b><span>Maintainers conclude Rust in the kernel is no longer "experimental" (reported by LWN).</span></li>
+    </ol>
+    <div class="stack">
+      <div class="card"><b>What a roadmap holds</b><span>A prioritised list of components in memory-unsafe languages (network-facing and security-sensitive code first), a plan that shows a significant reduction in these bugs, and evidence of reasonable effort to follow it.</span></div>
+      <div class="card"><b>It's guidance, not law</b><span>The CISA text is voluntary. It exempts products whose end of support is before 1 January 2030. Check what applies to you.</span></div>
+      <div class="card"><b>C++ is moving too</b><span>C++26 adds a hardened standard library and makes some uninitialised reads defined instead of undefined. Compiler support varies, so check yours.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>You don't need to memorise dates. The pattern is what matters: in two years the advice went from "consider it" to "publish a roadmap", and the vendors who've done it are reporting results. The roadmap isn't "rewrite everything": it's a list of what you'll do first, and a number you can watch fall. If you ship software that matters to critical infrastructure, ask what your customers will expect to see.</span></li><li><b class="show">Check</b><span>CISA and FBI Product Security Bad Practices: I read the CISA page: Version 2.0, January 2025 (version 1.0 was October 2024): "publish a memory safety roadmap by the end of 2025", for existing products in memory-unsafe languages used for critical infrastructure or national critical functions; exempt if end-of-support is before 1 January 2030; voluntary and non-binding. Some press coverage says 1 January 2026: use CISA's own wording. The June 2025 CISA and NSA information sheet: CISA's alert of 24 June 2025 ("New Guidance Released for Reducing Memory-Related Vulnerabilities") gives the title and the "most comprehensive mitigation" wording; I did not open the full PDF. ONCD: "Back to the Building Blocks: A Path Toward Secure and Measurable Software", February 2024; title and date confirmed from the White House PDF's listing and press coverage; I didn't read it in full. Apple and Google: their own posts, covered earlier. Linux: decided at the December 2025 Maintainers Summit and reported by LWN (a subscriber link, so read second-hand); Miguel Ojeda's patch "rust: conclude the Rust experiment" is dated 13 December 2025 on LKML, and he notes that some configurations (mixed GCC and LLVM builds, GCC support) are still experimental. C++26: P2795 (erroneous behaviour for uninitialised reads) and P3471 (standard library hardening, adopted at the February 2025 Hagenberg meeting) are both in C++26; whether a library is hardened is implementation-defined, compiler support varies (GCC implemented P2795 in late 2025, Clang's was still in review in 2026) and safety profiles were reported deferred: say "check your compiler".</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="4" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Where would you start introducing a memory-safe language in a large C++ codebase?</p><details><summary>Hint</summary><p>Think about untrusted input and about what you're about to write anyway.</p></details><details class="answer"><summary>Answer</summary><p>Two places: new components from now on, and the existing code that parses untrusted input and has a history of memory bugs (decoders, protocol handlers, file parsers). Choose small, self-contained pieces with clean interfaces, keep the boundary narrow, and fuzz it. Leave stable, rarely exposed code for later.</p></details></li>
+      <li><p>What's the difference between what a fuzzer finds and what a sanitizer reports?</p><details><summary>Hint</summary><p>One supplies the input; the other turns the failure loud.</p></details><details class="answer"><summary>Answer</summary><p>A fuzzer searches for an input that makes the program misbehave and keeps those inputs. A sanitizer instruments the program so that a memory error (an out-of-bounds access, a use after free) stops it and prints what, where and where the memory came from. Without a sanitizer the fuzzer only sees crashes; without a fuzzer the sanitizer only sees what your tests reach. Use them together.</p></details></li>
+      <li><p>If you wrote your team's memory-safety roadmap, what would the first three lines say?</p><details><summary>Hint</summary><p>Components, order, a number to watch.</p></details><details class="answer"><summary>Answer</summary><p>For example: (1) new code in these areas is written in a memory-safe language by default; (2) these three parsers move first, in this order, with owners and dates; (3) we track the share of our security bugs that are memory-safety bugs and review it each quarter. Plus: tests run under sanitizers and the parsers are fuzzed meanwhile, so nothing waits for the rewrite.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 5 -->
+<section class="slide" id="checklist" data-part="5" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>A memory-safety checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="map"> We know which components are C or C++ and read untrusted input</label>
+      <label><input type="checkbox" data-k="new"> New code in those areas is memory-safe by default, or has a written reason why not</label>
+      <label><input type="checkbox" data-k="asan"> Tests run under AddressSanitizer and UBSan in CI, and a report fails the build</label>
+      <label><input type="checkbox" data-k="fuzz"> Every parser has a fuzz harness that runs continuously, and each crash becomes a regression test</label>
+      <label><input type="checkbox" data-k="flags"> Release builds use the hardening flags and a hardened allocator or standard library our platform offers</label>
+      <label><input type="checkbox" data-k="own"> Reviewers ask "who owns this, and how long does it live?" of every new raw pointer</label>
+      <label><input type="checkbox" data-k="road"> We have a short roadmap: components, order, owners, dates</label>
+      <label><input type="checkbox" data-k="measure"> We record the bug class and watch the memory-safety share fall</label>
+      <label><input type="checkbox" data-k="border"> The border between safe and unsafe code is small, reviewed and fuzzed</label>
+      <label><input type="checkbox" data-k="mte"> Where the hardware offers memory tagging, we've turned it on, or know why not</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what's true today; each unticked box is a ticket. The ticks are saved in this browser only, and the PDF button prints the list. If you can only do two things this month: put your tests under the sanitizers, and write the one-page roadmap.</span></li><li><b class="show">Check</b><span>The checklist is my own summary of the talk, not a standard.</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="5" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Which parser in your codebase would you fuzz first, and which new component could start in a memory-safe language? Bring a real example and we'll pick one together.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The toy heap, the tagging demo and the fuzzer stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../security-testing/">Security Testing in Your Workflow</a><span>Where sanitizers, fuzzers and static analysis sit in a pipeline.</span></li>
+        <li><a href="../web-app-security/">Web Application Security Essentials</a><span>The other big family of bugs, in the code above the memory.</span></li>
+        <li><a href="../vulnerability-management/">Vulnerability Management</a><span>Severity, EPSS, KEV and deadlines for the findings you keep.</span></li>
+        <li><a href="../cryptographic-failures/">Cryptographic Failures</a><span>Heartbleed's neighbours: when the algorithm was fine and the code wasn't.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser with invented data; nothing you type is sent anywhere. Tool outputs were captured from small test programs. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. If someone describes a real codebase, run the "where to start" slide on it live: untrusted input, bug history, size.</span></li><li><b class="show">Check</b><span>Links go to other hub talks. Nothing external is linked from this slide.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="memory.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
