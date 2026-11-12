@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Security Testing in Your Workflow</title>
+<meta name="description" content="Security Testing in Your Workflow: which tools catch which bugs, the security tests you write yourself, and how to fit checks into a pipeline and triage the results without drowning. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/security-testing/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Security Testing in Your Workflow">
+<meta property="og:description" content="Scanners find what they were built to look for. Map the tools, write the authorization and input tests only you can write, then place checks in the pipeline and triage the findings.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/security-testing/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/security-testing/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Security Testing in Your Workflow in neon, beside a terminal that lints the name of a test.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M8 17l5 5 11-12' fill='none' stroke='%2300f0ff' stroke-width='3.5'/%3E%3Ccircle cx='24' cy='8' r='3' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "security-testing", "title": "Security Testing in Your Workflow", "footer": "SEC TESTING", "subtitle": "DEVELOPER TRACK · 11",
+  "parts": [{ "name": "The toolbox", "minutes": 28 }, { "name": "Tests you write", "minutes": 24 }, { "name": "Fitting it in", "minutes": 30 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">SECURITY<span>TESTING</span></a>
+  <div class="scroll-parts">
+    <a href="#toolmap" data-part="1"><b>01</b>The toolbox</a>
+    <a href="#authz" data-part="2"><b>02</b>Tests you write</a>
+    <a href="#pipeline" data-part="3"><b>03</b>Fitting it in</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 11 · FOR DEVELOPERS AND QA · INTERMEDIATE</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Security Testing in Your Workflow">Security Testing in Your Workflow</span></h1>
+      <p class="lede">Security testing shouldn't be a once-a-year event. Which tools catch what, the tests only you can write, and how to fit checks into your pipeline without drowning in noise.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/security-testing/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ lint-test-name <input id="hero-in" value="test_user_cannot_read_other_invoice" spellcheck="false" autocomplete="off" aria-label="A test name to lint"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 85 minutes with two checkpoints. Most teams have some security tooling, and most of it is either never looked at or looked at once. This talk is about which tool finds which kind of bug, the tests that only you can write because only you know your rules, and how to wire it all into a pipeline so it keeps working.</span></li><li><b class="show">Show</b><span>The terminal is a tiny in-deck linter for test names. Try the default, then test_it_works.</span></li><li><b class="tip">Eggs</b><span>On the title slide, lint a name such as test_it_works, test1, security, or an empty box; on the tool map, click all eight bugs; in the toy scanner, pick snippet D in pattern mode, or E in either mode; in the authorization demo, switch a bug on and then untick the test that covers it (the console says the same thing); in the input demo, type a famous classroom name into the box; in the pipeline, put everything before the commit; in the suppression linter, make every line pass; in the triage game, mark every finding as noise, or get all five right; in the measuring demo, hide the old findings; and tick all ten boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-3">
+      <li><a href="#toolmap"><small>PART 1 · 28 MIN</small><b>The toolbox</b></a><span>A map of the tools</span><span>Static, dynamic, dependency, secret, fuzzing</span><span>What each one misses</span></li>
+      <li><a href="#authz"><small>PART 2 · 24 MIN</small><b>Tests you write</b></a><span>Authorization tests</span><span>Input-handling tests</span><span>A regression test for every bug</span></li>
+      <li><a href="#pipeline"><small>PART 3 · 30 MIN</small><b>Fitting it in</b></a><span>What runs when</span><span>Suppressions and triage</span><span>Measuring what matters</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3: 5 minutes to discuss with a neighbour. Part 2 is a workshop of its own: you write tests, so no pause is needed.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one is the toolbox: what's in it and, more usefully, what each tool can't see. Part two is the tests you write yourself, which catch the bugs no scanner can. Part three is the practical bit: putting it in a pipeline, keeping the noise down, and measuring whether it's working.</span></li><li><b class="next">Next</b><span>"Why do this at all, and why now?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>Find it where it's cheap to fix</h2></header>
+  <div class="slide-body stack">
+    <ol class="stages" aria-label="Where a bug can be found, from cheapest to most expensive">
+      <li><b>Design</b><span>"Should anyone be able to do this?"</span></li>
+      <li><b>Editor</b><span>A linter or a secret check</span></li>
+      <li><b>Pull request</b><span>A test goes red; a reviewer asks</span></li>
+      <li><b>Pipeline</b><span>Scans and longer tests</span></li>
+      <li><b>Production</b><span>A scan, or a customer</span></li>
+      <li><b>The outside world</b><span>A researcher, or a criminal</span></li>
+    </ol>
+    <div class="cols-3">
+      <div class="card"><b>Cheaper, earlier</b><span>The same bug costs a one-line fix in the editor and an incident response at the far end. I'm not quoting a multiplier: the point is the direction.</span></div>
+      <div class="card"><b>Tools see patterns</b><span>A scanner finds what it was built to look for. It can't know who should be allowed to see an invoice.</span></div>
+      <div class="card"><b>The goal is a fix</b><span>A report nobody acts on is just a more expensive way to feel informed.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Walk left to right: every step to the right is more people, more context lost and less time. Then the three ideas that run through the talk: earlier is cheaper, tools find patterns while tests state your rules, and the output that matters is a fix.</span></li><li><b class="ask">Ask</b><span>Where do most of your security bugs get found today? <em>Answer: usually the far right: production, a pentest or a report. Moving that left is the whole talk.</em></span></li><li><b class="show">Check</b><span>There's a well-known claim that bugs cost a fixed multiple more to fix later. Its sources are famously weak, so the slide deliberately gives the direction and no number. Don't add one unless you have your own data.</span></li><li><b class="next">Next</b><span>"First, a map of the tools."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="toolmap" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE TOOLBOX 01</p><h2>A map: which tool catches which bug?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Pick a bug and see which tools usually, sometimes or rarely catch it:</p>
+      <div class="seg-pick" role="group" aria-label="Kind of bug" id="tm-pick"></div>
+      <p class="comment" id="tm-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="tm-grid" id="tm-grid" aria-live="polite"></ul>
+      <p class="tm-lesson" id="tm-lesson"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Click through the bugs. Read the pattern, not the individual dots: injection and crypto misuse are code patterns, so static analysis is good at them. Leaked keys are a text pattern, so secret scanners are. Old libraries need a database of known problems. Missing authorization and business-logic flaws have no pattern at all, so they're found by tests and by people. No single tool covers the map, which is why this talk has three parts.</span></li><li><b class="ask">Ask</b><span>Which row is empty for your team today? <em>Answer: for most teams it's the authorization row: nobody owns a test for it.</em></span></li><li><b class="tip">Tip</b><span>The dots are a rule of thumb from my own reading of what these tool classes do, not measurements. Real results depend on the product, its rules, how it's configured and your language. The page says so in the corner of the grid.</span></li><li><b class="show">Check</b><span>Before presenting, swap in the names of tools your audience actually runs, and adjust any dot your own experience disagrees with. Scanners improve, and some products blend categories (for instance dependency scanners with reachability, or static analysis with secret detection).</span></li><li><b class="next">Next</b><span>"Let's look inside one: static analysis."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sast" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE TOOLBOX 02</p><h2>Static analysis: patterns, and their blind spots</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Code sample" id="sa-pick"></div>
+      <pre class="term sa-code" id="sa-code" aria-label="Sample code"></pre>
+      <div class="seg-pick" role="group" aria-label="How the toy scanner looks" id="sa-mode">
+        <button type="button" data-sm="pattern" aria-pressed="true">Pattern match</button>
+        <button type="button" data-sm="taint" aria-pressed="false">Follow the data</button>
+      </div>
+      <p class="verdict" id="sa-verdict" aria-live="polite"></p>
+      <p class="comment" id="sa-note"></p>
+    </div>
+    <div class="stack">
+      <table class="grid-table sa-table" id="sa-table"></table>
+      <p class="fine">A toy scanner of about thirty lines, built for this page. Real tools are far more capable; the shape of the blind spots is the same.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Start with snippet A in pattern mode: it finds the query built from a string. Then B: the query is built in another file, so the scanner never sees it. Then D: it's safe because the table name is checked against an allowlist, but the pattern match flags it, a false alarm. Switch to "follow the data" and D goes quiet, because the value no longer comes from the request. Finally E: nothing is wrong with the code that's there. A check is missing, and no scanner flags something absent.</span></li><li><b class="ask">Ask</b><span>The scanner reports nothing on E. Is E safe? <em>Answer: no, anyone can read anyone's invoice. A clean report means "no known patterns", not "no bugs".</em></span></li><li><b class="tip">Tip</b><span>Real analyzers go further than this toy: cross-file data-flow analysis, framework knowledge and queries you can write yourself. GitHub's code scanning can run its own CodeQL engine or a third-party tool, and results from third-party tools travel in SARIF, an open OASIS standard (2.1.0, approved in March 2020, errata edition August 2023). Their blind spots are of the same shapes: logic, missing checks and anything the rules don't model.</span></li><li><b class="show">Check</b><span>Pointing out where the toy scanner differs from products is fine; don't claim a particular product misses snippet B, because many follow data across files.</span></li><li><b class="next">Next</b><span>"The other approach: test the running app."</span></li></ul></div>
+</section>
+
+<section class="slide" id="dast" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// THE TOOLBOX 03</p><h2>Dynamic scanning: probe the running app</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="card card-ok"><b>What it's good at</b><span>It sees what a browser sees: security headers, cookie flags, error pages, exposed files, reflected input, forms that behave oddly. It doesn't need your source code or your language.</span></div>
+      <div class="card card-bad"><b>What it struggles with</b><span>Anything behind a login it hasn't been given. Anything it can't find by crawling. Rules it can't know: <em>user A may not read user B's invoice</em> needs two logged-in users and an idea of whose data is whose.</span></div>
+    </div>
+    <div class="stack">
+      <h3>Two styles, both useful</h3>
+      <ul class="rules">
+        <li><b>Passive baseline.</b> Browse the app and look at the responses, without attacking. ZAP's baseline script works this way: its own docs say it doesn't perform "actual attacks", runs the spider for about a minute by default and suits CI, "even against production sites".</li>
+        <li><b>Active, authenticated scans.</b> Log in as real test users and try things. Slower and noisier, and it changes data: run it against a test environment you own.</li>
+      </ul>
+      <p class="callout"><b>RULE</b> Only scan systems you own or have written permission to test. A scan against someone else's site isn't "just testing".</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Dynamic scanning is the opposite view to static: no source, just the running thing. That's its strength, because it finds problems that only exist when everything is deployed together (headers added by a proxy, a debug page switched on), and its weakness: it can only test what it can reach and what it knows to look for. The cheap, safe place to start is the passive baseline in your pipeline against a staging site.</span></li><li><b class="ask">Ask</b><span>A scanner reports no issues on your staging site, but it never logged in. What has it told you? <em>Answer: about the login page and the public pages. Nothing about the application.</em></span></li><li><b class="tip">Tip</b><span>ZAP is open source and is now branded "ZAP by Checkmarx" on its own site, which calls it "an independent Open Source project". Several write-ups still call it OWASP ZAP, and sources disagree on how formal the OWASP link remains, so the slide says only "ZAP". The baseline facts above are from its documentation page for the baseline scan. Its docs show <code>docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t https://www.example.com</code>, with <code>-m</code> setting the spider minutes; re-check before showing it live.</span></li><li><b class="show">Check</b><span>The OWASP Web Security Testing Guide (latest stable 4.2 at my last check, with 5.0 in development) is the reference for what a manual tester looks at, if you want a next step.</span></li><li><b class="next">Next</b><span>"Two scanners that read lists, not code."</span></li></ul></div>
+</section>
+
+<section class="slide" id="depsec" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// THE TOOLBOX 04</p><h2>Dependency and secret scanning</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Dependencies: your list vs a database</h3>
+      <ul class="rules">
+        <li>Reads your lock file, and compares each version with a database of known vulnerabilities (GitHub's Dependabot alerts use the GitHub Advisory Database).</li>
+        <li>Fast, and the most reliable "free win": the fix is often just an upgrade.</li>
+        <li><b>The catch:</b> "present" isn't "reachable". Most flagged functions aren't ones you call. Go's <code>govulncheck</code> reports only the vulnerabilities your code can reach, and GitHub is adding reachability analysis to Dependabot, in a public preview for JavaScript and TypeScript at the time of writing.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Secrets: a pattern, found early</h3>
+      <ul class="rules">
+        <li>Token formats are recognisable, so detection is precise and the signal is high.</li>
+        <li><b>Push protection</b> blocks the push and says why. Secret-scanning <em>alerts</em> report after the secret has already landed. The first is far better.</li>
+        <li>A bypass is a decision, not a hole: GitHub asks for a reason ("used in tests", "false positive", "I'll fix it later") and the last one stays an open alert.</li>
+        <li>Anything found is revoked first, cleaned up second.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Both of these read lists and patterns rather than understanding code, which makes them fast and precise. For dependencies the big lesson is that a finding isn't an exploit: the question to ask is "can my code reach it?". For secrets it's about timing: the cheapest moment is before the commit. We have a whole talk on keeping secrets out of code (Secrets Management).</span></li><li><b class="ask">Ask</b><span>A critical CVE appears in a library you use in a build script only. How urgent is it? <em>Answer: it depends on what it processes. A build-time tool fed only your own files is rarely urgent. Record why, and upgrade routinely.</em></span></li><li><b class="tip">Tip</b><span>Read against primary pages: GitHub's push-protection docs (the three bypass reasons and how each is recorded), the Dependabot alerts page (reviewed advisories from the GitHub Advisory Database; optional reachability analysis described as a public preview supporting JavaScript repositories using npm, pnpm or Yarn, and TypeScript repositories, at the time I read it) and the Go blog on govulncheck (reports only vulnerabilities in functions your code transitively calls). The Gitleaks README says the project is "feature complete" and that the author is moving to a successor, so check its status before recommending it for a new setup.</span></li><li><b class="show">Check</b><span>Preview features move quickly: re-read the Dependabot reachability page before presenting. Which scanner names your audience uses matters more than the ones I mention.</span></li><li><b class="next">Next</b><span>"And the strangest one, in one slide."</span></li></ul></div>
+</section>
+
+<section class="slide" id="fuzz" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// THE TOOLBOX 05</p><h2>Fuzzing in one slide</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A fuzzer feeds a function huge numbers of generated inputs, steered by what code they reach, and watches for crashes, hangs and broken promises. In Go it's built in:</p>
+<pre class="term fz-code">func FuzzParse(f *testing.F) {
+    f.Add("1,2,3")                 // a seed input
+    f.Fuzz(func(t *testing.T, s string) {
+        got, err := Parse(s)
+        if err != nil { return }   // rejecting is fine
+        if Render(got) != s {      // a promise it must keep
+            t.Errorf("round trip failed for %q", s)
+        }
+    })
+}</pre>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Great for:</b> parsers, decoders, anything that takes bytes from outside.</li>
+        <li><b>Needs:</b> a harness you write, and a property to check ("doesn't crash", "round-trips").</li>
+        <li><b>Free regression test:</b> a failing input is saved under <code>testdata/fuzz</code> and re-run on every plain <code>go test</code>.</li>
+        <li>Related idea: property-based testing (Hypothesis for Python), with the same "for all inputs…" thinking.</li>
+      </ul>
+      <p class="callout"><b>LATER IN THIS TRACK</b> <a href="../fuzzing/">Fuzzing for Developers</a> (Developer 17) goes deeper. For now: one harness for your riskiest parser is a good start.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Fuzzing is the one tool here that doesn't read code for patterns or compare against a list: it just tries a very large number of inputs and sees what breaks. Because the harness states a property, it also finds logic bugs, not just crashes. Three lines of seed and a property check is a real harness.</span></li><li><b class="tip">Tip</b><span>The shape of the Go harness (FuzzXxx taking *testing.F, f.Add for seeds, f.Fuzz for the body, and a failing input written under testdata/fuzz and replayed by a plain go test) is from Go's fuzzing tutorial, which I read. The Parse and Render functions are invented for the slide. Hypothesis describes itself as a property-based testing library for Python; I didn't verify its example-database behaviour, so the slide doesn't mention it.</span></li><li><b class="show">Check</b><span>Other languages have similar tools (for example cargo-fuzz and Atheris); I haven't checked their current state, so the slide names only Go.</span></li><li><b class="next">Next</b><span>"Time to pause."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your static analyzer reports nothing. What kinds of bugs could still be there?</p><details><summary>Hint</summary><p>Think of the empty rows in the tool map, and snippet E.</p></details><details class="answer"><summary>Answer</summary><p>Anything that isn't a pattern in the code: a missing authorization check, a business-logic flaw (a coupon used twice), a vulnerable dependency, a misconfigured server, and data flows the tool doesn't model, such as a query built in another file. "Nothing found" means "none of my rules matched".</p></details></li>
+      <li><p>You turn on a new scanner and it reports 400 findings on its first run. What do you do, and what do you not do?</p><details><summary>Hint</summary><p>What is different about old findings and new ones?</p></details><details class="answer"><summary>Answer</summary><p>Don't ask the team to fix 400 things at once, and don't silence the tool. Record today's findings as a baseline so the pipeline fails only on new ones, then triage the baseline in the background, highest risk first. We'll build this later in the talk.</p></details></li>
+      <li><p>Which tool would have caught a leaked cloud key, and when is the best moment for it to run?</p><details><summary>Hint</summary><p>Which row in the map has a strong tool, and where in the timeline is a secret still cheap to remove?</p></details><details class="answer"><summary>Answer</summary><p>A secret scanner, ideally as push protection or a pre-commit check, so the key never reaches the repository. If it does get in, revoke the key first: scanning and deleting don't help once someone has copied it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="authz" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// TESTS YOU WRITE 01</p><h2>Authorization tests: "A can't read B's data"</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="lr-label" for="az-bug">Switch a bug on in the mock API</label>
+        <select id="az-bug"></select>
+      </div>
+      <p class="comment" id="az-about"></p>
+      <ul class="az-tests" id="az-tests"></ul>
+      <p class="verdict" id="az-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3 id="az-src-title">The test that went red</h3>
+      <pre class="term az-src" id="az-src"></pre>
+      <p class="comment" id="az-note"></p>
+      <div class="card"><b>The recipe</b><span>Create two users, and for each action write one test where the <em>right</em> user succeeds and one where the <em>wrong</em> user is refused. Check the status <em>and</em> that nothing changed.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>This is the test no tool can write for you, because only you know who should be allowed to do what. Pick a bug and exactly one test goes red, and its name says what broke. Now the uncomfortable half: untick that test (it's the checkbox beside it) and the bug sails through, all green. A suite is only as good as the rules it states. Write the "wrong user" test for every action you add, not just the "right user" one.</span></li><li><b class="ask">Ask</b><span>Which of these bugs would your current tests catch? <em>Answer: for most teams, only the happy-path ones: "the owner can read their invoice" passes whatever the bug.</em></span></li><li><b class="tip">Tip</b><span>The API is a mock written for this page: three invoices, three users, and five switchable bugs, each covered by exactly one test. In a real project the same tests run against your app through its test client. The "admin by header" bug is the classic of trusting a role from the client; the server must decide who's an admin.</span></li><li><b class="next">Next</b><span>"Same idea for what users send you."</span></li></ul></div>
+</section>
+
+<section class="slide" id="input" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// TESTS YOU WRITE 02</p><h2>Input-handling tests: nasty strings</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which version of the filename cleaner" id="in-pick"></div>
+      <div class="table-wrap"><table class="grid-table in-table" id="in-table"></table></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="in-verdict" aria-live="polite"></p>
+      <div class="controls">
+        <label class="lr-label" for="in-own">Try your own filename</label>
+        <input id="in-own" class="mono" value="" placeholder="type anything, or paste something odd" spellcheck="false" autocomplete="off">
+      </div>
+      <pre class="term in-own-out" id="in-own-out"></pre>
+      <p class="comment" id="in-note"></p>
+      <div class="card"><b>Test the property, not just examples</b><span>"The result never contains a slash, a dot-dot, a control character, a reserved name, or more than 100 characters." Then feed it the whole battery.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Here's a function every upload feature needs: turn a user's filename into something safe to store. Three versions of increasing care, and the same twelve inputs. Version 1 removes ".." and fails nearly everything. Version 2 deals with slashes and control characters, and still lets through percent signs, device names, a ten-thousand-character name and a right-to-left override. Version 3 allows only a short safe alphabet and caps the length. The test isn't clever: it's a list of nasty strings and the properties you want to hold. Keep the list in your repo and add to it whenever something odd breaks you.</span></li><li><b class="ask">Ask</b><span>Which of these would a code review have caught? <em>Answer: slashes, probably. The right-to-left override and the Windows device names, rarely. That's what a battery of test strings is for.</em></span></li><li><b class="tip">Tip</b><span>The properties are a teaching list, not a complete standard: real needs differ by filesystem and platform, and often the best answer is to ignore the user's filename entirely and store the file under a generated ID. Windows device names (CON, PRN, AUX, NUL, COM1 to COM9, LPT1 to LPT9) and the trailing dot or space behaviour are well known platform quirks that I did not re-verify against Microsoft's current documentation. The percent-encoded case matters because some other layer may decode it later.</span></li><li><b class="next">Next</b><span>"And what to do after you've found a bug."</span></li></ul></div>
+</section>
+
+<section class="slide" id="regression" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// TESTS YOU WRITE 03</p><h2>A regression test for every bug you fix</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="rules rules-num">
+        <li><b>Reproduce it as a test first.</b> It should fail for the reason in the report.</li>
+        <li><b>Fix the code.</b> The same test now passes.</li>
+        <li><b>Prove the test can fail.</b> Take the fix away, run it, see red, put the fix back.</li>
+        <li><b>Name it after the rule</b>, and point to the report in a comment.</li>
+        <li><b>Look for siblings.</b> If one endpoint forgot the check, test them all.</li>
+      </ol>
+    </div>
+    <div class="stack">
+<pre class="term rg-term"><span class="k">$</span> git stash push src/invoices.py     <span class="m"># take the fix away</span>
+<span class="k">$</span> pytest tests/security/test_invoices.py
+<span class="bad">FAILED test_other_user_cannot_read_invoice</span>
+<span class="k">$</span> git stash pop                      <span class="m"># put it back</span>
+<span class="k">$</span> pytest tests/security/test_invoices.py
+<span class="ok">9 passed</span></pre>
+      <p class="callout"><b>WHY</b> A bug that came back is the most embarrassing kind, and the cheapest to prevent. The test is the memory your team keeps.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Every security bug is a free test case: you've just learned exactly what the code did wrong. Step three is the one that's skipped: a test that has never been seen failing might not test anything. The git-stash trick takes ten seconds. Step five is where bugs come in pairs: if one endpoint forgot the owner check, ask which others did.</span></li><li><b class="ask">Ask</b><span>Where does a regression test live so it isn't deleted in a refactor? <em>Answer: in the normal test suite, with a name that states the rule, so removing it looks like removing the rule.</em></span></li><li><b class="show">Check</b><span>The terminal is an illustration with invented file names. Adjust the commands to your language and test runner.</span></li><li><b class="next">Next</b><span>"Now: where do all of these run?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="pipeline" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// FITTING IT IN 01</p><h2>Fast checks on every commit, slow ones nightly</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Plan presets" id="pl-presets">
+        <button type="button" data-p="all">Everything on every pull request</button>
+        <button type="button" data-p="suggested">A suggested layout</button>
+      </div>
+      <ul class="pl-list" id="pl-list"></ul>
+    </div>
+    <div class="stack">
+      <ul class="pl-totals" id="pl-totals"></ul>
+      <p class="verdict" id="pl-verdict" aria-live="polite"></p>
+      <ul class="pl-warns" id="pl-warns"></ul>
+      <p class="comment" id="pl-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Two measures decide where a check belongs: how fast it is and how good its signal is. Fast and precise things run early, even before the commit: a secret scan on the diff, a formatter. Medium things run on the pull request: your tests, a dependency scan, a short fuzz run. Slow and noisy things run after merge, nightly or weekly, and report. The default is "everything on every pull request", which looks safe and teaches your team to wait, and then to skip. Click the suggested layout and compare the warnings.</span></li><li><b class="ask">Ask</b><span>Which check does your team skip today, and how long does it take? <em>Answer: usually the slowest one. Move it later instead of arguing about it.</em></span></li><li><b class="tip">Tip</b><span>The durations and the stage budgets (10 seconds, 10 minutes, 30 minutes, 8 hours, 24 hours) are teaching numbers I chose, not measurements of any product. Your own pipeline's times matter more. A check that fails the build should be fast and nearly always right; a slow or noisy one should report, not block, until you trust it.</span></li><li><b class="next">Next</b><span>"What to do with a finding you can't fix today."</span></li></ul></div>
+</section>
+
+<section class="slide" id="suppress" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// FITTING IT IN 02</p><h2>Baselines and suppressions with a reason and an expiry</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="lr-label" for="sp-text">A suppression file (rule path | reason | owner | expires) · pretend today is <span id="sp-today"></span></label>
+        <textarea id="sp-text" rows="8" spellcheck="false"></textarea>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Suppression presets" id="sp-presets">
+        <button type="button" data-p="sloppy">The sloppy file</button>
+        <button type="button" data-p="good">Fix them all</button>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="sp-results" id="sp-results" aria-live="polite"></ul>
+      <p class="comment" id="sp-note"></p>
+      <div class="card"><b>The three things a suppression needs</b><span>A <em>reason</em> a stranger can check, an <em>owner</em> who can answer for it, and an <em>expiry date</em>, so "not now" can't become "never" by accident.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Two tools for living with a noisy scanner. A baseline says "these findings exist today, fail only on new ones", which lets you adopt a scanner on a big old codebase without a freeze. A suppression says "this one is acceptable, here's why". The linter on the right is the policy: no reason, no owner or no expiry and the line is flagged, and an expired one is flagged too, because the finding is back. The sloppy file has one good line and four bad ones.</span></li><li><b class="tip">Tip</b><span>How real tools do it, from their docs: Semgrep accepts an inline <code>nosemgrep: rule-id</code> comment on the line or the one above, and its docs describe no inline syntax for a reason (the platform has an "ignore reason" when triaging); OSV-Scanner's config file takes an id, an optional <code>reason</code> and an optional expiry named <code>effectiveUntil</code>; Gitleaks can ignore a single finding by its fingerprint in a <code>.gitleaksignore</code> file, which its README calls experimental, and can compare against a baseline report with <code>--baseline-path</code>. The file format in the demo is invented, and so are the rule names. The 180-day expiry limit and the 15-character reason minimum are my suggestions, not standards.</span></li><li><b class="show">Check</b><span>If your audience uses a different scanner, replace the examples with its suppression syntax. The idea carries over: where the tool has no field for a reason or an expiry, put them in a comment and enforce them with a small script, like this one.</span></li><li><b class="next">Next</b><span>"Now the game: real or noise?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="triage" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// FITTING IT IN 03</p><h2>Triage: real, or noise?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="tg-count" id="tg-count"></p>
+      <div class="card tg-card"><b id="tg-title"></b><span id="tg-where"></span><pre class="term tg-code" id="tg-code"></pre></div>
+      <div class="seg-pick tg-buttons" role="group" aria-label="Your call" id="tg-buttons">
+        <button type="button" data-a="real">Real: act on it</button>
+        <button type="button" data-a="noise">Noise: close it</button>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="tg-verdict" aria-live="polite"></p>
+      <p class="tg-why" id="tg-why"></p>
+      <p class="tg-prio" id="tg-prio"></p>
+      <button type="button" class="btn btn-sm" id="tg-next" hidden>Next finding</button>
+      <p class="comment" id="tg-note"></p>
+      <div class="card"><b>Four questions for any finding</b><span><em>Is it true?</em> <em>Can an attacker reach it in our setup?</em> <em>What would it cost us?</em> <em>Who owns the fix, and by when?</em></span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Five invented findings, one at a time. Ask the room to call each, then reveal. The SQL injection is real. The fixture password is noise, and so is AWS's own documented example key. The critical library CVE is the interesting one: it isn't reachable from your inputs, so "critical" doesn't describe your risk, but "we never call it" is itself a claim, so you write it down with an owner and an expiry. The fifth is a live token in an old commit, and that's today's problem.</span></li><li><b class="ask">Ask</b><span>What extra evidence would move the TIFF finding from "noise" to "real"? <em>Answer: finding any upload path that decodes TIFF, such as an admin import or a thumbnailer. That's why a failing test is better than a belief.</em></span></li><li><b class="tip">Tip</b><span>All five findings, files and names are invented. AKIAIOSFODNN7EXAMPLE is the example access key ID from AWS's documentation. Severity scores describe a vulnerability in general: the CVSS specification itself says the Base score reflects intrinsic severity and that you enrich it with threat and environmental information, "a more comprehensive input to risk assessment". For ranking, two public signals help: EPSS (FIRST's model of the probability a CVE will be exploited in the next 30 days) and CISA's Known Exploited Vulnerabilities catalogue, which CISA says to use "as an input to their vulnerability management prioritization framework", and which we covered in the Vulnerability Management talk.</span></li><li><b class="next">Next</b><span>"How do you know any of this is working?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="measure" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// FITTING IT IN 04</p><h2>Measure time to fix, not the number of findings</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="m">Day 80 for a team that fixes what it finds. Now change something:</p>
+      <div class="seg-pick" role="group" aria-label="Change the scenario" id="ms-buttons">
+        <button type="button" data-t="scanner" aria-pressed="false">Add a new scanner on day 49</button>
+        <button type="button" data-t="hide" aria-pressed="false">Suppress the findings older than 30 days</button>
+      </div>
+      <div class="stat-row stat-row-3 ms-stats" id="ms-stats"></div>
+      <p class="comment" id="ms-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Time to fix</b> (median, and the slowest) says whether the team acts.</li>
+        <li><b>Age of the oldest open finding</b> says what's being ignored.</li>
+        <li><b>The count</b> goes up when you improve your tools, and down when you hide things. It can't tell you whether you're safer.</li>
+        <li><b>Escapes:</b> bugs found <em>after</em> release that a check should have caught, each one a hole to close.</li>
+      </ul>
+      <p class="fine">The 54 findings, their dates and their fix times are invented for this demo.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Start with the baseline: 24 findings over 80 days, 6 still open, median 7 and a half days to fix. Add the scanner: the count jumps to 54 and 7 are open, and the dashboard looks worse. But the median time to fix hardly moves: the team is fine, the tooling got better. Now reset and suppress the old findings: the open count falls and the median doesn't move, because nothing was fixed. The count can be fooled in both directions; time to fix and age are much harder to fake.</span></li><li><b class="ask">Ask</b><span>If leadership asks for one number, which? <em>Answer: a time-to-fix for the issues that matter (the high-severity ones), plus what escaped.</em></span></li><li><b class="show">Check</b><span>Everything here is simulated. Real teams need to define when the clock starts (found? triaged?) and what counts as fixed. Don't quote a "good" time-to-fix from this slide: pick your own target from your own history.</span></li><li><b class="next">Next</b><span>"Another pause."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>How would you write a test that proves a user can't see another user's data?</p><details><summary>Hint</summary><p>How many users do you need, and what are the two assertions?</p></details><details class="answer"><summary>Answer</summary><p>Create two users and a record owned by one. Ask as the other user, assert that the response is a refusal (403 or 404, whichever your API uses) and that the record's contents aren't in the body. Then repeat for every action: read, change, delete, list. And write the test first, so you've seen it fail.</p></details></li>
+      <li><p>Your dependency scanner flags a critical CVE in a library you use. How do you decide what to do?</p><details><summary>Hint</summary><p>Is the vulnerable code reachable, and what does the attacker need?</p></details><details class="answer"><summary>Answer</summary><p>Check whether your code can reach the affected function, with what input, and whether the vulnerability is being exploited in the wild. If it's reachable or exploited, treat it as urgent and upgrade. If it isn't, suppress it with a reason, an owner and an expiry, and upgrade in the next routine update.</p></details></li>
+      <li><p>Which one metric would you show your manager instead of "number of findings", and why?</p><details><summary>Hint</summary><p>Which number goes down only when something real was fixed?</p></details><details class="answer"><summary>Answer</summary><p>Time to fix for serious findings (and the age of the oldest one open), plus bugs that escaped to production. Counts rise when tools improve and fall when findings are hidden. Time to fix and escapes measure behaviour and outcomes.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// FITTING IT IN 05</p><h2>A security testing checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="map"> We know which kinds of bug each of our tools can and can't find</label>
+      <label><input type="checkbox" data-k="secret"> Secrets are checked before the commit or push, not after</label>
+      <label><input type="checkbox" data-k="deps"> Dependencies are scanned, and a flagged one gets a "can we reach it?" answer, not a panic</label>
+      <label><input type="checkbox" data-k="dast"> A passive scan runs against a staging copy we own, and has been given a login</label>
+      <label><input type="checkbox" data-k="authz"> Every action has a "wrong user is refused" test next to its "right user succeeds" test</label>
+      <label><input type="checkbox" data-k="input"> Risky inputs have a battery of nasty strings in the repo, and it grows after each surprise</label>
+      <label><input type="checkbox" data-k="regress"> Each fixed security bug leaves a regression test that was seen failing first</label>
+      <label><input type="checkbox" data-k="stages"> Fast checks block; slow or noisy ones report, and run nightly or weekly</label>
+      <label><input type="checkbox" data-k="supp"> Every suppression has a reason, an owner and an expiry date</label>
+      <label><input type="checkbox" data-k="measure"> We track time to fix and escapes, not the number of findings</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what's true today and treat each unticked box as a ticket. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box is the cheapest to fix this week? <em>Answer: usually "authorization tests for the one endpoint that returns other people's data".</em></span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">What does your pipeline run today, and which finding has been open the longest? Bring a real example and we'll triage it together.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The tool map, the test runner and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../web-app-security/">Web Application Security Essentials</a><span>The bugs these tools and tests are looking for.</span></li>
+        <li><a href="../secure-apis/">Building Secure APIs</a><span>Object-level authorization, in depth: the thing to test.</span></li>
+        <li><a href="../vulnerability-management/">Vulnerability Management</a><span>Severity, EPSS, KEV and deadlines for the findings you keep.</span></li>
+        <li><a href="../secrets-management/">Secrets Management</a><span>Keeping keys out of code, and what to do when one leaks.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser with invented data; nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. If someone describes a finding they're unsure about, run the four triage questions live.</span></li><li><b class="show">Check</b><span>Links go to other hub talks. Nothing external is linked from this slide.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="tests.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
