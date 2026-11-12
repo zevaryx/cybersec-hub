@@ -376,7 +376,7 @@
       <li><b>2004</b>Researchers find two inputs with the same MD5 hash</li>
       <li><b>2008</b>Fake website certificate made using the MD5 weakness</li>
       <li><b>2012</b>Flame malware fakes a trusted software signature (MD5)</li>
-      <li><b>2017</b>SHAttered: first SHA-1 collision, found by Google</li>
+      <li><b>2017</b>SHAttered: first SHA-1 collision, by CWI and Google</li>
       <li><b>2020</b>Faster SHA-1 attack: "SHA-1 is a Shambles"</li>
     </ol>
     <div class="cards-3">
@@ -738,7 +738,7 @@ make t passes over it</pre><span>Needs lots of memory for every guess, so graphi
     </div>
     <pre class="term" id="rng-attack"></pre>
     <div class="cards-3">
-      <div class="card card-bad"><b>Debian OpenSSL, 2006–2008</b><span>A code change left only 32,768 possible keys on Debian and Ubuntu systems.</span></div>
+      <div class="card card-bad"><b>Debian OpenSSL, 2006–2008</b><span>A code change left only 32,767 possible keys per architecture on Debian and Ubuntu systems.</span></div>
       <div class="card card-bad"><b>Android Bitcoin wallets, 2013</b><span>A weak random generator repeated ECDSA's k, and coins were stolen.</span></div>
       <div class="card card-ok"><b>The rule</b><span>Use the system's secure generator: crypto.getRandomValues, Python's secrets, /dev/urandom. Never Math.random.</span></div>
     </div>
