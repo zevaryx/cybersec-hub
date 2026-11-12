@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fuzzing for Developers</title>
+<meta name="description" content="Fuzzing for Developers: how coverage-guided fuzzers find the inputs you would never think to test, how to write a harness, and how to run it continuously. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/fuzzing/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Fuzzing for Developers">
+<meta property="og:description" content="Watch a coverage-guided fuzzer learn a file format in your browser, find a planted bug, shrink it to nine bytes and keep it as a regression test. Then write the harness and run it continuously.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/fuzzing/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/fuzzing/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Fuzzing for Developers in neon, beside a terminal that feeds a record to a toy parser and lights up the branches it reaches.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Crect x='5' y='5' width='6' height='6' fill='%2300f0ff'/%3E%3Crect x='13' y='5' width='6' height='6' fill='%2300f0ff'/%3E%3Crect x='13' y='13' width='6' height='6' fill='%23ff2e88'/%3E%3Crect x='21' y='13' width='6' height='6' fill='%2300f0ff'/%3E%3Crect x='21' y='21' width='6' height='6' fill='%23f6e94b'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "fuzzing", "title": "Fuzzing for Developers", "footer": "FUZZING", "subtitle": "DEVELOPER TRACK · 17",
+  "parts": [{ "name": "How fuzzers think", "minutes": 28 }, { "name": "Writing a harness", "minutes": 30 }, { "name": "Running it for real", "minutes": 23 }, { "name": "Wrap-up", "minutes": 8 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">FUZZING<span>FOR DEVS</span></a>
+  <div class="scroll-parts">
+    <a href="#why" data-part="1"><b>01</b>How fuzzers think</a>
+    <a href="#targets" data-part="2"><b>02</b>Harnesses</a>
+    <a href="#ci" data-part="3"><b>03</b>Running it</a>
+    <a href="#checklist" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 17 · FOR PEOPLE WHO WRITE PARSERS, LIBRARIES AND PROTOCOLS · ADVANCED</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Fuzzing for Developers">Fuzzing for Developers</span></h1>
+      <p class="lede">Fuzzers find the inputs you would never think to test. How coverage-guided fuzzing works, how to write a harness, and how to run it all the time, so you find the bug before anyone else does.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/fuzzing/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>toy parser · REC records</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ parse(<input id="hero-in" value="hello" spellcheck="false" autocomplete="off" aria-label="Text to feed to the toy record parser">)</label>
+      <div class="bgrid" id="hero-grid" aria-hidden="true"></div>
+      <p class="hero-key"><span class="sw lit"></span> branch reached by this input <span class="sw"></span> not reached <span id="hero-count" class="m"></span></p>
+      <p class="comment" id="hero-note" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes with two checkpoints. This is about finding bugs in your own code before release: how a fuzzer decides what to try, how to write the small function that lets it in, and how to run it continuously. Everything you'll see is a toy in this page, aimed at an invented parser, and the one real tool run I show is on a small program I wrote for this talk.</span></li><li><b class="show">Show</b><span>The terminal feeds your text to a toy parser for an invented format called REC and lights up which branches of the code it reached. Type hello: it's rejected at the front door. Then try REC2:hello.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try an empty input, FUZZ on its own, REC2:FUZZ (the planted bug: the slide shouts), REC1:9:hi, or just hello. On the gates slide, push the slider to 12 gates. On the fuzzer race, let random fuzzing run out of tries, find the bug and read the banner, or press Leave it running and wait five minutes for Patience of a Fuzzer. On the sanitizer slide, open all three views. In the minimiser, shrink the crash to nine bytes. On the property test, find the one-byte failure. On the harness doctor, get all six right; on the target picker, call the whole web server worth fuzzing; in the seeds benchmark, run all four; on the structure slide, throw the inputs; on the coverage chart, look at the flat line; and tick all ten boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#why"><small>PART 1 · 28 MIN</small><b>How fuzzers think</b></a><span>Random, mutation, coverage</span><span>The fuzzing loop</span><span>Sanitizers and properties</span></li>
+      <li><a href="#targets"><small>PART 2 · 30 MIN</small><b>Writing a harness</b></a><span>Picking targets</span><span>Anatomy of a harness</span><span>Seeds, dictionaries, structure</span></li>
+      <li><a href="#ci"><small>PART 3 · 23 MIN</small><b>Running it for real</b></a><span>CI and continuous fuzzing</span><span>Crashes into regression tests</span><span>Measuring progress</span></li>
+      <li><a href="#checklist"><small>PART 4 · 8 MIN</small><b>Wrap-up</b></a><span>A checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3: 5 minutes to discuss with a neighbour. Every demo is a toy on an invented parser. Nothing here attacks a real system, and the aim throughout is finding and fixing your own bugs.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one: what a fuzzer is and why it beats random input. Part two: how to write a harness that lets a fuzzer into your code. Part three: running it in CI and continuously, and what to do with a crash. The goal is simple: by the end you can pick a function in your own code, write the ten lines around it, and know where to run it.</span></li><li><b class="next">Next</b><span>"First, why bother?"</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="why" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// HOW FUZZERS THINK 01</p><h2>The inputs you'd never think to test</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Write the tests you can imagine. A fuzzer writes the ones you can't.</p>
+      <ul class="rules">
+        <li><b>Where it started:</b> in the late 1980s a stormy-night dial-up session scrambled a researcher's commands with line noise, and the noise crashed programs. The 1990 paper that came from it fed random characters to almost 90 Unix utilities and crashed more than 24% of them.</li>
+        <li><b>What it finds:</b> the bugs hiding in the places your tests never go. Parsers, decoders, protocol handlers, anything that reads bytes it doesn't control.</li>
+        <li><b>What it costs:</b> a small harness, some CPU time, and the habit of looking at what it finds.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Fuzzing, in one sentence</b><span>Run your code over and over on machine-made inputs, keep the ones that reach new code, and watch for crashes, hangs and sanitizer reports.</span></div>
+      <div class="card"><b>The goal here</b><span>Finding and fixing bugs in <em>your own</em> code before release. A crash becomes: reproduce it, shrink it, fix it, keep the input as a regression test.</span></div>
+      <div class="card"><b>It doesn't replace the rest</b><span>Unit tests say what should work. A fuzzer asks what happens on everything else. See <a href="../security-testing/">Security Testing in Your Workflow</a> for where each tool fits.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>The idea is old. In the late 1980s a researcher was logged in over a dial-up line during a rainstorm; the line noise scrambled what he typed, and it crashed programs. That made the team ask what would happen if they fed random characters to the standard Unix utilities on purpose. In their 1990 paper, testing almost 90 utilities on seven versions of Unix, they crashed more than 24%. Modern fuzzers are far cleverer, but the question is the same: what happens on input nobody planned for?</span></li><li><b class="show">Check</b><span>The storm story, "almost 90 utilities", "seven versions of UNIX" and "more than 24%" are from the paper itself (Miller, Fredriksen and So, CACM December 1990; read in the Wisconsin technical-report copy, and the three figures re-checked against the published text on 11 November 2026). That copy is dated 1989 and its summary says 25 to 33%; the published CACM version (December 1990) says "more than 24%". I use the 24% from the introduction. I didn't read the published version itself.</span></li><li><b class="next">Next</b><span>"Three ways to make test input."</span></li></ul></div>
+</section>
+
+<section class="slide" id="gates" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// HOW FUZZERS THINK 02</p><h2>Random, mutation, coverage: why guessing fails</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="rules rules-num">
+        <li><b>Random input.</b> New text every time. Fast, and hopeless past the first check.</li>
+        <li><b>Mutation.</b> Edit an input that already works. Better, but it never learns where to aim.</li>
+        <li><b>Coverage guidance.</b> Keep any input that reaches new code and mutate <em>that</em>. It climbs the format one check at a time.</li>
+      </ol>
+      <div class="controls">
+        <label class="lr-label" for="gt-n">Checks the input must pass in a row: <b id="gt-nv">9</b></label>
+        <input type="range" id="gt-n" min="1" max="14" value="9" aria-describedby="gt-gates">
+        <label class="lr-label" for="gt-speed">Tries per second</label>
+        <select id="gt-speed" aria-label="Tries per second"><option value="1000">1,000 a second</option><option value="100000" selected>100,000 a second</option><option value="1000000">1,000,000 a second</option></select>
+      </div>
+      <p class="m" id="gt-gates"></p>
+    </div>
+    <div class="stack">
+      <div class="gt-cols">
+        <div class="gt-col"><h3>Random guessing</h3><b id="gt-r-tries">–</b><span>tries, on average</span><b class="gt-time" id="gt-r-time">–</b></div>
+        <div class="gt-col gt-good"><h3>Coverage-guided</h3><b id="gt-g-tries">–</b><span>tries, roughly</span><b class="gt-time" id="gt-g-time">–</b></div>
+      </div>
+      <p class="verdict" id="gt-verdict" aria-live="polite"></p>
+      <p class="fine">A toy model: 95 printable characters, inputs about 10 long. Random must hit every check at once; guided finds each check on its own, because a correct guess reaches new code and gets kept. REC2:FUZZ is nine checks.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Our toy parser wants a record that starts REC2: and then a field starting FUZZ. That's nine characters that must all be right. A random guesser needs all nine at once: about 95 to the ninth power tries, which is hundreds of quadrillions. A coverage-guided fuzzer gets a signal after each correct step: when it finds R, the code takes a new branch, so that input is kept and mutated further. Slide the number up: random grows by a factor of 95 per check; guided grows in a straight line.</span></li><li><b class="show">Show</b><span>Drag the slider. At nine checks the random column is about 10 to the 17th tries; guided is a few thousand. Push it to 12 and watch the random time pass the age of the universe.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question, preview) Why does coverage guidance find deep bugs that random input never reaches? <em>Answer: coverage feedback turns one impossible guess into a chain of small, feasible ones.</em></span></li><li><b class="show">Check</b><span>This is my own simplified model, not a measurement: it ignores length, assumes each check takes about 95 guesses at a known position, and real fuzzers differ a lot. The time column uses the speed you pick. The "age of the universe" line uses 13.8 billion years.</span></li><li><b class="next">Next</b><span>"Let me show you the loop it runs."</span></li></ul></div>
+</section>
+
+<section class="slide" id="loop" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// HOW FUZZERS THINK 03</p><h2>The loop: pick, mutate, run, keep what's new</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="lp-flow" aria-label="The fuzzing loop">
+        <div class="lp-step" id="lp-pick"><small>1 · pick</small><code id="lp-parent">–</code></div>
+        <div class="lp-step" id="lp-mut"><small>2 · mutate</small><code id="lp-mutant">–</code><span id="lp-muts" class="m"></span></div>
+        <div class="lp-step" id="lp-run"><small>3 · run</small><code id="lp-status">–</code><span id="lp-fresh" class="m"></span></div>
+        <div class="lp-step" id="lp-keep"><small>4 · keep?</small><code id="lp-kept">–</code></div>
+      </div>
+      <div class="seg-pick">
+        <button type="button" id="lp-step">Step</button>
+        <button type="button" id="lp-step10">× 10</button>
+        <button type="button" id="lp-step100">× 100</button>
+        <button type="button" id="lp-reset">Reset</button>
+      </div>
+      <p class="comment" id="lp-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3>The corpus <small class="m" id="lp-count"></small></h3>
+      <ol class="lp-corpus" id="lp-corpus" aria-label="Inputs the fuzzer has kept"></ol>
+      <div class="stats fz-stats">
+        <div class="stat"><b id="lp-tries">0</b><span>tries</span></div>
+        <div class="stat"><b id="lp-cov">0</b><span>branches reached</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>That is the whole loop. Pick an input from the corpus, change it a little, run the program, and see which branches it reached. If it reached something no earlier input did, keep it: it joins the corpus and becomes a parent for later rounds. If it didn't, throw it away. Do that millions of times. The starting corpus is just one tiny record. Press Step a few times, then ×100.</span></li><li><b class="show">Show</b><span>The mutations are the usual ones: flip or insert or delete a byte, copy a chunk, splice two corpus entries, drop in a word from a dictionary. This toy also notes the strings the code compares against and tries those, like real fuzzers do (the real run later shows it: CMP and PersAutoDict in libFuzzer's log).</span></li><li><b class="show">Check</b><span>The mutators and their odds are a simplified imitation. libFuzzer's mutation names (ChangeByte, EraseBytes, CrossOver, CMP, PersAutoDict) are visible in the real log on the sanitizer slide.</span></li><li><b class="next">Next</b><span>"Now race the three strategies."</span></li></ul></div>
+</section>
+
+<section class="slide" id="race" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// HOW FUZZERS THINK 04</p><h2>Race: random vs mutation vs coverage-guided</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <pre class="term fz-code" id="fz-code" aria-label="The toy parser, simplified"></pre>
+      <div class="seg-pick" role="group" aria-label="Fuzzing strategy" id="fz-mode">
+        <button type="button" data-f="random" aria-pressed="false">Random text</button>
+        <button type="button" data-f="mutate" aria-pressed="false">Mutation only</button>
+        <button type="button" data-f="guided" aria-pressed="true">Coverage-guided</button>
+      </div>
+      <div class="seg-pick">
+        <button type="button" id="fz-run">Run up to 100,000 tries</button>
+        <button type="button" id="fz-again">Another run</button>
+        <button type="button" id="fz-learn" aria-pressed="true">Comparison tracing: on</button>
+        <button type="button" id="fz-patience" aria-pressed="false">Leave it running</button>
+      </div>
+      <p class="comment" id="fz-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <ul class="fz-branches" id="fz-branches" aria-label="Branches of the parser reached so far"></ul>
+      <div class="stats fz-stats">
+        <div class="stat"><b id="fz-tries">–</b><span>tries</span></div>
+        <div class="stat"><b id="fz-cov">–</b><span>branches reached</span></div>
+        <div class="stat"><b id="fz-corpus">–</b><span>kept inputs</span></div>
+      </div>
+      <p class="verdict" id="fz-result" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Same invented parser, three strategies. Random text never gets past the magic bytes. Mutation starts from a valid record but doesn't learn from what it finds, so it can't climb the format. Coverage-guided keeps every input that reaches a new branch, and typically finds the planted bug (the tag FUZZ is copied into a three-byte buffer) in a thousand or so tries. Run it a few times with Another run: it varies, but guided finds it, and random never does in 100,000.</span></li><li><b class="show">Show</b><span>Comparison tracing is on by default for guided: the fuzzer notes the strings the code compares input against (REC, 2, FUZZ) and tries them. Turn it off to see coverage feedback alone: it still gets there on some runs, much more slowly. Leave it running starts a continuous run that ignores the first crash; stay on this slide for five minutes and something appears.</span></li><li><b class="ask">Ask</b><span>What does the guided run have that the mutation run doesn't? <em>Answer: memory. It keeps what worked and builds on it.</em></span></li><li><b class="show">Check</b><span>The parser, the numbers and the seed record are invented: this is not a benchmark, and real random fuzzers do better on simple formats than the toy suggests. The five-minute egg can be tested with ?patience=2000 (milliseconds) added to the page address.</span></li><li><b class="next">Next</b><span>"A fuzzer finds an input. What makes the failure visible?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sanitizers" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// HOW FUZZERS THINK 05</p><h2>Sanitizers: turn silent bugs into loud ones</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="note">A real run on a small C program with the same planted bug. Captured on 11 November 2026 with clang 23.1.4 and AddressSanitizer, on one core; trimmed.</p>
+      <pre class="term sn-term" id="sn-term" aria-label="A real libFuzzer and AddressSanitizer run, trimmed"></pre>
+      <div class="seg-pick" id="sn-pick" role="group" aria-label="Which part of the output">
+        <button type="button" data-s="log" aria-pressed="true">The search</button>
+        <button type="button" data-s="report" aria-pressed="false">The report</button>
+        <button type="button" data-s="min" aria-pressed="false">Shrinking it</button>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="verdict y" id="sn-out" aria-live="polite"></p>
+      <div class="card"><b>Without a sanitizer</b><span>A one-byte overflow in heap memory usually runs on quietly. The fuzzer sees no crash, so it reports nothing.</span></div>
+      <div class="card"><b>With one</b><span>The first bad access stops the program and says <em>what</em> (heap-buffer-overflow), <em>where</em> (record.c:18) and <em>who allocated it</em>. The fuzzer then saves the input that did it.</span></div>
+      <div class="card"><b>The pair</b><span>The fuzzer finds the <em>input</em>. The sanitizer makes the failure <em>loud</em>. Memory errors are the classic case: see <a href="../memory-safety/">Memory Safety</a>.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is a real libFuzzer run, not the toy. A small C program parses the same invented record format with the same planted bug: it allocates three bytes for a tag and copies four. Built with clang's -fsanitize=fuzzer,address. Start from an empty corpus, no hints. Look at the log: cov is the code blocks reached, ft the features, corp the corpus, MS the mutations that made each input. See CMP and PersAutoDict: libFuzzer noticed the code compared against REC and FUZZ and reused them. Then the crash: AddressSanitizer names the bug class, the exact line and where the buffer was allocated. And the input is saved to a file called crash-something.</span></li><li><b class="show">Show</b><span>Click through the three parts. The last is libFuzzer's own crash minimiser, which shrank the saved crash to the nine bytes REC2:FUZZ. That is exactly what our toy minimiser will do in a minute.</span></li><li><b class="show">Check</b><span>Real output from my machine on 11 November 2026 (clang 23.1.4, ASan, seed 1, -max_len=32, empty corpus): the crash appeared after about 12,000 runs in under a second. Paths, addresses and some lines are trimmed or shortened; the program is compiled at -O0 because an optimising build removed the whole planted bug as dead code. The crash-file name is libFuzzer's convention (crash- plus the SHA-1 of the input), from its documentation. Other machines and seeds will differ.</span></li><li><b class="next">Next</b><span>"There's a friendlier cousin: property-based testing."</span></li></ul></div>
+</section>
+
+<section class="slide" id="property" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// HOW FUZZERS THINK 06</p><h2>Property-based testing: fuzzing's friendly cousin</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <pre class="term fz-code" id="pb-code" aria-label="The round-trip property"></pre>
+      <div class="seg-pick" id="pb-impl" role="group" aria-label="Which Base64 encoder">
+        <button type="button" data-i="good" aria-pressed="true">Correct encoder</button>
+        <button type="button" data-i="bug" aria-pressed="false">Encoder with a bug injected</button>
+      </div>
+      <div class="seg-pick">
+        <button type="button" id="pb-examples">Run 5 hand-written tests</button>
+        <button type="button" id="pb-prop">Run the property: 100 random inputs</button>
+        <button type="button" id="pb-again">Another run</button>
+      </div>
+    </div>
+    <div class="stack">
+      <ul class="pb-list" id="pb-examples-out" aria-label="Hand-written example tests"></ul>
+      <p class="verdict" id="pb-result" aria-live="polite"></p>
+      <div class="card"><b>Fuzzing vs property tests</b><span>A fuzzer watches for <em>crashes</em>. A property test checks a <em>statement that must always be true</em>, such as decode(encode(x)) == x. Same idea, any language, runs in your normal test suite.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>You don't need a fuzzing engine to start. A property is a statement that must hold for every input: here, encoding and then decoding gives back what you started with. The framework generates hundreds of random inputs, and when one fails it shrinks it to the smallest failing case. Run the five hand-written tests against the buggy encoder: they pass, because the bug only appears when the input length leaves one byte over and that byte is 128 or more, and my examples are all plain ASCII. Run the property: it finds it in a few tries and shrinks to a single byte, 0x80.</span></li><li><b class="show">Show</b><span>The bug is the classic sign mix-up: a byte above 127 treated as a negative number, so the first output character comes out as a question mark that the decoder rejects. The correct encoder agrees with the platform's own Base64 on 20,000 random inputs in my test.</span></li><li><b class="ask">Ask</b><span>Which properties could you state about code you own? <em>Answers: round trips, "never crashes", "output sorted", "same result for the same input twice", "old and new implementation agree".</em></span></li><li><b class="show">Check</b><span>QuickCheck (Claessen and Hughes, ICFP 2000) is the usual origin; I confirmed the paper's title and venue by search, not by reading it. Python's Hypothesis calls itself "the property-based testing library for Python"; what it does about shrinking and replaying failures is from my background knowledge, not from the page I read. The Base64 here is the deck's own small implementation with a bug I planted.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why does coverage guidance find deep bugs that random input never reaches?</p><details><summary>Hint</summary><p>What does the fuzzer learn when an input reaches new code?</p></details><details class="answer"><summary>Answer</summary><p>Random input has to get every check right at once, and the odds multiply with each one. Coverage feedback turns that into a sequence: an input that passes the first check reaches new code, so it's kept and mutated, and the next check only has to be guessed on top of it. One impossible guess becomes a chain of small ones.</p></details></li>
+      <li><p>What makes a good fuzz target in your codebase?</p><details><summary>Hint</summary><p>Think about where untrusted bytes enter, and what a harness needs to be fast.</p></details><details class="answer"><summary>Answer</summary><p>A function that takes bytes (or something you can build from bytes) from outside your trust boundary: a parser, decoder, deserialiser or protocol handler. It should be fast, deterministic, and free of network, disk and global state. If it isn't, fuzz the part of it that parses, with the rest stubbed.</p></details></li>
+      <li><p>Why do fuzzers usually run together with a sanitizer?</p><details><summary>Hint</summary><p>What does a silent memory error look like from outside?</p></details><details class="answer"><summary>Answer</summary><p>A fuzzer only notices what looks like a failure: a crash, hang or timeout. Many memory bugs corrupt memory and carry on. A sanitizer turns the first bad access into a loud failure with a report, so the fuzzer can save the input and you can see what went wrong.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="targets" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// WRITING A HARNESS 01</p><h2>Picking targets: what's worth fuzzing?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="tg-card" aria-live="polite">
+        <small class="m" id="tg-pos"></small>
+        <b id="tg-name"></b>
+        <div class="seg-pick" id="tg-pick">
+          <button type="button" data-a="yes">Worth fuzzing</button>
+          <button type="button" data-a="no">Not as it stands</button>
+        </div>
+        <p class="verdict" id="tg-fb"></p>
+        <button type="button" class="btn btn-ghost btn-sm" id="tg-next" hidden>Next one</button>
+      </div>
+      <p class="comment" id="tg-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>A good target</b><span>Takes bytes (or something you can build from them) that cross a trust boundary. Parsers, decoders, deserialisers, protocol and file-format code, anything with a long switch on input.</span></div>
+      <div class="card"><b>A poor target, today</b><span>Anything slow, stateful, or touching the outside world. The fix is usually to fuzz the part inside: the parser, the handler, with the network, disk and database stubbed.</span></div>
+      <div class="card"><b>Where to start</b><span>Your riskiest input first: the code that parses data from users, other systems or files you didn't write.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Nine candidates. For each, say whether it's a good fuzz target as written. The pattern: if untrusted bytes go in and it's a function you can call quickly with no side effects, it's a good target. If it needs a socket, a database or the real world, fuzz the function inside it.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question 2 returns here.) What's the riskiest parser in your code? <em>Answers vary: file upload, config, an internal RPC format, a date or URL parser.</em></span></li><li><b class="show">Check</b><span>The list is my own teaching set. "A function that adds two integers" is a deliberate judgement call: overflow bugs can be found by a fuzzer, but a unit or property test and a sanitizer run get you most of the way.</span></li><li><b class="next">Next</b><span>"Now the harness itself."</span></li></ul></div>
+</section>
+
+<section class="slide" id="harness" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// WRITING A HARNESS 02</p><h2>Anatomy of a harness: one small function</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="hn-tabs" role="group" aria-label="Language">
+        <button type="button" data-l="cpp" aria-pressed="true">C and C++ (libFuzzer)</button>
+        <button type="button" data-l="go" aria-pressed="false">Go</button>
+        <button type="button" data-l="rust" aria-pressed="false">Rust</button>
+        <button type="button" data-l="py" aria-pressed="false">Python</button>
+      </div>
+      <pre class="term hn-code" id="hn-code" aria-label="A fuzz harness"></pre>
+      <p class="m" id="hn-run"></p>
+    </div>
+    <div class="stack">
+      <ol class="rules rules-num hn-rules">
+        <li><b>Bytes in, nothing out.</b> Hand the input straight to the code under test.</li>
+        <li><b>Accept every input</b>, including empty, huge and malformed. Never call <code>exit()</code>.</li>
+        <li><b>Fast and deterministic.</b> No network, disk, clock or randomness that isn't driven by the input.</li>
+        <li><b>No state between calls.</b> The engine calls it millions of times, often in parallel.</li>
+        <li><b>Catch only documented errors.</b> A parser may reject bad input; a crash must still escape.</li>
+        <li><b>Build with sanitizers</b> (or the language's checks) so memory bugs are loud.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>A harness is tiny. The engine calls one function over and over with bytes it made up; your function passes them to the code under test and returns. That's it. Flip through the languages: same shape each time. In C and C++ it's LLVMFuzzerTestOneInput; in Go it's an ordinary test function with f.Fuzz; in Rust, the fuzz_target macro from cargo-fuzz; in Python, Atheris. The rules on the right come from libFuzzer's and Go's own guidance, and they apply to every one.</span></li><li><b class="show">Show</b><span>The Python harness catches only the parser's own error type, not every exception. That is rule 5, and the next slide tests you on it.</span></li><li><b class="show">Check</b><span>The C++ shape, the rules about exit(), determinism, speed and global state, and the build flag come from LLVM's libFuzzer page (read 11 November 2026). The Go shape, the go test -fuzz command, seed corpus and the testdata file location come from go.dev/doc/security/fuzz. The Rust macro shape and cargo fuzz run come from the rust-fuzz book tutorial, which uses an older extern-crate style; recent cargo fuzz templates use `use libfuzzer_sys::fuzz_target;`, which I didn't confirm. cargo-fuzz needs a nightly compiler (its setup page). The Atheris shape (instrument_imports, Setup, Fuzz) comes from its README. I did not run the Go, Rust or Python snippets: those toolchains aren't on my machine; the C++ shape is what I ran.</span></li><li><b class="next">Next</b><span>"Spot what's wrong with these."</span></li></ul></div>
+</section>
+
+<section class="slide" id="doctor" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// WRITING A HARNESS 03</p><h2>Harness doctor: what's wrong with this one?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="m" id="hd-lang"></p>
+      <pre class="term hd-code" id="hd-code" aria-label="A fuzz harness to review"></pre>
+      <p class="comment" id="hd-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="seg-pick hd-opts" id="hd-opts" role="group" aria-label="Your diagnosis"></div>
+      <p class="verdict" id="hd-fb" aria-live="polite"></p>
+      <button type="button" class="btn btn-ghost btn-sm" id="hd-next" hidden>Next harness</button>
+      <p class="fine" id="hd-score"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Six harnesses, one verdict each. One is fine and five have a real problem: time and randomness, disk and network, catching everything, remembered state, and exiting on bad input. Call it out loud; I'll reveal the reason after each answer.</span></li><li><b class="show">Show</b><span>Pick a diagnosis. The explanation always names what to do instead.</span></li><li><b class="show">Check</b><span>The exit() and determinism rules are libFuzzer's; the state-between-calls rule is Go's fuzzing guidance. "Hides real bugs" and "slow because of files or network" are advice that follows from those rules, in my wording. All six snippets are written for this talk.</span></li><li><b class="next">Next</b><span>"Next: help the fuzzer start."</span></li></ul></div>
+</section>
+
+<section class="slide" id="seeds" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// WRITING A HARNESS 04</p><h2>Seeds and dictionaries: give it a head start</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Seeds</b> are a few real inputs, valid and invalid. The fuzzer mutates these first, so it starts inside the format.</li>
+        <li><b>A dictionary</b> lists the format's words: keywords, magic numbers, tags. The fuzzer drops them into inputs.</li>
+        <li>Seeds teach <em>shape</em>. A dictionary teaches <em>vocabulary</em>. Checksums and lengths still need a cleverer harness.</li>
+      </ul>
+      <pre class="term sd-dict" id="sd-dict" aria-label="A dictionary file for the REC format">kw1="REC1:"
+kw2="REC2:"
+kw3=";"
+kw4="FUZZ"</pre>
+      <div class="seg-pick"><button type="button" id="sd-run">Run the benchmark: 10 runs of each</button></div>
+      <p class="comment" id="sd-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="sd-table" aria-label="Seeds and dictionary benchmark">
+        <thead><tr><th scope="col">Setup</th><th scope="col">Found it</th><th scope="col">Median tries</th><th scope="col">Branches at 1,000</th></tr></thead>
+        <tbody id="sd-body"></tbody>
+      </table></div>
+      <p class="fine">Limit 20,000 tries per run. Comparison tracing is off here, so the effect of seeds and a dictionary shows on its own. "Branches at 1,000" is the median over the runs, out of 24 possible.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Four setups, ten runs each, same toy fuzzer, with its comparison tracing switched off so we can see what the starting material does by itself. A seed puts the fuzzer inside the format straight away, so it reaches more branches early. But on its own it doesn't find the bug: it still has to guess F, U, Z, Z. The dictionary is the big win: the four words from the format, and the bug falls in a few hundred tries.</span></li><li><b class="show">Show</b><span>Press the button. It runs for a second or two. Watch Found it: none or seed alone often miss within 20,000 tries; dictionary and both find it every time.</span></li><li><b class="show">Check</b><span>The dictionary file format (name="value", # comments, \xAB escapes, passed with -dict=) is from libFuzzer's docs; the corpus directory and -merge=1 minimising are too. Run the toy numbers as illustration only: they depend on my mutation odds. Real fuzzers can also learn words from the code's comparisons, as the real run showed. AFL++ ships its own dictionary and corpus tools (afl-tmin and afl-cmin are on its home page); I did not read its dictionary docs.</span></li><li><b class="next">Next</b><span>"Some formats need more than a dictionary."</span></li></ul></div>
+</section>
+
+<section class="slide" id="structure" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// WRITING A HARNESS 05</p><h2>Structure-aware fuzzing: when bytes aren't enough</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lede">Flip bytes in a JSON document and most results die at the syntax check, so the code behind it never runs.</p>
+      <div class="seg-pick"><button type="button" id="st-run">Throw 1,000 inputs at each</button><button type="button" id="st-again">Another run</button></div>
+      <div class="st-cols">
+        <div class="st-col"><h3>Byte-level edits</h3><div class="st-bar" id="st-byte" role="img" aria-label="Byte-level outcomes"></div><ul class="st-list" id="st-byte-l"></ul><code class="st-sample" id="st-byte-s"></code></div>
+        <div class="st-col st-good"><h3>Structure-aware</h3><div class="st-bar" id="st-tree" role="img" aria-label="Structure-aware outcomes"></div><ul class="st-list" id="st-tree-l"></ul><code class="st-sample" id="st-tree-s"></code></div>
+      </div>
+      <p class="comment" id="st-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Custom mutators</b><span>Parse the input, change the parsed form, write it back out. libFuzzer supports these.</span></div>
+      <div class="card"><b>Describe the structure</b><span>For example as a protobuf message: libprotobuf-mutator mutates the message instead of raw bytes.</span></div>
+      <div class="card"><b>Generate from a grammar</b><span>Build inputs from rules, such as csmith does for C programs.</span></div>
+      <div class="card card-bad"><b>The catch</b><span>If you only ever produce valid input, the code that rejects bad input never gets exercised. Mix both: structure-aware for depth, byte-level for the front door.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Our JSON-like target parses a document and then checks it has a user with a name and age, and a list of items. Edit raw bytes and you mostly break the syntax: about nine in ten inputs die at the very first check. Edit the parsed document instead and write it back, and every input gets past the parser to the logic behind it. But notice the other column: the structure-aware fuzzer never sends malformed JSON, so it never tests the parser's error handling. You want both.</span></li><li><b class="show">Show</b><span>Press the button. The typical split is around 85 to 90% syntax errors for byte edits and 100% deep for structure-aware, but it varies by run.</span></li><li><b class="show">Check</b><span>Custom mutators, libprotobuf-mutator and grammar-based generation (csmith) are from the google/fuzzing "structure-aware fuzzing" document. libFuzzer's page confirms it supports custom mutators. The target, schema and percentages are invented, and "deep" just means the invented schema check passed. I did not read FuzzedDataProvider's documentation, so the deck doesn't describe it.</span></li><li><b class="next">Next</b><span>"Let's put it together: find, shrink, fix, keep."</span></li></ul></div>
+</section>
+
+<section class="slide" id="walkthrough" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// WRITING A HARNESS 06</p><h2>Walkthrough: find it, shrink it, fix it, keep it</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <pre class="term fz-code" id="wk-code" aria-label="The code around the planted bug"></pre>
+      <div class="seg-pick wk-steps" role="group" aria-label="Walkthrough steps">
+        <button type="button" id="wk-find">1 · Run the fuzzer</button>
+        <button type="button" id="wk-min" disabled>2 · Shrink the crash</button>
+        <button type="button" id="wk-fix" disabled>3 · Fix and re-run</button>
+        <button type="button" id="wk-keep" disabled>4 · Keep it</button>
+        <button type="button" id="wk-reset">Start over</button>
+      </div>
+      <p class="verdict" id="wk-result" aria-live="polite"></p>
+      <p class="comment" id="wk-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3 id="wk-title">Log</h3>
+      <ol class="wk-log" id="wk-log" aria-label="Steps taken"></ol>
+      <pre class="term wk-keep" id="wk-keepbox" hidden aria-label="The regression test files"></pre>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>The full cycle, on the toy. One: run the fuzzer, and it finds a crashing input, usually with junk around the part that matters. Two: shrink it. The minimiser removes chunks, then single characters, keeping any cut that still crashes, until nothing more can go. It ends at nine bytes: REC2:FUZZ. Three: read the code at that spot, fix it, re-run, and the same fuzzer finds nothing in 100,000 tries. Four: keep the shrunken input in your repository as a regression test, so this bug can never quietly come back.</span></li><li><b class="show">Show</b><span>Press the buttons in order. The log shows each shrinking attempt: kept, or put back. In step four, both forms of regression test appear: a saved input file and a plain test.</span></li><li><b class="show">Check</b><span>The Go testdata format ("go test fuzz v1" then one value per line) and the rule that go test re-runs files in testdata/fuzz/FuzzName are from go.dev/doc/security/fuzz. libFuzzer's crash-&lt;sha1&gt; naming and re-running a file by passing it on the command line are from LLVM's libFuzzer page (reproducing by passing the file is my reading, and my real run did it). The shrinker is a simplified delta-debugging pass of my own, not libFuzzer's.</span></li><li><b class="next">Next</b><span>"Part three: running it for real."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="ci" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// RUNNING IT FOR REAL 01</p><h2>In CI, nightly, or all the time?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="table-wrap"><table class="ci-table" aria-label="Where to run fuzzers">
+        <thead><tr><th scope="col">Where</th><th scope="col">How long</th><th scope="col">What it's for</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Every pull request</th><td>minutes</td><td>Replay the saved corpus, fuzz the changed targets briefly, fail on a new crash</td></tr>
+          <tr><th scope="row">Nightly or weekly</th><td>hours</td><td>Longer runs, grow the corpus, catch what short runs miss</td></tr>
+          <tr><th scope="row">Continuous</th><td>days, always on</td><td>Deep bugs; the corpus and coverage keep building between releases</td></tr>
+        </tbody>
+      </table></div>
+      <label class="lr-label" for="ci-speed">How fast is your harness?</label>
+      <select id="ci-speed" aria-label="Executions per second"><option value="10" selected>10 a second (heavy)</option><option value="100">100 a second</option><option value="1000">1,000 a second</option><option value="10000">10,000 a second</option><option value="100000">100,000 a second (tiny)</option></select>
+    </div>
+    <div class="stack">
+      <div class="seg-pick"><button type="button" id="ci-run">Time the three toy bugs (12 runs each)</button></div>
+      <div class="table-wrap"><table class="sd-table" aria-label="Time to find each bug">
+        <thead><tr><th scope="col">Bug</th><th scope="col">Median tries</th><th scope="col">Time at this speed</th><th scope="col">Fits in</th></tr></thead>
+        <tbody id="ci-body"></tbody>
+      </table></div>
+      <p class="comment" id="ci-note" aria-live="polite"></p>
+      <p class="fine">Toy numbers on an invented parser, coverage-only (no comparison tracing), seed record REC1:5:hello, limit 60,000 tries. "Fits in": PR = 10 minutes, nightly = 1 hour, continuous = 24 hours.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three places, three budgets. On every pull request you replay the saved corpus (seconds) and give changed targets a short fuzz: it catches regressions and the shallow bugs. A nightly run goes longer and grows the corpus. A continuous service keeps going between releases. Our toy has one shallow bug and two deeper ones: pick the speed of your own harness and see which budgets find what. Slow harnesses are the main reason fuzzing disappoints: one reason to keep them small and fast.</span></li><li><b class="show">Show</b><span>Press the button, then change the speed menu: the table updates without re-running. The slowest case shows why continuous fuzzing exists.</span></li><li><b class="show">Check</b><span>The table of three places is my own practical summary. From the CIFuzz page (read 11 November 2026): CIFuzz runs fuzz targets on pull requests, builds them from the PR, runs them for a short time, reports a crash only if it reproduces on the PR build and doesn't occur in older OSS-Fuzz builds, defaults to 600 seconds, and the page recommends at least that, scaled to project size. The toy times use the speed you pick and are not benchmarks.</span></li><li><b class="next">Next</b><span>"And when it finds something?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="triage" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// RUNNING IT FOR REAL 02</p><h2>Crash handling: deduplicate, shrink, fix, keep</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="rules rules-num">
+        <li><b>Deduplicate.</b> A thousand crashes are usually a handful of bugs. Group by where they happen.</li>
+        <li><b>Reproduce and shrink.</b> The smallest input that still fails is the easiest to understand.</li>
+        <li><b>Fix the cause</b>, not the symptom.</li>
+        <li><b>Keep the input</b> as a regression test. It's free, and it runs in every build.</li>
+      </ol>
+      <div class="seg-pick"><button type="button" id="tr-run">Fuzz 20,000 tries with three bugs in the code</button><button type="button" id="tr-min" disabled>Shrink each one</button></div>
+      <p class="comment" id="tr-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="stats fz-stats">
+        <div class="stat"><b id="tr-raw">–</b><span>crashes</span></div>
+        <div class="stat"><b id="tr-uniq">–</b><span>distinct bugs</span></div>
+      </div>
+      <div class="table-wrap"><table class="sd-table" aria-label="Crashes grouped by site">
+        <thead><tr><th scope="col">Where</th><th scope="col">Hits</th><th scope="col">First input found</th><th scope="col">Shrunk to</th></tr></thead>
+        <tbody id="tr-body"></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Run the fuzzer on a build with all three planted bugs and keep going after the first crash. Over a thousand crashes, three distinct causes. Real tools deduplicate by stack trace; the toy groups by the function where it failed. Then shrink one example from each group: the first is the long, messy input the fuzzer happened to find; the second is what you'd actually put in a bug report and a test.</span></li><li><b class="show">Show</b><span>Press the first button, then Shrink each one. The shrunk inputs are short enough to read: a missing length, an empty field, a four-letter tag.</span></li><li><b class="show">Check</b><span>Go's engine minimises a failing input and writes it to testdata/fuzz (go.dev); libFuzzer writes crash-&lt;sha1&gt; files (LLVM) and its -minimize_crash option shrinks them (I ran it). Whether to dedupe by stack, by function or by sanitizer report depends on your tooling: the toy's grouping is deliberately simple.</span></li><li><b class="next">Next</b><span>"Who runs this for you?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="programmes" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// RUNNING IT FOR REAL 03</p><h2>Tools and programmes you can use today</h2></header>
+  <div class="slide-body">
+    <div class="cards-3 pg-grid">
+      <div class="card"><b>libFuzzer · AFL++ · Honggfuzz</b><span>The main engines. libFuzzer ships with clang. AFL++ is a community fork that gathers improvements to AFL, which hasn't been updated since 2017.</span></div>
+      <div class="card"><b>Go, Rust, Python</b><span>Native Go fuzzing since Go 1.18. cargo-fuzz for Rust (libFuzzer, nightly compiler). Atheris for Python (libFuzzer-based). Hypothesis for property tests.</span></div>
+      <div class="card"><b>OSS-Fuzz</b><span>Google's free continuous fuzzing for open-source projects. Its README says it had found over 13,000 vulnerabilities and 50,000 bugs across about 1,000 projects as of May 2025.</span></div>
+      <div class="card"><b>CIFuzz</b><span>A GitHub Action that runs OSS-Fuzz projects' fuzz targets on pull requests. Default 10 minutes.</span></div>
+      <div class="card"><b>ClusterFuzzLite</b><span>Fuzzing in your own CI: pull-request fuzzing, longer batch runs, crash downloads and coverage reports. GitHub Actions, GitLab, Cloud Build, Prow. C, C++, Java, Go, Python, Rust, Swift.</span></div>
+      <div class="card"><b>Where to begin</b><span>One parser. One harness. Run it over lunch with a sanitizer. Add it to CI when it's quiet.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>You don't build any of this yourself. Engines: libFuzzer, AFL++, Honggfuzz. Language-native: Go has it in the standard toolchain; Rust and Python use libFuzzer underneath. If your project is open source, OSS-Fuzz will run your fuzzers for free once they're integrated. For private code, ClusterFuzzLite gives you a pull-request mode and a batch mode on your own CI. Start with one target.</span></li><li><b class="show">Check</b><span>Read on 11 November 2026: OSS-Fuzz README (engines libFuzzer, AFL++, Honggfuzz; the 13,000 and 50,000 figures are "as of May 2025" and the README may have updated since; languages it lists include Java/JVM and JavaScript); ClusterFuzzLite's home page (modes, CI systems, languages); the CIFuzz page; aflplus.plus (AFL++ is a fork of AFL, AFL last updated in November 2017 on that page); go.dev (Go 1.18); the rust-fuzz book (nightly); Atheris's README (based on libFuzzer). Hypothesis's home page. Not read: Honggfuzz's own page, and any commercial service's pricing or availability, which the deck doesn't mention. Google's OSS-Fuzz-Gen, which asked language models to write harnesses, shows as archived and no longer maintained on its repository page; the deck doesn't rely on it.</span></li><li><b class="next">Next</b><span>"How do you know it's working?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="measuring" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// RUNNING IT FOR REAL 04</p><h2>Measuring progress: coverage over time</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <svg class="cov-chart" id="cv-chart" viewBox="0 0 560 300" role="img" aria-label="Branches reached against tries, for four strategies"></svg>
+      <ul class="cv-legend" id="cv-legend"></ul>
+      <div class="seg-pick"><button type="button" id="cv-run">Draw the curves</button><button type="button" id="cv-again">Another run</button></div>
+    </div>
+    <div class="stack">
+      <div class="card"><b>What to watch</b><span>Coverage <em>rising</em> means the fuzzer is learning. A <em>plateau</em> means it's stuck, or done.</span></div>
+      <div class="card"><b>When it goes flat</b><span>Is the harness reaching the code at all? Add seeds and a dictionary. Check for a checksum or length field it can't guess. Try a structure-aware mutator. Look at the coverage report for code that never ran.</span></div>
+      <div class="card"><b>Coverage isn't correctness</b><span>High coverage means the code ran, not that bugs were found. It's a progress signal, not a finish line.</span></div>
+      <p class="comment" id="cv-note" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Four runs of 20,000 tries on the toy parser, drawn on one chart: random text, mutation only, coverage-guided with coverage feedback alone, and coverage-guided with comparison tracing. Random is the flat line: it barely gets off the floor. Mutation climbs a little and stops. Guided keeps climbing, and the comparison-tracing run gets there first. In real life you'd watch the same curve per target: if it goes flat, ask why before assuming you're finished.</span></li><li><b class="show">Show</b><span>Press Draw the curves, then Another run: the shapes stay, the details change.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question 3) A target's coverage has been flat for a week. What do you check? <em>Answer: whether the harness reaches the code, whether seeds or a dictionary are missing, whether something blocks progress (a checksum, a length), and whether the code that never ran needs a different harness.</em></span></li><li><b class="show">Check</b><span>The toy curves are drawn from real runs of this page's own fuzzer on its own invented parser. Real tools (libFuzzer's cov: and ft: counts, coverage reports in ClusterFuzzLite) measure real code. libFuzzer's log fields are from its docs.</span></li><li><b class="next">Next</b><span>"Checkpoint."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What would you run on every pull request, and what overnight?</p><details><summary>Hint</summary><p>Think about how long each takes, and what each can find.</p></details><details class="answer"><summary>Answer</summary><p>On every pull request: replay the saved corpus (and past crash files) so nothing regresses, then fuzz the changed targets for a few minutes. Overnight or continuously: longer runs that grow the corpus and reach the deep bugs short runs miss.</p></details></li>
+      <li><p>A crash file arrives. What happens to it, step by step?</p><details><summary>Hint</summary><p>Four verbs.</p></details><details class="answer"><summary>Answer</summary><p>Reproduce it, shrink it, fix the cause, keep the shrunken input as a regression test that runs in every build. Group duplicates first so you fix one bug once.</p></details></li>
+      <li><p>Coverage on one target has been flat for a week. What do you check?</p><details><summary>Hint</summary><p>Is the fuzzer stuck, or is the harness the problem?</p></details><details class="answer"><summary>Answer</summary><p>Whether the harness actually reaches the code you care about, whether seeds or a dictionary would help, whether a checksum or length field is blocking it, whether a structure-aware approach fits, and what the coverage report says never ran.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= WRAP-UP -->
+<section class="slide" id="checklist" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>A fuzzing checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list"></div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The talk on one page. Tick what's true today; each unticked box is a ticket. The ticks are saved in this browser only, and the PDF button prints the list. If you do one thing: pick your riskiest parser and write its harness this week.</span></li><li><b class="show">Check</b><span>The checklist is my own summary of the talk, not a standard.</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Which function in your code reads bytes you don't control? Bring a real example and we'll sketch its harness together.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The fuzzer, the minimiser and the property test stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../memory-safety/">Memory Safety</a><span>The bugs fuzzers love, and the sanitizers that make them loud.</span></li>
+        <li><a href="../security-testing/">Security Testing in Your Workflow</a><span>Where fuzzing sits beside static analysis, scanning and tests.</span></li>
+        <li><a href="../secure-code-review/">Secure Code Review Workshop</a><span>The human version: reading the diff for the same bugs.</span></li>
+        <li><a href="../cryptographic-failures/">Cryptographic Failures</a><span>Parsing bugs in famous places, told from the defender's side.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser on an invented parser; nothing you type is sent anywhere. The libFuzzer output was captured from a small test program. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. If someone describes a real parser, run the target-picker questions on it live: where do the bytes come from, is it fast, what does a harness for it need?</span></li><li><b class="show">Check</b><span>Links go to other hub talks. Nothing external is linked from this slide.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+<div class="fz-toast" id="fz-toast" role="status" aria-live="polite" hidden></div>
+
+<script src="fuzz.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
