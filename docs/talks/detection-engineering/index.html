@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Detection Engineering</title>
+<meta name="description" content="Detection Engineering: from a threat report to a tested, reviewed and measured rule. A talk by zevaryx, with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/detection-engineering/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Detection Engineering">
+<meta property="og:description" content="From a threat report to a tested, reviewed and measured rule. Live demos run in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/detection-engineering/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/detection-engineering/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "detection-engineering", "title": "Detection Engineering", "footer": "DETECT", "subtitle": "SECURITY TRACK · 06",
+  "parts": [{ "name": "From threat to detection", "minutes": 24 }, { "name": "Writing detections", "minutes": 37 },
+            { "name": "Testing and coverage", "minutes": 23 }, { "name": "Detections as code", "minutes": 21 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Detection Engineering</a>
+  <div class="scroll-parts">
+    <a href="#lifecycle" data-part="1"><b>01</b>Threat to rule</a>
+    <a href="#data-sources" data-part="2"><b>02</b>Writing</a>
+    <a href="#tests" data-part="3"><b>03</b>Testing</a>
+    <a href="#pipeline" data-part="4"><b>04</b>As code</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// SECURITY TRACK 06 · FOR SOC AND DETECTION TEAMS</p>
+      <h1><span class="pre">Detection</span> <span class="glitch" data-text="Engineering">Engineering</span></h1>
+      <p class="lede">A rule is a hypothesis about attacker behaviour. Engineering is what makes it testable, reviewable and measurable: from a threat report to a rule, a test, a pipeline and, one day, a retirement date.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/detection-engineering/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>pyramid of pain</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ which-rung&nbsp;<input id="hero-in" value="svc_update.exe" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 110 minutes, four parts, three checkpoints. This builds on the logging talk: that one was about having the data and a signal a person can act on. This one is about the rules that turn data into that signal, and how to treat them like software: written down, tested, reviewed, measured and retired.</span></li><li><b class="show">Show</b><span>The terminal: type something an attacker uses (a hash, an address, a domain, a file name, a tool, a behaviour) and it says which rung of the Pyramid of Pain it sits on. The higher the rung, the more it hurts the attacker when you take it away. A toy: it looks at the shape of what you type.</span></li><li><b class="tip">Eggs</b><span>Title slide: an empty box, "pyramid", "ttp", "sigma", "hello", the SHA-256 of the empty string, 127.0.0.1 or localhost, any 203.0.113.x address, example.com or any .test name, a technique ID such as T1059.001, and T1562 (revoked). Elsewhere: in the report exercise choose all twelve statements, or only the hash; get 6 of 6 on the technique mapping; in the playground write a rule that matches everything, nothing, or every attack with no false alarms, or set level critical; tick every change on the attacker-changes slide and choose a service for persistence; in the test lab get all tests green, with and without the variants; take all six emulation results to the end; in the tuning lab hide an attack with a careless filter, or reach a quiet week with all attacks caught; in the pipeline break everything at once or get all green; on the coverage grid paint it all green; tick all 12 on the checklist. The console has a hint too.</span></li><li><b class="next">Next</b><span>"Here's the plan."</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#lifecycle"><small>PART 1 · 24 MIN</small><b>From threat to detection</b></a><span>The detection lifecycle</span><span>The Pyramid of Pain</span><span>A report into detections</span><span>Mapping to ATT&amp;CK</span></li>
+      <li><a href="#data-sources"><small>PART 2 · 37 MIN</small><b>Writing detections</b></a><span>The data you really have</span><span>Sigma: anatomy of a rule</span><span>Rule playground</span><span>What survives a change</span><span>Tuning, and documenting</span></li>
+      <li><a href="#tests"><small>PART 3 · 23 MIN</small><b>Testing and coverage</b></a><span>Test-first detections</span><span>Emulation and purple teams</span><span>What a green square proves</span></li>
+      <li><a href="#pipeline"><small>PART 4 · 21 MIN</small><b>Detections as code</b></a><span>The pipeline</span><span>Metrics that matter</span><span>Drift and retirement</span><span>A checklist</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour. Every demo runs a real rule engine on made-up data, in your browser.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is the thinking: what to detect, and which indicators are worth your time. Part 2 is writing rules, with a playground where you edit a real Sigma-format rule and watch it match a log. Part 3 is testing and measuring honestly. Part 4 is running it as a pipeline, with metrics and a way to retire what no longer works.</span></li><li><b class="next">Next</b><span>"Why call it engineering?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>The map doesn't tell you what you can detect</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stats stats-3">
+        <div class="stat"><b>227 + 479</b><span>techniques and sub-techniques in Enterprise ATT&amp;CK v20.1. A map of behaviours, not a checklist.</span></div>
+        <div class="stat"><b>706</b><span>detection strategies in that data, with <b>1,773</b> analytics: starting points, each with settings you must tune.</span></div>
+        <div class="stat"><b>3,000+</b><span>rules in SigmaHQ's public repository, in one portable format.</span></div>
+      </div>
+      <p class="big-lede">A rule that was never tested is a hope, not a control.</p>
+      <ul class="rules">
+        <li>Rules are <b>code</b>: they have inputs, bugs, owners and a lifecycle.</li>
+        <li>Indicators <b>expire</b>. Behaviours last, if you test them against more than one sample.</li>
+        <li>Two teams can both be "covered" on a heatmap and have very different detection.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <p class="quote">"Two organizations can show the same technique as green on an ATT&amp;CK heatmap"<cite>MITRE Center for Threat-Informed Defense, "Beyond the Heatmap", 10 Sep 2026</cite></p>
+      <p class="quote">"Threat actors can easily modify known IOCs, such as filenames and command line arguments, or modify content to change the hash."<cite>CISA, NSA, FBI and partners, living off the land guidance, 7 Feb 2024</cite></p>
+      <div class="card"><b>8 Dec 2020: detections shared as code</b><span>After its red-team tools were stolen, FireEye published "hundreds of countermeasures" in formats such as Yara and Snort. The repository labels each one <b>Production</b> (little tuning needed) or <b>Supplemental</b> (needs tuning for your environment, often used for hunting): maturity written next to the rule.</span></div>
+      <p class="src">Sources: <a href="https://attack.mitre.org/resources/versions/" target="_blank" rel="noopener">ATT&amp;CK versions</a> · <a href="https://github.com/mitre-attack/attack-stix-data" target="_blank" rel="noopener">ATT&amp;CK STIX data</a> (counted 9 Nov 2026) · <a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noopener">SigmaHQ README</a> · <a href="https://ctid.mitre.org/blog/2026/09/10/summiting-the-pyramid-2026/" target="_blank" rel="noopener">CTID</a> · <a href="https://www.cisa.gov/resources-tools/resources/identifying-and-mitigating-living-land-techniques" target="_blank" rel="noopener">CISA LOTL guidance</a> · <a href="https://cloud.google.com/blog/topics/threat-intelligence/unauthorized-access-of-fireeye-red-team-tools" target="_blank" rel="noopener">FireEye post</a>, <a href="https://github.com/mandiant/red_team_tool_countermeasures" target="_blank" rel="noopener">repo</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>ATT&amp;CK is a catalogue of what attackers do, and since 2025 it ships starting points for detecting each technique. That is useful, and it is also the reason for this talk: a starting point isn't a detection until it's been adapted to your data, tested, owned and measured.</span></li><li><b class="say">Say</b><span>The two quotes are the thesis. The first is about measuring: a green square says very little. The second is about durability: the things that are easiest to match (a hash, a file name, a command-line detail) are the easiest for an attacker to change. We'll spend the day on what to do instead.</span></li><li><b class="tip">Check</b><span>Counts are mine, from the Enterprise ATT&amp;CK STIX data (v20.1, released 13 Oct 2026) on 9 Nov 2026, excluding revoked and deprecated objects: 227 techniques, 479 sub-techniques, 15 tactics, 706 detection strategies, 1,773 analytics. ATT&amp;CK v18 (28 Oct 2025) replaced the per-technique detection text with Detection Strategies and Analytics and deprecated Data Sources (v18 release notes); each analytic in the data lists "mutable elements", the fields meant to be tuned per environment. SigmaHQ's README says "more than 3000 detection rules"; I counted 3,782 rule files with a detection section in its rules folders, which is a file count, not a quality claim. The CTID quote is exact; the post continues that actual capabilities may differ substantially. FireEye: post dated 8 Dec 2020 says it released "hundreds of countermeasures for publicly available technologies like OpenIOC, Yara, Snort, and ClamAV"; the repository's README defines Production and Supplemental; the repository was archived on 8 May 2025. The CISA quote is from the guidance PDF.</span></li><li><b class="next">Next</b><span>"Let's start with the whole lifecycle."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="lifecycle" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// FROM THREAT TO DETECTION 01</p><h2>The detection lifecycle: seven steps, each with an output</h2></header>
+  <div class="slide-body stack">
+    <div class="lc-steps" id="lc-steps" role="group" aria-label="Lifecycle steps"></div>
+    <div class="lc-detail" id="lc-detail" aria-live="polite"></div>
+    <p class="callout"><b>IN A SIGMA RULE</b> the lifecycle shows up as fields: <code>status</code> (stable, test, experimental, deprecated, unsupported), <code>date</code> and <code>modified</code>, <code>falsepositives</code>, <code>level</code>, and <code>tags</code> for the ATT&amp;CK technique.</p>
+    <p class="src">Sources: <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-rules-specification.md" target="_blank" rel="noopener">Sigma rules specification 2.1.0</a> (status, level, tags) · <a href="https://github.com/palantir/alerting-detection-strategy-framework" target="_blank" rel="noopener">Palantir ADS framework</a></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click through the seven steps. For each: what you make, what typically goes wrong, and the question to ask. Most teams do steps 1, 3 and 5 and skip the others.</span></li><li><b class="say">Say</b><span>The lifecycle isn't a waterfall: tune feeds back into rule, and retire feeds back into idea. The reason to write it as steps is that each one has an output you can review: a hypothesis, a data list, a file, a test run, a rollout plan, a filter with a reason, a retirement note.</span></li><li><b class="ask">Ask</b><span>Which of the seven does your team do least? <em>Answer: usually test and retire. Both are about evidence, and neither has a natural owner unless you give it one.</em></span></li><li><b class="tip">Check</b><span>The Sigma status values and meanings are from the rules specification 2.1.0 (2 Aug 2025): stable (may be used in production), test (mostly stable, may need slight adjustments), experimental (could be noisy), deprecated (replaced or covered by another rule), unsupported (can't be used in its current state). The spec lists falsepositives and level as optional; write them anyway. The seven-step lifecycle is this talk's own framing, in line with the Palantir ADS idea of validating before production.</span></li><li><b class="next">Next</b><span>"Step one starts with a threat report. What do you pull out of it?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="pyramid" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// FROM THREAT TO DETECTION 02</p><h2>The Pyramid of Pain: what you take away from the attacker</h2></header>
+  <div class="slide-body cols-2 cols-detail">
+    <div class="stack">
+      <div class="py-wrap" id="py-rungs" role="group" aria-label="Pyramid of Pain rungs"></div>
+      <div class="py-axis"><span>cheap for them to change</span><span>costly</span></div>
+    </div>
+    <div class="stack">
+      <div class="fa-detail" id="py-detail" aria-live="polite"></div>
+      <p class="note">Use the lower rungs as <b>cheap enrichment</b>: search last month's logs, add to a blocklist. Build the <b>detections</b> higher up.</p>
+      <p class="src">Sources: <a href="http://detect-respond.blogspot.com/2013/03/the-pyramid-of-pain.html" target="_blank" rel="noopener">David Bianco, The Pyramid of Pain</a> (1 Mar 2013) · <a href="https://center-for-threat-informed-defense.github.io/summiting-the-pyramid/levels/quicklevels" target="_blank" rel="noopener">Summiting the Pyramid, v4.0.0 levels</a> (STP column: my loose alignment)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Click each rung from the bottom. The question is always the same: if I block or detect this, what does the attacker have to do? A hash: rebuild. An address: rent another. A domain: register another. Then it gets more expensive, until the top, where they have to change how they work.</span></li><li><b class="say">Say</b><span>Bianco's point isn't that indicators are bad. His post says they're valuable if you can respond to them fast enough, but "not all indicators are created equal". The Pyramid is a way to ask what each detection costs the attacker when you take it away.</span></li><li><b class="ask">Ask</b><span>Which rung do most of your current detections sit on? <em>Answer: usually the bottom three, because they're easy to get from a feed and easy to write. The top is harder: it needs telemetry you may not have and rules you have to test.</em></span></li><li><b class="tip">Check</b><span>Quotes are from Bianco's post (1 Mar 2013, updated 17 Jan 2014): hash values ("It is so easy for hash values to change"), IP addresses ("they can usually recover without even breaking stride"), domain names ("slightly harder to change than just IP addresses"), tools ("they have to invest time in research"), TTPs defined as "how the adversary goes about accomplishing their mission". The "pain" rating on the left is the post's own colour and wording, not a measurement; the original diagram's difficulty labels aren't in the post text I read, so they aren't used. The Summiting the Pyramid (STP) levels are the exact names from its v4.0.0 documentation: Level 1 "Ephemeral Values", Level 2 "Core to Adversary-Brought Tools", Level 3 "Core to Pre-Existing Tools", Level 4 "Core to Some Implementations of (Sub-)Technique", Level 5 "Core to Sub-Technique or Technique". The mapping between Bianco's rungs and STP levels is my loose alignment: they measure different things (kinds of indicator versus how an analytic observes a technique).</span></li><li><b class="next">Next</b><span>"Let's do it on a report."</span></li></ul></div>
+</section>
+
+<section class="slide" id="report" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// FROM THREAT TO DETECTION 03</p><h2>A made-up report: what do you detect?</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls"><span class="note"><b>MARMALADE MOTH</b>: all invented</span><button type="button" class="btn btn-ghost btn-sm" id="rp-clear">Clear</button><button type="button" class="btn btn-sm" id="rp-model">Show a model answer</button></div>
+      <div class="rp-list" id="rp-list" role="group" aria-label="Statements from the report"></div>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3 stats-sm" id="rp-stats">
+        <div class="stat"><b id="rp-n">0</b><span>chosen</span></div>
+        <div class="stat"><b id="rp-b">0</b><span>behaviours</span></div>
+        <div class="stat"><b id="rp-i">0</b><span>indicators</span></div>
+      </div>
+      <div class="rp-out" id="rp-out" aria-live="polite"></div>
+      <p class="verdict" id="rp-verdict" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Tick the statements you'd turn into a detection. Each one shows its rung, the ATT&amp;CK technique if it's a behaviour, and the data you'd need. Then "Show a model answer": four behaviours to detect, eight values to keep as enrichment. Give the room two minutes to argue it before you press the button.</span></li><li><b class="say">Say</b><span>Nobody is told not to use a hash or an address. They're cheap to match and cheap to lose: put them into search and blocklists and use them to find other victims. The detections you maintain are the four behaviours: Office starting PowerShell with a hidden window and an encoded command, certutil used to download, a scheduled task that runs something from a folder anyone can write to, and shadow copies being deleted.</span></li><li><b class="ask">Ask</b><span>Which behaviour would you write first, and which of your log sources would you need? <em>Answer: process creation with parent and command line covers all four. That one telemetry choice decides how much of the report you can detect, which is the next section.</em></span></li><li><b class="tip">Check</b><span>The report, the actor, the file, the addresses (203.0.113.0/24 is reserved for documentation) and the domains (.test is reserved) are all invented. The hash shown is the real SHA-256 of a made-up string. The "model answer" is a teaching choice, not the only valid one: a team without file telemetry would drop the tool, and a team with proxy logs might also alert on the User-Agent.</span></li><li><b class="next">Next</b><span>"Now, put names on the behaviours."</span></li></ul></div>
+</section>
+
+<section class="slide" id="attack-map" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// FROM THREAT TO DETECTION 04</p><h2>Name the behaviour, find the technique</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="aq-list" id="aq-list"></div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="aq-check">Check my mapping</button><button type="button" class="btn btn-ghost btn-sm" id="aq-reset">Reset</button><span class="note" id="aq-score"></span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A technique tag is how a rule finds a <b>place on the map</b>, and how you find the next gap.</li>
+        <li>Pick the <b>most specific</b> one that fits: a sub-technique when the behaviour names one.</li>
+        <li>Check the ID against the <b>current version</b>. ATT&amp;CK v19 (April 2026) replaced Defense Evasion with Stealth and Defense Impairment and revoked T1562 (Impair Defenses) in favour of <b>T1685</b> (Disable or Modify Tools).</li>
+        <li>A behaviour can map to several techniques. SigmaHQ's certutil download rule is tagged <code>attack.t1105</code> (Ingress Tool Transfer).</li>
+      </ul>
+      <div class="note-panel" id="aq-out" aria-live="polite">Choose a technique for each line, then check.</div>
+      <p class="src">Sources: <a href="https://attack.mitre.org/techniques/T1105/" target="_blank" rel="noopener">T1105</a> · <a href="https://attack.mitre.org/techniques/T1059/001/" target="_blank" rel="noopener">T1059.001</a> · <a href="https://attack.mitre.org/techniques/T1053/005/" target="_blank" rel="noopener">T1053.005</a> · <a href="https://attack.mitre.org/techniques/T1490/" target="_blank" rel="noopener">T1490</a> · <a href="https://attack.mitre.org/resources/updates/updates-april-2026/" target="_blank" rel="noopener">ATT&amp;CK v19 notes</a> · <a href="https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_certutil_download.yml" target="_blank" rel="noopener">SigmaHQ certutil rule</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Pick a technique for each line and check. The distractors are real techniques that are easy to confuse: a Run key and a service are other ways to persist, and LSASS memory is credential dumping.</span></li><li><b class="say">Say</b><span>The mapping step looks like paperwork and isn't. It's how you find out later that you have five rules for PowerShell and none for persistence. It also forces a specific question: what exactly is the behaviour?</span></li><li><b class="tip">Check</b><span>Names and IDs checked against Enterprise ATT&amp;CK v20.1 data on 9 Nov 2026: T1566.001 Spearphishing Attachment, T1059.001 PowerShell, T1105 Ingress Tool Transfer, T1053.005 Scheduled Task, T1490 Inhibit System Recovery, T1486 Data Encrypted for Impact, T1547.001 Registry Run Keys / Startup Folder, T1543.003 Windows Service, T1003.001 LSASS Memory. In v19 (28 Apr 2026) T1562 Impair Defenses is listed as revoked by T1685 Disable or Modify Tools. T1070 (Indicator Removal) was not renumbered. Mapping choices are judgement: ATT&amp;CK itself says a behaviour can map to more than one technique.</span></li><li><b class="next">Next</b><span>"Time to pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is detecting a behaviour more durable than detecting a file hash or an IP address?</p><details><summary>Hint</summary><p>What does the attacker have to do to get around each one?</p></details><details class="answer"><summary>Answer</summary><p>A hash changes with a rebuild and an address with a rented server: both are cheap. A behaviour, such as Office starting PowerShell with a hidden window and an encoded command, is how they get the job done, so avoiding your detection means learning and rehearsing a different way to do it.</p></details></li>
+      <li><p>A report lists a hash, a server address and a technique. What do you do with each?</p><details><summary>Hint</summary><p>Which of them can you maintain for a year?</p></details><details class="answer"><summary>Answer</summary><p>The hash and the address go into a search over past logs and your blocklists, as cheap, short-lived enrichment. The technique becomes a behaviour detection with tests, an owner and a review date.</p></details></li>
+      <li><p>Your logs have no parent process and no command line. Which parts of the report can you still detect?</p><details><summary>Hint</summary><p>What does each statement need to be seen?</p></details><details class="answer"><summary>Answer</summary><p>Mostly the indicators: addresses in network logs, domains in DNS logs. The behaviours need process telemetry with the command line. A detection you can't run isn't a detection: the missing telemetry goes on the backlog, and the gap goes on the coverage map as "no data".</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself. Question 1 is the one to get right.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="data-sources" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// WRITING DETECTIONS 01</p><h2>Write for the data you actually have</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls"><span class="note">Telemetry</span></div>
+      <div class="seg-pick" role="group" aria-label="Telemetry" id="ts-profile"></div>
+      <div class="controls"><span class="note">Rule</span></div>
+      <div class="seg-pick" role="group" aria-label="Rule" id="ts-rule"></div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="ts-caught">2 of 2</b><span>attacks caught</span></div>
+        <div class="stat"><b id="ts-fp">0</b><span>false alarms</span></div>
+        <div class="stat"><b id="ts-miss">0</b><span>fields the rule can't read</span></div>
+      </div>
+      <p class="fine">Fields this rule reads:</p>
+      <div class="ts-fields" id="ts-fields"></div>
+      <p class="verdict" id="ts-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <p class="ts-note" id="ts-note"></p>
+      <table class="grid-table ts-map" aria-label="Sigma field names and the Windows Security event"><thead><tr><th>Sigma field</th><th>Windows Security 4688</th></tr></thead><tbody>
+        <tr><td><code>Image</code></td><td><code>NewProcessName</code></td></tr>
+        <tr><td><code>ParentImage</code></td><td><code>ParentProcessName</code> (Windows 10 and later)</td></tr>
+        <tr><td><code>CommandLine</code></td><td><code>CommandLine</code>, empty unless a policy is on</td></tr>
+        <tr><td><code>IntegrityLevel</code></td><td><code>MandatoryLabel</code>, a SID such as S-1-16-8192</td></tr>
+        <tr><td><code>OriginalFileName</code>, <code>Hashes</code>, <code>ParentCommandLine</code></td><td>not in the event</td></tr>
+      </tbody></table>
+      <p class="src">Sources: <a href="https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688" target="_blank" rel="noopener">Microsoft, event 4688</a> · <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon" target="_blank" rel="noopener">Sysmon</a> · <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-appendix-taxonomy.md" target="_blank" rel="noopener">Sigma taxonomy appendix</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Pick the Office rule and switch the telemetry. Sysmon: both attacks caught. Windows Security 4688 with the command-line policy on: still caught, because the rule only needs parent and child. Policy off: the same, since the rule doesn't read the command line, apart from the finance filter, which now fails to filter. Then pick the certutil rule: with 4688 and policy off it catches nothing, and it reports no error.</span></li><li><b class="say">Say</b><span>The same behaviour can be visible, partly visible or invisible depending on which sensor you have, and the rule won't tell you. A rule written for one source is a hypothesis about another. Sigma's logsource (category: process_creation, product: windows) abstracts this: a converter maps the generic fields to your source's. It can't invent a field the source doesn't have.</span></li><li><b class="ask">Ask</b><span>Which of your sources record the command line, the parent's command line and the original file name? <em>Answer: find out before you copy rules. A quick test: run a harmless known command in a lab and look at the event.</em></span></li><li><b class="tip">Check</b><span>Windows Security event 4688 fields were read from Microsoft's page (event versions 0 to 2): NewProcessName, ParentProcessName and MandatoryLabel (version 2, Windows 10); the command-line field "is empty by default" until the group policy "Include command line in process creation events" is enabled; the page lists no hashes, no original file name and no parent command line. The Sysmon page describes process creation with the full command line "for both current and parent processes" and hashes (configurable). The EDR profile is made up. The renamed-binary events used in this demo are extra attack events that aren't shown in the playground log.</span></li><li><b class="next">Next</b><span>"What does the rule itself look like?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sigma" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// WRITING DETECTIONS 02</p><h2>Sigma: anatomy of a portable rule</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <pre class="sg-code" id="sg-code" aria-label="A Sigma rule. Click a section to explain it."></pre>
+    </div>
+    <div class="stack">
+      <div class="fa-detail" id="sg-detail" aria-live="polite"></div>
+      <table class="grid-table mods" aria-label="Common Sigma modifiers"><thead><tr><th>Modifier</th><th>What it does</th></tr></thead><tbody>
+        <tr><td>contains, startswith, endswith</td><td>where the value sits in the field</td></tr>
+        <tr><td>all</td><td>a list of values means AND, not OR</td></tr>
+        <tr><td>re (i, m, s)</td><td>regular expression, case-sensitive unless <code>i</code></td></tr>
+        <tr><td>windash</td><td><code>-</code> and <code>/</code> in flags are interchangeable</td></tr>
+        <tr><td>cidr, lt, lte, gt, gte, neq</td><td>network ranges and numbers</td></tr>
+        <tr><td>exists, cased, fieldref</td><td>field present, case-sensitive, compare two fields</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <p class="src slide-src">Sources: <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-rules-specification.md" target="_blank" rel="noopener">Sigma rules specification 2.1.0</a> · <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-appendix-modifiers.md" target="_blank" rel="noopener">modifiers appendix</a> · <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-appendix-tags.md" target="_blank" rel="noopener">tags appendix</a> · the example is my own, in the style of <a href="https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_certutil_download.yml" target="_blank" rel="noopener">SigmaHQ's certutil rule</a></p>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Click each block of the rule from the top. The metadata first, then the log source, then the three search identifiers, then the condition that combines them. The point to land: <code>all of selection_*</code> means three small, readable tests ANDed together, and each can be fixed on its own.</span></li><li><b class="say">Say</b><span>Sigma is to log detection what a unit test is to code: a format that says what a rule means, separately from the language of any one SIEM. Converters such as pySigma and sigma-cli turn it into a query for your product. The rule you read here is the actual unit you review, test and version.</span></li><li><b class="ask">Ask</b><span>Why is the original file name in the rule as well as the image path? <em>Answer: a copy of the program under another name changes Image but not OriginalFileName. The playground and the test lab both show it.</em></span></li><li><b class="tip">Check</b><span>All spec statements are from the Sigma specification repository (rules, modifiers and tags documents, version 2.1.0 dated 2 Aug 2025; the repository's newest release tag, v2.1.0, was published 12 Sep 2025 and was still the latest in its release list on 9 Nov 2026). Mandatory fields: title, logsource, detection (with a condition). Wildcards are * and ?; values are case-insensitive by default; regular expressions are case-sensitive and limited to a portable subset. Operator precedence, least to most binding: or, and, not, "1/all of", brackets. Level meanings, including that critical is "used only for cases in which probability borders certainty", are quoted from the spec. The spec's tags appendix defines namespaces attack, car, cve, d3fend, detection, stp and tlp. Real SigmaHQ rules such as the certutil one combine Image or OriginalFileName, a flags selection and a "http" selection in the same way; mine is my own text.</span></li><li><b class="next">Next</b><span>"Now edit one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="playground" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// WRITING DETECTIONS 03</p><h2>Rule playground: edit a rule, watch the log</h2></header>
+  <div class="slide-body cols-2 pg-grid">
+    <div class="stack">
+      <div class="chips" id="pg-presets" role="group" aria-label="Starting rules"></div>
+      <textarea class="rule" id="pg-rule" spellcheck="false" autocomplete="off" aria-label="Sigma rule, editable"></textarea>
+      <p class="pg-status ok" id="pg-status" aria-live="polite"></p>
+      <ul class="pg-warn" id="pg-warn"></ul>
+    </div>
+    <div class="stack">
+      <div class="stats stats-4 stats-sm">
+        <div class="stat"><b id="pg-tp">0</b><span>attacks caught</span></div>
+        <div class="stat"><b id="pg-fn">0</b><span>attacks missed</span></div>
+        <div class="stat"><b id="pg-fp">0</b><span>false alarms</span></div>
+        <div class="stat"><b id="pg-n">0</b><span>events</span></div>
+      </div>
+      <div class="pg-wrap" id="pg-wrap"><table class="pe" aria-label="Events"><thead><tr><th></th><th>time</th><th>host</th><th>user</th><th>parent → process</th></tr></thead><tbody id="pg-rows"></tbody></table></div>
+      <p class="pg-note" id="pg-note">Click an event to read about it.</p>
+      <p class="verdict" id="pg-verdict" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="show">Show</b><span>Start with "Office app starts a shell": two attacks caught, one benign finance workbook filtered, three attacks missed (the other behaviours). Press "Any PowerShell (too broad)": the two Office attacks, and five false alarms. "One exact command (too narrow)": one catch, and the short-flag variant slips by. "Encoded PowerShell": both Office attacks, and three false alarms from the monitoring agent. Then "All four behaviours": every attack, no false alarms. Edit the rule live: remove the finance filter, change the child list, misspell a modifier and read the error.</span></li><li><b class="say">Say</b><span>This is a real evaluator reading a real rule format: every outcome you see is computed, not scripted. The errors are the point too: a misspelled modifier, an undefined search identifier, a regular expression that couldn't match, a wildcard you forgot to quote. Writing rules is mostly the loop of edit, run, read the error, run again.</span></li><li><b class="ask">Ask</b><span>The "all four" rule has two filters. What does each one say, and would you accept both in review? <em>Answer: filter_finance matches the script's path in the command line (specific, but an attacker could imitate a path); filter_backup matches the full path of the backup agent and the SYSTEM account together (two attributes, harder to copy). Both need an owner and a review date.</em></span></li><li><b class="tip">Check</b><span>All 39 events, accounts, products (Contoso is fictional), and the base64 strings (UTF-16 encodings of "Get-Date" and "Write-Output 'test'") are invented. OriginalFileName values for powershell.exe ("PowerShell.EXE"), certutil.exe ("CertUtil.exe") and vssadmin.exe ("VSSADMIN.EXE") are those used in SigmaHQ's own rules. The engine is a small YAML reader plus an evaluator for the parts of Sigma 2.1.0 listed on the previous slide; it says so for the modifiers it doesn't implement (base64 and UTF-16 encodings, expand, time parts) and for the legacy count() condition syntax and correlation rules. Against SigmaHQ's rule files, run on 9 Nov 2026: 4,257 YAML files in its rule folders, 3,782 with a detection section, and this engine parses and compiles 3,771 of them (99.7%); the 11 it rejects use encoding modifiers or have a modifier on a search-identifier name (a typo in the rule). That is a test that it reads real rules, not a proof that it matches exactly as pySigma would.</span></li><li><b class="next">Next</b><span>"And what survives when the attacker changes something?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="durable" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// WRITING DETECTIONS 04</p><h2>Behaviour versus indicator: what survives a change?</h2></header>
+  <div class="slide-body cols-2 du-grid">
+    <div class="stack">
+      <p class="note">The attacker's chain from the report. Tick what they change:</p>
+      <div class="du-checks" id="du-changes"></div>
+      <div class="controls"><label class="grow">Persistence <select id="du-persist" aria-label="Persistence method"></select></label></div>
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="du-cost">0</b><span>their effort (relative)</span></div>
+        <div class="stat"><b id="du-fire">7 of 7</b><span>rules still fire</span></div>
+        <div class="stat"><b id="du-ttp">3 of 3</b><span>behaviour rules still fire</span></div>
+      </div>
+      <p class="verdict" id="du-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <table class="du-table" aria-label="Which rules still fire"><thead><tr><th></th><th>Rule</th><th>Rung</th></tr></thead><tbody id="du-rows"></tbody></table>
+      <p class="src">Sources: <a href="http://detect-respond.blogspot.com/2013/03/the-pyramid-of-pain.html" target="_blank" rel="noopener">Bianco</a> · <a href="https://www.cisa.gov/resources-tools/resources/identifying-and-mitigating-living-land-techniques" target="_blank" rel="noopener">CISA LOTL guidance</a> · <a href="https://center-for-threat-informed-defense.github.io/summiting-the-pyramid/levels/quicklevels" target="_blank" rel="noopener">STP levels</a>. Effort numbers are my illustration, not measurements.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Seven rules, from a file hash up to "any autostart that points at a folder anyone can write to". Tick the cheap changes first: recompile, rename, a new address, a new domain. The hash, name, address and domain rules go quiet, and all three behaviour rules still fire. Now make them work for it: download with curl, persist with a Run key (the narrow task rule dies, the broader one survives), then a new service (both persistence rules die).</span></li><li><b class="say">Say</b><span>Every rule you can break with one cheap change is borrowed time. The behaviour rules survive until the attacker changes how they work. And notice the broader persistence rule: the task-only rule looks equally good in a demo, and it's the one that goes quiet when they switch to a Run key. Write the behaviour, not the sample.</span></li><li><b class="ask">Ask</b><span>Which of these changes would you notice as a defender if the rule simply stopped firing? <em>Answer: none, which is why the next sections are about tests and canaries.</em></span></li><li><b class="tip">Check</b><span>All outcomes are computed by running the seven rules over generated events for the chain (made-up file, addresses and domains). The effort numbers (1 for recompile, rename and a new address; 2 for a new domain; 4 for a different downloader; 5 for a Run key; 7 for a service) are my illustration of the ordering in Bianco's post, not measured data. The CISA guidance (7 Feb 2024) says attackers can easily modify known IOCs "such as filenames and command line arguments" and gives an example of a shortened argument that still works. Using certutil to download is tagged T1105 in SigmaHQ's rule; the run-key persistence is T1547.001 and the service is T1543.003.</span></li><li><b class="next">Next</b><span>"Behaviour rules make noise. Let's tune one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tuning" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// WRITING DETECTIONS 05</p><h2>Tuning without blinding yourself</h2></header>
+  <div class="slide-body cols-2 tn-grid">
+    <div class="stack">
+      <p class="note">One week of an invented estate. The rule alerts on <b>PowerShell with an encoded command</b>: 2,219 harmless runs and 4 real attacks. Add filters:</p>
+      <div class="tn-list" id="tn-list" role="group" aria-label="Filters"></div>
+    </div>
+    <div class="stack">
+      <div class="stats stats-3 stats-sm">
+        <div class="stat"><b id="tn-alerts">2,223</b><span>alerts a week</span></div>
+        <div class="stat"><b id="tn-hours">370 h</b><span>analyst time on false alarms</span></div>
+        <div class="stat"><b id="tn-caught">4 of 4</b><span>real attacks still alerting</span></div>
+      </div>
+      <p class="verdict" id="tn-verdict" aria-live="polite"></p>
+      <p class="comment" id="tn-note"></p>
+      <details class="rule-view"><summary>Show the rule as it stands</summary><pre id="tn-rule"></pre></details>
+      <ul class="rules rules-sm">
+        <li>Ask of every filter: <b>what else matches it?</b> The lab computes it for you.</li>
+        <li>Prefer <b>two attributes</b> (a full path <i>and</i> an account) to one.</li>
+        <li>Give each filter a <b>reason, an owner and a review date</b>.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml" target="_blank" rel="noopener">SigmaHQ schtasks rule</a> (filter_main_*, filter_optional_*) · <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-filters-specification.md" target="_blank" rel="noopener">Sigma filters</a> · <a href="https://github.com/palantir/alerting-detection-strategy-framework" target="_blank" rel="noopener">Palantir ADS</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Start with no filters: 2,223 alerts a week, about 370 analyst hours, and four real attacks buried in them. First tick "Ignore everything running as SYSTEM": most of the noise goes, and it says it now hides an attack. Untick it. Try "Ignore parents called agent.exe": a file name anyone can copy, and one of the attacks does exactly that. "Ignore anything started by Excel": a whole application becomes a blind spot. Now the careful versions: the monitoring agent by full path and account, the device-management agent, the finance workbook by what it opened, the build account. All four attacks still alert, and the noise is down to about 39 alerts a week.</span></li><li><b class="say">Say</b><span>Every allow-list entry is a bet that attackers won't look like that thing. The safe ones are specific in a way the attacker can't easily copy: a path ordinary users can't write to, plus the account that runs it. The careless ones key on one easy attribute. The lab makes the cost visible: "hides an attack" is computed from the data, not claimed.</span></li><li><b class="ask">Ask</b><span>After the careful filters, 35 alerts remain, all from administrators pasting encoded commands. What would you do? <em>Answer: ask them to use signed scripts, or add context (is it from an expected host, is it a known script?). Not another blanket exclusion: that would also hide the stolen admin account.</em></span></li><li><b class="tip">Check</b><span>The week is invented: 1,900 monitoring-agent runs, 210 device-management, 60 build, 35 administrator, 14 finance, and four attacks (a macro, a loader also called agent.exe, code as SYSTEM, and a stolen admin account). The 10 minutes per false alarm is invented, only to give the numbers a scale. Real SigmaHQ rules show the same idea: the schtasks creation rule names its filters filter_main_* and filter_optional_*, and its Office filter requires the parent path, the image and the command line together, while another rule carries the comment "too many FPs" next to a parent it chose not to list. The Sigma filters specification (2.1.0) describes global filters for tuning without editing the original rule. Palantir's ADS template says a rule that can't reach a low false-positive rate "may need to be broken down, refactored, or entirely discarded".</span></li><li><b class="next">Next</b><span>"Write the reasoning down."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ads" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// WRITING DETECTIONS 06</p><h2>Document each rule like a design doc: Palantir's ADS</h2></header>
+  <div class="slide-body cols-2 ads-grid">
+    <div class="stack"><div class="ads-list" id="ads-list" role="group" aria-label="ADS sections"></div></div>
+    <div class="stack">
+      <div class="fa-detail" id="ads-detail" aria-live="polite"></div>
+      <p class="note">Palantir's Alerting and Detection Strategy template, published on GitHub under the MIT licence, is one way to keep the <b>reasoning</b> next to the rule. The example text is mine.</p>
+      <p class="src">Sources: <a href="https://github.com/palantir/alerting-detection-strategy-framework" target="_blank" rel="noopener">palantir/alerting-detection-strategy-framework</a> (README and ADS-Framework.md)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Click through the ten headings with the Office rule as the example. Spend the time on Blind Spots and Assumptions and on Validation: those are the two sections people skip, and the ones that stop a rule from quietly rotting.</span></li><li><b class="say">Say</b><span>A rule file says what it matches. It doesn't say why, what it misses, what you assumed about the data, or what a responder should do. The template makes you write that down once, where the next person will find it. Sigma's description, falsepositives and references fields carry some of it; the rest belongs in a short document beside the rule.</span></li><li><b class="tip">Check</b><span>The template's headings, as in the repository's ADS-Framework.md: Goal, Categorization, Strategy Abstract, Technical Context, Blind Spots and Assumptions, False Positives, Validation, Priority, Response, Additional Resources (the README lists the first nine). Its Categorization asks for both the parent and child ATT&amp;CK category. Its Validation section says each strategy "must have true positive validation", described as "similar to a unit test", and suggests Atomic Red Team tests as one way. The repository is under the MIT licence (copyright 2017 Palantir Technologies Inc.). The Office rule example in each section is my own text.</span></li><li><b class="next">Next</b><span>"Time to pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A rule fires 300 times a day and is always benign. What are your options?</p><details><summary>Hint</summary><p>There is more than one way to reduce noise, and one of them is to stop.</p></details><details class="answer"><summary>Answer</summary><p>Narrow it with specific filters (a full path plus an account, with an owner and a review date), add context so the alert says more, change the condition so it needs a second signal, lower its priority so it isn't paged, or retire it if no real finding has ever come from it. Not: a blanket exclusion that also hides the attack.</p></details></li>
+      <li><p>Your rule matches a command line. A month later an agent upgrade stops logging command lines. What happens, and what would have caught it?</p><details><summary>Hint</summary><p>Does anything report an error?</p></details><details class="answer"><summary>Answer</summary><p>Nothing reports an error: the rule goes quiet. A canary test (a synthetic event that should fire the rule, run through the real pipeline on a schedule) or a check that the field is still populated would catch it.</p></details></li>
+      <li><p>Why does the playground's "all four behaviours" rule filter the backup agent by its full path <i>and</i> the SYSTEM account, not by the word "backup"?</p><details><summary>Hint</summary><p>What could an attacker copy?</p></details><details class="answer"><summary>Answer</summary><p>A word or a file name is easy to copy; a full path in Program Files plus the account that runs it is much harder for an ordinary user or attacker to imitate. A filter should be specific in a way the attacker can't easily reproduce.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. Question 1 is the plan's question: collect every option before you reveal.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="tests" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// TESTING AND COVERAGE 01</p><h2>Test-first: unit tests for a detection</h2></header>
+  <div class="slide-body cols-2 tl-grid">
+    <div class="stack">
+      <div class="chips" id="tl-presets" role="group" aria-label="Rule to test"></div>
+      <textarea class="rule" id="tl-rule" spellcheck="false" autocomplete="off" aria-label="Sigma rule, editable"></textarea>
+      <p class="pg-status ok" id="tl-status" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="controls"><label class="check"><input type="checkbox" id="tl-var"> also run variants</label><span class="note" id="tl-sum"></span></div>
+      <div class="tl-list" id="tl-list" aria-label="Test results"></div>
+      <p class="verdict" id="tl-verdict" aria-live="polite"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Start with the narrow rule: it copies one sample and fails four of the five positive cases. Switch to the broad rule, which mentions only "urlcache": it passes four positives, wrongly fires on two negatives, and also misses the verifyctl form. So a rule can be too broad and too narrow at once. Then the good rule: all nine pass. Tick "also run variants": each positive case is run again with upper case, flags written with a slash, a quoted path, doubled spaces, reordered flags and a renamed program. Edit the rule and watch which ones break.</span></li><li><b class="say">Say</b><span>Tests make rules changeable. Without them, every tweak is a gamble, and tuning a false positive can quietly break a true positive. The negative cases matter as much as the positive ones: they are your list of benign look-alikes. The variants are cheap robustness tests: they are the ways a command can be written differently without changing what it does.</span></li><li><b class="ask">Ask</b><span>What other variants would you add for a PowerShell rule? <em>Answer: abbreviated parameters (the shell accepts short forms), a different case, a copied binary, a different parent, a script block instead of a one-liner.</em></span></li><li><b class="tip">Check</b><span>The test cases, programs and addresses are invented; the three rules are mine (the good one is the same as the playground's certutil rule). The variants are the kind SigmaHQ and the CISA guidance describe: the "windash" modifier exists because Windows tools accept "-" or "/" for flags; the joint guidance (7 Feb 2024) gives a documented example of a shortened argument ("ac i ntds" for "activate instance ntds") still working. SigmaHQ's own regression tests pair each rule with sample events and fail if the expected number of matches isn't produced (its regression_data README). PowerShell 7's documentation lists <code>-EncodedCommand | -e | -ec</code>, and SigmaHQ's encoded-command rule carries the comment that " -e" covers -en and -enc; I did not verify the short forms for Windows PowerShell 5.1.</span></li><li><b class="next">Next</b><span>"These are synthetic. How do you test with real behaviour?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="emulation" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// TESTING AND COVERAGE 02</p><h2>Testing without attacking production</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>What an atomic test is</h3>
+      <pre class="at-code" aria-label="The structure of an Atomic Red Team test file"><span class="k">attack_technique:</span> T1053.005
+<span class="k">display_name:</span> "Scheduled Task/Job: Scheduled Task"
+<span class="k">atomic_tests:</span>
+- <span class="k">name:</span> <span class="p">a short name</span>
+  <span class="k">auto_generated_guid:</span> <span class="p">a UUID</span>
+  <span class="k">description:</span> <span class="p">what it does, and what you should see</span>
+  <span class="k">supported_platforms:</span>
+  - windows
+  <span class="k">executor:</span>
+    <span class="k">name:</span> command_prompt
+    <span class="k">elevation_required:</span> true
+    <span class="k">command:</span> <span class="p">the small action that triggers the behaviour</span>
+    <span class="k">cleanup_command:</span> <span class="p">how to undo it</span></pre>
+      <ul class="rules rules-sm">
+        <li><b>Read</b> every test before you run it. <b>Authorise</b> it. Run it on a <b>dedicated test machine</b> built like production, with your sensors on.</li>
+        <li>Run the <b>cleanup</b>. Then <b>record</b> the date and what you saw.</li>
+        <li>In CI, replay <b>recorded or synthetic events</b>. Save real execution for scheduled lab runs.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>A purple-team loop</h3>
+      <div class="pt-steps"><span>Plan</span><i>→</i><span>Run in the lab</span><i>→</i><span>Observe</span><i>→</i><span>Tune</span><i>→</i><span>Record</span></div>
+      <p class="note">Click each result to cycle it. How far did each test get?</p>
+      <div class="pt-grid" id="pt-grid"></div>
+      <p class="verdict" id="pt-verdict" aria-live="polite"></p>
+      <p class="src">Sources: <a href="https://github.com/redcanaryco/atomic-red-team" target="_blank" rel="noopener">Atomic Red Team</a> · <a href="https://github.com/redcanaryco/invoke-atomicredteam/wiki" target="_blank" rel="noopener">Invoke-AtomicRedTeam wiki</a> · <a href="https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1053.005/T1053.005.yaml" target="_blank" rel="noopener">an example test file</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>A unit test proves the rule matches the event you wrote. An emulation test proves the whole path works: the action happened, the sensor recorded it, the pipeline parsed it, the rule fired and a person got the alert. They answer different questions and you need both.</span></li><li><b class="show">Show</b><span>Click through the five results for each test: no telemetry, logged only, rule fired, alert reached an analyst, analyst knew what to do. The aim of a purple-team exercise isn't a pass: it's to find out which of the five each technique reaches, together with the red team, and to fix the weakest one. Most gaps are at "logged only" and "alert reached an analyst".</span></li><li><b class="tip">Check</b><span>Atomic Red Team describes itself as "a library of tests mapped to the MITRE ATT&amp;CK framework" (MIT licence). The test structure shown matches a real file (atomics/T1053.005/T1053.005.yaml): attack_technique, display_name, then atomic_tests with name, auto_generated_guid, description, supported_platforms, executor (name, command, cleanup_command, elevation_required) and, in some, input_arguments. The Invoke-AtomicRedTeam wiki says "Executing atomic tests may leave your system in an undesirable state", that you are responsible for knowing what a test does before you run it, that you should confirm you're authorised, and recommends a dedicated test machine similar to your environment's build, with your collection or EDR in place. I did not read the wiki pages on its prerequisite and cleanup options, so the deck doesn't describe them. "Purple team" has no single standard definition; here it means red and blue working together on the same test. The five result levels and the sample results are my illustration, not a standard.</span></li><li><b class="next">Next</b><span>"And what does all that add up to on the coverage map?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="coverage" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// TESTING AND COVERAGE 03</p><h2>What does a green square actually prove?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="chips" id="cv-boards" role="group" aria-label="Example boards"></div>
+      <div class="cv-grid" id="cv-grid" aria-label="Techniques and how well each is tested"></div>
+      <p class="note">Click a square to change its state. States run from <b>nothing</b> to <b>tested against variants and tuned</b>.</p>
+    </div>
+    <div class="stack">
+      <div class="cv-bars" id="cv-bars"></div>
+      <p class="verdict" id="cv-verdict" aria-live="polite"></p>
+      <div class="stp" aria-label="Summiting the Pyramid analytic robustness levels">
+        <div><b>Level 1</b><span>Ephemeral Values</span></div>
+        <div><b>Level 2</b><span>Core to Adversary-Brought Tools</span></div>
+        <div><b>Level 3</b><span>Core to Pre-Existing Tools</span></div>
+        <div><b>Level 4</b><span>Core to Some Implementations of (Sub-)Technique</span></div>
+        <div><b>Level 5</b><span>Core to Sub-Technique or Technique</span></div>
+      </div>
+      <p class="src">Sources: <a href="https://ctid.mitre.org/blog/2026/09/10/summiting-the-pyramid-2026/" target="_blank" rel="noopener">CTID, Beyond the Heatmap</a> (10 Sep 2026) · <a href="https://center-for-threat-informed-defense.github.io/summiting-the-pyramid/levels/quicklevels" target="_blank" rel="noopener">Summiting the Pyramid levels (v4.0.0)</a>. The boards are invented.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>"Painted green": 16 of 24 squares have a rule, none has been tested. "Tested": 16 of 24 squares have a rule, and every one has been tested against variants. The heatmap percentage is identical, and the real position isn't. Switch between them, then click squares on "Mixed" to see how the three bars move.</span></li><li><b class="say">Say</b><span>Coverage is a statement about intent: "we have something for this technique". It says nothing about whether the something works. CTID's new framing splits it in two: implementation coverage (how many distinct ways of doing the technique you can see) and detection quality (how robust and how precise the signal is). The practical version: record, per technique, the last test date and which variants it was tested against, and report that next to the heatmap.</span></li><li><b class="ask">Ask</b><span>What does a green square prove on your current map? <em>Answer: usually that a rule exists and was enabled once. Ask what it was tested against, when, and by whom.</em></span></li><li><b class="tip">Check</b><span>Quotes and terms from CTID's "Beyond the Heatmap" post (10 Sep 2026): implementation coverage ("how much of the behavior we can see"), detection quality made up of robustness ("how difficult a detection signal is for an adversary to evade or manipulate") and precision ("how well a signal distinguishes malicious behavior from benign activity"); the Detection Coverage Calculator can ingest Sigma-formatted YAML. STP level names are exact from the v4.0.0 documentation; the page doesn't define "robustness" beyond ordering the levels from ephemeral values to behaviours core to the technique. The 24 technique names and IDs are checked against ATT&amp;CK v20.1; the boards and the five states are invented. Sigma has an <code>stp</code> tag namespace for recording these ratings (tags appendix).</span></li><li><b class="next">Next</b><span>"Time to pause and discuss."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What does a green square on a coverage map actually prove?</p><details><summary>Hint</summary><p>Think of three things that could all be true of a square that was painted green.</p></details><details class="answer"><summary>Answer</summary><p>Only that someone believes there's a rule for that technique. It doesn't show that the data exists, that the rule fires on real behaviour, which variants it catches, how often it fires on benign activity or whether anyone owns it. Record the last test date and the variants beside each square.</p></details></li>
+      <li><p>Your unit tests all pass and an emulation test still doesn't produce an alert. Where could the problem be?</p><details><summary>Hint</summary><p>Follow the event from the machine to the analyst.</p></details><details class="answer"><summary>Answer</summary><p>Anywhere outside the rule logic: the sensor didn't record it, a field is named differently in your pipeline, the event didn't reach the SIEM, the rule isn't enabled for that data set, or the alert was suppressed or routed nowhere. That is why you need both kinds of test.</p></details></li>
+      <li><p>You're about to run adversary-emulation tests. What do you check first?</p><details><summary>Hint</summary><p>Three things before anything runs.</p></details><details class="answer"><summary>Answer</summary><p>That you have permission, that you've read what each test does, and that it will run on a dedicated test machine built like production, with your sensors on and a cleanup step ready. Not on a production system.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. Question 1 is the plan's question.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="pipeline" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// DETECTIONS AS CODE 01</p><h2>The pipeline: break a rule and watch CI say no</h2></header>
+  <div class="slide-body cols-2 ci-grid">
+    <div class="stack">
+      <div class="chips ci-breaks" id="ci-breaks" role="group" aria-label="Ways to break the rule"></div>
+      <textarea class="rule" id="ci-rule" spellcheck="false" autocomplete="off" aria-label="Sigma rule, editable"></textarea>
+      <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="ci-reset">Reset the rule</button></div>
+    </div>
+    <div class="stack">
+      <div class="ci-log" id="ci-log" aria-live="polite"></div>
+      <p class="verdict" id="ci-verdict" aria-live="polite"></p>
+      <p class="src">Sources: <a href="https://github.com/SigmaHQ/sigma/tree/master/.github/workflows" target="_blank" rel="noopener">SigmaHQ's workflows</a> · <a href="https://github.com/SigmaHQ/sigma/blob/master/regression_data/README.md" target="_blank" rel="noopener">its regression tests</a> · <a href="https://github.com/SigmaHQ/sigma/blob/master/tests/test_rules.py" target="_blank" rel="noopener">test_rules.py</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="show">Show</b><span>The rule starts green on all six steps. Press the break buttons one at a time and read the log: a reused id, a deleted id, a missing falsepositives list, a typo in the condition (it suggests the right name), a misspelled modifier (it suggests the right one), a misspelled field (the compile passes, and the back-test says the rule can never match), a loosened rule (the tests and the alert budget both fail), a narrowed rule (the tests fail), a technique that doesn't exist, a date in the wrong format. Then edit the rule yourself.</span></li><li><b class="say">Say</b><span>A detection repository is a software project. Rules go in a branch and are reviewed. CI runs them: parse, check the metadata, compile, run the unit tests, back-test on a week of recorded logs for volume, and only then ask a person to review. The back-test is the one people skip, and it's the one that stops a 3 a.m. flood.</span></li><li><b class="ask">Ask</b><span>Which of these checks does your repository run today? <em>Answer: most have the first two. The tests and the back-test are where the value is.</em></span></li><li><b class="tip">Check</b><span>The pipeline runs in your browser on made-up data: a week of 52,000 invented process-creation events of which 74 mention certutil, an alert budget of 2 a day (my choice), and a rule file in the style of SigmaHQ's. SigmaHQ's real pipeline, read from its repository on 9 Nov 2026: on every push and pull request its workflows run strict yamllint, a logsource test, tests/test_rules.py (duplicate detections, file names, title in first line, and others), <code>sigma check --fail-on-error --fail-on-issues</code> with pySigma and the SigmaHQ validators, a duplicate-id check, and a JSON-schema validation against the Sigma 2.1.0 rule schema; separately, regression tests (a rule's info.yml points to sample events, and CI "fails if the expected number of matches is not produced"; rules with status test or stable must have them) and "goodlog" tests that run the rules against benign Windows baseline logs and show findings except known false positives. Its workflow that promotes older experimental rules is commented out, so I don't claim it runs. The team rules the demo enforces (id, status, description, author, date, level, falsepositives and an ATT&amp;CK tag) are this talk's policy: the Sigma spec makes only title, logsource and detection mandatory.</span></li><li><b class="next">Next</b><span>"And once it's running: how do you know it's good?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="metrics" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// DETECTIONS AS CODE 02</p><h2>Metrics that matter: precision, analyst time, silence</h2></header>
+  <div class="slide-body cols-2 mt-grid">
+    <div class="stack">
+      <div class="controls">
+        <label class="grow"><span>Real alerts ≥ <output id="mt-prec-o">20%</output></span><input id="mt-prec" type="range" min="1" max="90" value="20"></label>
+        <label class="grow"><span>Analyst hours a week ≤ <output id="mt-hours-o">8</output></span><input id="mt-hours" type="range" min="1" max="40" value="8"></label>
+        <label class="grow"><span>Last tested within <output id="mt-stale-o">180</output> days</span><input id="mt-stale" type="range" min="30" max="720" step="30" value="180"></label>
+      </div>
+      <table class="mt-table" aria-label="Rule metrics"><thead><tr><th data-k="name">Rule</th><th class="n" data-k="fires">Alerts</th><th class="n" data-k="precision">Real</th><th class="n" data-k="hours">Hours</th><th class="n" data-k="tested">Tested</th><th data-k="verdict">Verdict</th></tr></thead><tbody id="mt-rows"></tbody></table>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="mt-sum" aria-live="polite"></p>
+      <ul class="rules">
+        <li><b>Precision</b>: of the alerts, how many were real? The CTID post defines it as how well a signal separates malicious from benign.</li>
+        <li><b>Analyst time</b>: alerts times triage minutes. Noisy rules cost people, not servers.</li>
+        <li><b>Silence is a metric</b>: a rule that never fires is working, or broken. Test it.</li>
+        <li>Track <b>last tested</b> and <b>owner</b> too. A rule with neither is a risk.</li>
+      </ul>
+      <p class="note">Click a column heading to sort. Every figure here is invented.</p>
+      <p class="src">Sources: <a href="https://ctid.mitre.org/blog/2026/09/10/summiting-the-pyramid-2026/" target="_blank" rel="noopener">CTID, Beyond the Heatmap</a> (precision, robustness)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Ten invented rules. Move the sliders and watch the verdicts change. "Encoded PowerShell" (about 26 analyst hours a week) and "Rare parent-child pair" (about 35) each cost a person most of a working week for almost nothing real: tune or retire. "Old VPN appliance exploit signature" has been silent for a year: is it still working, or is the threat gone? "certutil download" is fine, but not tested for 210 days. "Logon from a new country" has no owner.</span></li><li><b class="say">Say</b><span>Pick a few numbers that drive a decision, not a dashboard. Precision tells you which rules to tune. Analyst hours tell you which noise costs most. Last-tested and owner tell you which rules are quietly rotting. And a rule's value isn't how often it fires: a rule that fires once a year on a real intrusion can be the most valuable one you have.</span></li><li><b class="ask">Ask</b><span>What would you do with a rule that has 100% precision and has fired twice in a year? <em>Answer: keep it, test it on a schedule, and make sure it still can fire. Low volume is not a defect.</em></span></li><li><b class="tip">Check</b><span>All rule names and numbers are invented. The thresholds are a teaching default, not a standard. Precision and robustness are defined in the CTID post (10 Sep 2026) as quoted on the coverage slide.</span></li><li><b class="next">Next</b><span>"What happens when the world changes under a rule?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="drift" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// DETECTIONS AS CODE 03</p><h2>Rules rot: drift, canaries and retirement</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" id="dr-pick" role="group" aria-label="What changes"></div>
+      <p class="note" id="dr-desc"></p>
+      <table class="dr-table" aria-label="Rules after the change"><thead><tr><th>Rule</th><th class="n">Attacks caught</th><th class="n">False alarms</th><th>Canary</th></tr></thead><tbody id="dr-rows"></tbody></table>
+      <p class="verdict" id="dr-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Drift</b> is the data changing under a rule: a renamed field, a policy change, a sensor upgrade, a new software version.</li>
+        <li>A <b>canary</b> is a synthetic event, pushed through the real pipeline on a schedule, that must fire the rule. When the canary stops firing, the rule is broken.</li>
+        <li><b>Retire</b> with evidence: mark it <code>deprecated</code>, link what replaced it with <code>related</code>, and keep the history.</li>
+        <li>Your tags drift too. ATT&amp;CK v19 (April 2026) replaced Defense Evasion with Stealth and Defense Impairment, and revoked T1562. The Sigma tags appendix (2.1.0, August 2025) still lists <code>defense-evasion</code>, while SigmaHQ's own certutil rule is tagged <code>attack.stealth</code>.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://attack.mitre.org/resources/updates/updates-april-2026/" target="_blank" rel="noopener">ATT&amp;CK v19 notes</a> · <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-appendix-tags.md" target="_blank" rel="noopener">Sigma tags appendix</a> · <a href="https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-rules-specification.md" target="_blank" rel="noopener">Sigma rules specification</a> (status, related)</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Four rules over the log. Baseline: all attacks caught, one false alarm from the backup agent on the shadow-copy rule. Then: an agent upgrade renames the parent-process field, and the Office rule catches nothing. A policy switches command-line logging off: three rules go silent, and the Office rule gets noisier because its finance filter reads the command line. The sensor stops sending the original file name: renamed copies of the same tools slip past. In each case the canary row shows what a scheduled test would have told you. Nothing logged an error.</span></li><li><b class="say">Say</b><span>Rules rot because the data around them moves. The defence is the same as for any software: tests that run on a schedule, against the real pipeline. And retirement is a decision with evidence, not a deletion: deprecate it, say what replaced it and why.</span></li><li><b class="ask">Ask</b><span>What would a canary for your best rule look like, and who would get the alert when it fails? <em>Answer: a synthetic event written to the same place real events are, once a day; and an owner named in the rule.</em></span></li><li><b class="tip">Check</b><span>ATT&amp;CK v19 (28 Apr 2026) release notes: "the Defense Evasion Tactic in Enterprise ATT&amp;CK" was split "into the Stealth and Defense Impairment Tactics"; Impair Defenses (T1562) is listed as revoked by Disable or Modify Tools (T1685); T1070 was not renumbered. The Sigma tags appendix (2.1.0, released 2 Aug 2025) lists defense-evasion among its attack tactic tags and no stealth or defense-impairment tag; SigmaHQ's certutil rule (modified Dec 2025) uses attack.stealth. The spec's deprecated status means "the rule is replaced or covered by another one. The link is established by the related field". The demo's drift events are changes I made to the made-up log; no real agent is claimed to rename these fields.</span></li><li><b class="next">Next</b><span>"A checklist to take away."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// DETECTIONS AS CODE 04</p><h2>Before a rule goes live: a twelve-point checklist</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="plan" id="cl-plan"></div>
+      <p class="verdict" id="cl-note" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <h3>Try it on one rule this week</h3>
+      <ul class="rules">
+        <li>Pick the rule that pages you most.</li>
+        <li>Walk the twelve points. Write down the ones it fails.</li>
+        <li>Write <b>one negative test</b> from the last false alarm.</li>
+        <li>Add a <b>canary</b> for the rule you'd least like to lose.</li>
+        <li>Put an <b>owner and a review date</b> on every filter.</li>
+      </ul>
+      <p class="fine">The checklist is a starting point: adapt it to your SIEM, your repository and your alert budget. Ticks are remembered in this browser only.</p>
+      <p class="src">Sources: <a href="https://github.com/palantir/alerting-detection-strategy-framework" target="_blank" rel="noopener">Palantir ADS</a> · <a href="https://github.com/SigmaHQ/sigma-specification" target="_blank" rel="noopener">Sigma specification</a> · <a href="https://center-for-threat-informed-defense.github.io/summiting-the-pyramid/" target="_blank" rel="noopener">Summiting the Pyramid</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Tick the points as you read them. They remember your ticks in this browser. At the end, ask the room how many of the twelve their best rule would pass today.</span></li><li><b class="say">Say</b><span>None of the twelve needs a new tool. It needs a repository, a few test events, and the habit of writing down why. The checklist combines this talk: documentation (the ADS sections), tests (the lab), a back-test and staged rollout (the pipeline), canaries (drift) and ownership and review dates (metrics).</span></li><li><b class="tip">Check</b><span>The checklist is this talk's synthesis, not a standard. Its ideas come from the Palantir ADS template (goal, blind spots, false positives, validation, response), the Sigma specification (id, status, tags, falsepositives) and the sources on the previous slides.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Which of your detections would you trust at 3 a.m., and how do you know?</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The rule engine and every demo stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../logging-and-incident-response/">Logging, Monitoring and Incident Response</a><span>The data and the alerts these rules depend on.</span></li>
+        <li><a href="../identity-and-access/">Identity and Access Management</a><span>The sign-in telemetry behind many good detections.</span></li>
+        <li><a href="../cloud-security/">Cloud Security Fundamentals</a><span>Audit logs, and what to alert on in the control plane.</span></li>
+        <li><a href="../vulnerability-management/">Vulnerability and Patch Management</a><span>Deciding what matters first, for patches and for rules.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser on made-up data: the events, hosts, accounts, products and the threat report are invented, and nothing you type is sent anywhere. The rule engine is a toy that reads a subset of Sigma, not a converter or a production tool. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. Good prompts: which detection do you trust least, which has the most undocumented exclusions, and which would you be unable to explain to a new analyst.</span></li><li><b class="tip">Check</b><span>Not confirmed here, and worth a look before presenting: whether your SIEM's Sigma backend supports every modifier your rules use (conversion support varies by backend); the current Sigma specification and ATT&amp;CK versions (checked 9 Nov 2026: Sigma 2.1.0, ATT&amp;CK v20.1); that Summiting the Pyramid's levels and the Detection Coverage Calculator haven't changed since the v4.0.0 documentation and the 10 Sep 2026 post I read; and your own sources' fields (the deck's 4688 and Sysmon notes describe the defaults).</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="rules.js"></script>
+<script src="scenario.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
