@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Security in Your Development Process</title>
+<meta name="description" content="Security that depends on heroes doesn't scale. Requirements, champions, paved roads, disclosure, report deadlines and metrics that drive improvement, with demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/secure-sdlc/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Security in Your Development Process">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/secure-sdlc/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/secure-sdlc/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<script type="application/json" id="deck-config">
+{ "id": "secure-sdlc", "title": "Security in Your Development Process", "footer": "SECURE SDLC", "subtitle": "DEVELOPER TRACK · 19",
+  "parts": [{ "name": "Through the lifecycle", "minutes": 25 }, { "name": "People and process", "minutes": 32 }, { "name": "Measuring", "minutes": 20 }, { "name": "Wrap-up", "minutes": 10 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Security in Your Process</a>
+  <div class="scroll-parts">
+    <a href="#why" data-part="1"><b>01</b>Lifecycle</a>
+    <a href="#champions" data-part="2"><b>02</b>People</a>
+    <a href="#metrics" data-part="3"><b>03</b>Measuring</a>
+    <a href="#trackmap" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// ZEVARYX · CYBERSEC HUB · DEVELOPER 19</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Security in Your Process">Security in Your Process</span></h1>
+      <p class="lede">Security that depends on heroes doesn't scale. How to build it into requirements, reviews, releases, disclosure and the numbers you watch, so that the secure way is the default way.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/secure-sdlc/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>security.txt checker</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ check <textarea id="hero-in" rows="4" spellcheck="false" autocomplete="off" aria-label="Contents of a security.txt file to check">Contact: security@example.org
+Expires: 2027-06-30T23:59:59Z</textarea></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes with two checkpoints, or about 80 if you skip the two slides marked skippable. This is the capstone of the developer track: the earlier talks each taught one technique, and this one is about how a team makes those techniques routine, so the safe way happens without anyone being a hero. It's for tech leads, engineering managers and security champions. Every team, finding and service in the demos is invented, and nothing leaves your browser.</span></li><li><b class="show">Show</b><span>The checker is the first of the day's small tools. It reads a security.txt, the file at /.well-known/security.txt that tells researchers where to send a report, and checks it against RFC 9116. The one pasted in has a flaw: it's missing the mailto: scheme. Fix it and the verdict changes. We'll build a whole file properly in part two.</span></li><li><b class="tip">Eggs</b><span>On the title slide, put cat@example.com as the contact, empty the box or set an Expires date in the past. In the lifecycle board, open every stage. In the report clock, make a critical report that is actively exploited and sold in the EU. In the maturity check, answer Yes to everything. In the security.txt builder, use cat@example.com as the contact. In the closing checklist, tick all ten boxes. Open the console too.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#why"><small>PART 1 · 25 MIN</small><b>Through the lifecycle</b></a><span>A light step at each stage</span><span>Requirements as tests</span><span>Frameworks to borrow</span></li>
+      <li><a href="#champions"><small>PART 2 · 32 MIN</small><b>People and process</b></a><span>Champions and paved roads</span><span>Disclosure and report deadlines</span><span>Bounties, blameless reviews</span></li>
+      <li><a href="#metrics"><small>PART 3 · 20 MIN</small><b>Measuring</b></a><span>Numbers that drive change</span><span>Numbers that get gamed</span><span>A maturity self-check</span></li>
+      <li><a href="#trackmap"><small>PART 4 · 10 MIN</small><b>Wrap-up</b></a><span>The whole track on one page</span><span>A team checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3: 5 minutes to discuss with a neighbour. Two slides (bug bounties, blameless reviews) are marked <b>skippable</b> if time is short. Every team and number is <b>invented</b>: the targets are examples, not advice for your company.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one walks the lifecycle and asks for the smallest useful security step at each stage. Part two is the people side: champions, paved roads, disclosure, bounties and what to do after an incident. Part three is how you know it's working. Part four ties the whole developer track together and leaves you a checklist.</span></li><li><b class="next">Next</b><span>"Start with why a process beats a hero."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// LIFECYCLE 01</p><h2>Why a process beats a hero</h2></header>
+  <div class="slide-body stack">
+    <div class="inc-grid">
+      <div class="card inc"><small>HOW YOU TREAT A REPORT · 2021 TO 2022</small><b>A journalist, a web page and a governor</b><span>A St. Louis Post-Dispatch journalist told Missouri's education department that its website exposed teachers' Social Security numbers in the page source. The governor called it hacking and promised prosecution. The county prosecutor declined to charge in February 2022. The flaw had been there since 2011. A policy decides in advance whether a report is a gift or a threat.</span></div>
+      <div class="card inc"><small>A LEGAL DUTY · 11 SEPTEMBER 2026</small><b>EU reporting now applies</b><span>Under the Cyber Resilience Act, manufacturers of products with digital elements sold in the EU must report actively exploited vulnerabilities: an early warning within 24 hours, a full notification within 72 hours, through ENISA's single reporting platform. You can't improvise that on the day.</span></div>
+      <div class="card inc"><small>A MOVING STANDARD · 2025 TO 2026</small><b>NIST SSDF is being revised</b><span>The Secure Software Development Framework (SP 800-218) is at version 1.1, final since February 2022. A Rev. 1 (version 1.2) draft went out for comment on 17 December 2025, with comments closed on 30 January 2026. The practices keep evolving. The habit of reviewing your process is the part that lasts.</span></div>
+    </div>
+    <div class="callout"><b>The idea:</b> add the smallest step that works at each stage, make the safe way the easy way, decide in advance how you'll treat a report, and watch numbers that show whether it's working. Nothing in that list depends on one brilliant person staying.</div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three stories, one theme: what happens depends on what the organisation decided beforehand. In Missouri, the page source held the numbers; the reporter did what a person with a browser can do, and told the state. How the state reacted shows what happens with no policy that says "thank you". The Cyber Resilience Act made one piece of process mandatory in the EU from 11 September 2026: if you ship a product that contains software and someone is actively exploiting a vulnerability in it, the clock starts the moment you become aware. And the standards you'll be asked about keep moving, which is why the point is a loop, not a snapshot. Security that depends on a hero fails when the hero is on holiday, leaves or burns out.</span></li><li><b class="ask">Ask</b><span>If your best security person left next month, what would stop working first? <em>Answer: usually reviews, triage of reports and knowing which of the old exceptions are still valid.</em></span></li><li><b class="tip">Tip</b><span>Sources: Missouri (Post-Dispatch reporting; Cole County prosecutor's decision on 11 February 2022; the flaw's age from a later state police report as reported). CRA: the European Commission's CRA reporting page says reporting duties apply from 11 September 2026, early warning within 24 hours of becoming aware, full notification within 72 hours, final report no later than 14 days after a corrective measure is available (actively exploited vulnerabilities), through the ENISA single reporting platform. SSDF: csrc.nist.gov page for SP 800-218 Rev. 1 (initial public draft, 17 December 2025, comments due 30 January 2026).</span></li><li><b class="show">Check</b><span>The Missouri account rests on press coverage (Malwarebytes, NBC News, Post-Dispatch, Krebs on Security and others) and not the court record; keep to "declined to charge". The "since 2011" detail is from the Missouri State Highway Patrol's report as covered by KSHB and KBIA on 22 February 2022, which also found the reporter did nothing wrong; reported counts of exposed numbers range from 100,000 to 576,000, so the slide gives none. Whether the CRA applies to your product depends on what it is and where it's sold: this talk isn't legal advice.</span></li><li><b class="next">Next</b><span>"Now the lifecycle: one light step per stage."</span></li></ul></div>
+</section>
+
+<section class="slide" id="lifecycle" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// LIFECYCLE 02</p><h2>One light step at every stage</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="seg-pick lc-stages" role="group" aria-label="Stage" id="lc-stages"></div>
+      <p class="comment" id="lc-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card" id="lc-detail" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Click through the six stages. Each has one lightweight step, not a gate. Requirements: acceptance criteria. Design: a short threat-modelling session, but only for changes that add a boundary, a data store or a new way in. Code: secure defaults and a checklist. Build and test: automation that runs on every change. Release: signed, pinned, least-privilege. Operate: a policy, logs, rehearsed response. Every step links to the talk in this track that teaches the detail. The "if you find it later" line is deliberately qualitative: the famous "N times more expensive" figure has weak sources, so I don't quote one.</span></li><li><b class="ask">Ask</b><span>Which stage in your process has no step at all? <em>Answer: for most teams it's design, and then operate.</em></span></li><li><b class="tip">Tip</b><span>Start with the stage where bugs reach customers. If incidents come from forgotten authorization checks, start at requirements and code review. If they come from leaked keys, start at code and CI. Add one step per quarter, not six at once.</span></li><li><b class="next">Next</b><span>"Requirements are where a sentence saves a week."</span></li></ul></div>
+</section>
+
+<section class="slide" id="reqs" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// LIFECYCLE 03</p><h2>Requirements as acceptance criteria</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="lr-label">Pick a feature from the backlog</p>
+      <div class="seg-pick" role="group" aria-label="Feature" id="rq-pick"></div>
+      <label class="chk"><input type="checkbox" id="rq-tests"> Show a test name for each</label>
+      <p class="comment" id="rq-note"></p>
+    </div>
+    <div class="stack">
+      <p class="lr-label" id="rq-title"></p>
+      <ol class="rq-list" id="rq-list"></ol>
+      <p class="fine" id="rq-talk"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The cheapest security control is a sentence in the story. "Users can reset their password" becomes five testable statements: the link works once, it expires, the response doesn't reveal whether an account exists, the requests are rate limited, and sessions end on change. Each of those is something a developer can build and a test can check. Tick the box to see a test name for each. If a criterion can't be turned into a test, it's probably too vague, and a reviewer can't hold anyone to it either. Pick the feature that is closest to what your team ships next week.</span></li><li><b class="ask">Ask</b><span>Which of these would your current definition of done have missed? <em>Answer: usually the "same response for unknown emails" and "sessions end" items, because they're about what must not happen.</em></span></li><li><b class="tip">Tip</b><span>Keep a short list of reusable criteria per feature type (sign-in, upload, export, admin, webhook) in the team wiki, and paste from it into stories. OWASP's Application Security Verification Standard is the longer source when you need more. All the criteria here are my own examples.</span></li><li><b class="next">Next</b><span>"You don't have to invent a framework: here are the ones worth borrowing from."</span></li></ul></div>
+</section>
+
+<section class="slide" id="frameworks" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// LIFECYCLE 04</p><h2>Frameworks to borrow from</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Framework" id="fw-pick"></div>
+      <div class="card" id="fw-detail" aria-live="polite"></div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Where each speaks to the lifecycle</p>
+      <div class="table-wrap"><table class="grid-table fw-table" id="fw-map"></table></div>
+      <p class="comment" id="fw-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Borrow, don't adopt wholesale. OWASP SAMM is the one I'd start with: five business functions with three practices each, scored on three maturity levels, built for a "score, pick two, improve, score again" loop. The NIST SSDF is a catalogue of outcomes in four groups, useful when a customer or government buyer asks for it. BSIMM is a benchmark: it tells you what firms like yours actually do, not what they should. CISA's Secure by Design pledge is a ready-made set of seven promises to make about your product. The ISO standards describe the shape of a disclosure and handling process. The table on the right shows where each speaks to our six stages.</span></li><li><b class="ask">Ask</b><span>Has anyone been asked "do you follow the SSDF?" by a customer? <em>Answer: if yes, a one-page mapping from your own steps to its four groups answers it.</em></span></li><li><b class="tip">Tip</b><span>Sources read for this talk: SAMM's model page (the five functions and fifteen practices); NIST's CSRC pages for SP 800-218 and its Rev. 1 draft; CISA's pledge page (the seven goals, voluntary); Black Duck's BSIMM page ("descriptive", 100+ organisations); ISO/IEC 29147:2018 and 30111:2019 via secondary summaries.</span></li><li><b class="show">Check</b><span>The current SAMM release: the owaspsamm/core GitHub releases page lists v2.2.0 as latest, released on 6 July (the page shows no year; the previous release was v2.1.0, September 2024); owaspsamm.org's model page still calls it "version 2". Confirm the year on owaspsamm.org before quoting it. The SSDF practice groups' names come from my own knowledge, and the NIST page I read didn't list them, so check them against the PDF. I did not read the ISO documents themselves (they're paid). Whether SSDF 1.2 has been finalised after May 2026: not confirmed.</span></li><li><b class="next">Next</b><span>Checkpoint.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Through the lifecycle</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Where in your current process would a design flaw be caught today, if at all?</p><details><summary>Hint</summary><p>Walk a recent feature from idea to release and note who looked at its design.</p></details><details class="answer"><summary>Answer</summary><p>For most teams: nowhere, until it's built. The fix is a short design review (threat modelling) for changes that add a boundary, a data store or a new way in, and an owner who checks it happened.</p></details></li>
+      <li><p>Which of your last three stories would have been safer with security acceptance criteria, and what would one have said?</p><details><summary>Hint</summary><p>Think about what must <em>not</em> happen: reuse, enumeration, another tenant's data.</p></details><details class="answer"><summary>Answer</summary><p>There's no single answer. A good one is testable: "a reset link works once" or "an export only contains the caller's organisation's rows".</p></details></li>
+      <li><p>You can add one step this quarter. Which stage, and what makes you sure it's the one?</p><details><summary>Hint</summary><p>Where did your last real incident or near miss come from?</p></details><details class="answer"><summary>Answer</summary><p>The stage where the last bug reached customers. Pick the cheapest step that would have caught it, and measure whether it does.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="champions" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// PEOPLE AND PROCESS 01</p><h2>Security champions, planned honestly</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <label>Developers <output id="ch-devs-out"></output><input type="range" id="ch-devs" min="10" max="300" step="5" value="80"></label>
+        <label>Teams <output id="ch-teams-out"></output><input type="range" id="ch-teams" min="1" max="30" value="10"></label>
+        <label>Developers per champion <output id="ch-ratio-out"></output><input type="range" id="ch-ratio" min="3" max="40" value="10"></label>
+        <label>Champion hours per week <output id="ch-hours-out"></output><input type="range" id="ch-hours" min="0" max="12" step="0.5" value="3"></label>
+      </div>
+      <p class="lr-label">What you give them</p>
+      <div class="ch-support" id="ch-support"></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="ch-stats"></div>
+      <ul class="ch-warn" id="ch-warn" aria-live="polite"></ul>
+      <p class="comment" id="ch-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A champion is a developer on a product team who becomes the first stop for security questions there: they join design reviews, help triage findings and carry lessons back to the team. The programme works when the time is protected and the person is supported, and it fails when it's a title with extra unpaid work. Slide the numbers: with a champion for every ten developers and ten teams, you get eight champions and two teams with none. Drop the hours below one a week and the verdict turns red, because nothing will change. Push it above eight and it's a second job. Then tick the five support items: training, a direct line to security, a say in the paved road, recognition and protected time. Fewer than three and burnout follows.</span></li><li><b class="ask">Ask</b><span>Who would you pick, and what would their manager need to agree to? <em>Answer: someone respected by peers, not just the most security-keen; and a manager who has agreed in writing to the hours.</em></span></li><li><b class="tip">Tip</b><span>The ratios and hours here are teaching defaults of my own, not published standards: there's no authoritative number. Start with one volunteer per team for the teams with the most risk, and expand. Rotate the role yearly so it isn't a trap.</span></li><li><b class="show">Check</b><span>All numbers are my own heuristics. I didn't read a published source for champions-programme sizing (OWASP's and BSIMM's material on champions describe the practice, not a ratio).</span></li><li><b class="next">Next</b><span>"Champions help people choose well. A paved road makes the safe choice the easy one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="paved" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// PEOPLE AND PROCESS 02</p><h2>Paved roads: make the safe way the easy way</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lr-label">Pick a task teams repeat</p>
+      <div class="seg-pick" role="group" aria-label="Task" id="pr-pick"></div>
+      <div class="controls">
+        <label>Minutes to do it the paved way <output id="pr-paved-out"></output><input type="range" id="pr-paved" min="1" max="120" value="5"></label>
+        <label>Minutes to do it yourself <output id="pr-diy-out"></output><input type="range" id="pr-diy" min="1" max="120" value="25"></label>
+        <label>Share of real cases the paved road covers <output id="pr-fit-out"></output><input type="range" id="pr-fit" min="0" max="100" step="5" value="85"></label>
+        <label class="chk"><input type="checkbox" id="pr-mandate"> Make it mandatory</label>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="pr-stats"></div>
+      <p class="verdict" id="pr-verdict" aria-live="polite"></p>
+      <div class="card" id="pr-detail"></div>
+      <p class="comment" id="pr-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A paved road is a template, library or default that does the secure thing without asking the developer to know why: a shared HTTP client with timeouts and TLS, one helper for reading a secret, a template engine that escapes by default, a policy decorator for authorization, a service template with CI, scanning and a hardened image. People take the easier path. The model is crude on purpose: adoption is the share of real cases the road covers, weighted by how much easier it is than going alone. If the paved way takes as long as the DIY way, you get half. If the road is harder than going alone, you get little, and no mandate fixes that, because a mandate adds some adoption on paper and a pile of workarounds in practice. Adjust the sliders to see what you'd need.</span></li><li><b class="ask">Ask</b><span>What's the one task your teams repeat that would pay back a paved road fastest? <em>Answer: usually "start a new service" or "read a secret".</em></span></li><li><b class="tip">Tip</b><span>Treat the road like a product: it has users, a roadmap and a feedback channel (champions are good for that). Measure how many services use it and which exceptions keep appearing. The model's formula is mine, for teaching: it is not an empirical result.</span></li><li><b class="next">Next</b><span>"Next: how you handle the people who find what you missed."</span></li></ul></div>
+</section>
+
+<section class="slide" id="disclosure" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// PEOPLE AND PROCESS 03</p><h2>A disclosure policy and security.txt</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="lr-label" for="st-contact">Contact (an email or an https link; one per line)</label>
+      <textarea id="st-contact" rows="2" spellcheck="false" autocomplete="off">security@example.org</textarea>
+      <div class="st-grid">
+        <label class="lr-label">Valid for (days, at most 365)<input type="number" id="st-days" class="mono" min="30" max="365" value="330"></label>
+        <label class="lr-label">Preferred languages<input type="text" id="st-lang" class="mono" value="en" spellcheck="false"></label>
+        <label class="lr-label">Policy link<input type="text" id="st-policy" class="mono" value="https://example.org/security/policy" spellcheck="false"></label>
+        <label class="lr-label">Acknowledgments link<input type="text" id="st-ack" class="mono" value="https://example.org/security/thanks" spellcheck="false"></label>
+        <label class="lr-label">Encryption key (a link, never the key)<input type="text" id="st-enc" class="mono" value="" spellcheck="false"></label>
+        <label class="lr-label">Canonical<input type="text" id="st-canon" class="mono" value="https://example.org/.well-known/security.txt" spellcheck="false"></label>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Serve at /.well-known/security.txt as text/plain, over https</p>
+      <pre class="term st-out" id="st-out" aria-live="polite"></pre>
+      <div class="seg-pick"><button type="button" id="st-copy">Copy to clipboard</button></div>
+      <ul class="st-lint" id="st-lint" aria-live="polite"></ul>
+      <p class="comment" id="st-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>A disclosure policy is a short public page that says how to report a vulnerability, what's in scope, whether testing is allowed, when you'll reply and what the reporter can expect. The security.txt file, defined by RFC 9116, points to it. Two fields are required: Contact, and Expires, so a stale file can't pass for a current one. The contact is a URI, so an email needs mailto:. Web links must be https. Expires should be less than a year ahead. Everything else is optional: Policy, Acknowledgments, Encryption (a link to your key, never the key pasted in), Preferred-Languages, Hiring and Canonical. Fill the form on the left; the file on the right passes the same checker as the title slide. Put it at /.well-known/security.txt, served as text/plain over https.</span></li><li><b class="ask">Ask</b><span>Who reads the security@ mailbox today, and what happens when they're away? <em>Answer: if the answer is "one person", that's the first thing to fix.</em></span></li><li><b class="tip">Tip</b><span>Policy contents, from OWASP's Vulnerability Disclosure Cheat Sheet and CISA's VDP template: scope (which systems, which are excluded), safe-harbour wording for good-faith testing reviewed by a lawyer, a secure way to report (an https form if you can), a promised reply time (CISA's template says acknowledge within three business days), credit for reporters and a promise not to threaten them. The US Department of Justice's May 2022 charging policy tells prosecutors to decline to charge good-faith security research under the Computer Fraud and Abuse Act, but a policy is how you say "we agree" in advance. Add a reminder to renew Expires.</span></li><li><b class="show">Check</b><span>RFC 9116 read in full for fields, requirements and HTTPS and location rules. On stale files the RFC says data past its Expires date "is considered stale and should not be used", and that no file may be better than a stale one; the checker only says "stale", which is enough. Whether your web host serves dot-directories: GitHub Pages needs a .nojekyll file or similar. The DOJ policy (announced 19 May 2022; prosecutors should decline to charge conduct that is good-faith security research, with extortion excluded) was read through law-firm summaries and the press release as mirrored elsewhere, not justice.gov itself, whose page didn't load on 11 November 2026.</span></li><li><b class="next">Next</b><span>"And when a report arrives, a clock starts."</span></li></ul></div>
+</section>
+
+<section class="slide" id="clock" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// PEOPLE AND PROCESS 04</p><h2>A report arrives: what's due, and when?</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="controls">
+        <label>Report received (09:00 UTC) <input type="date" id="rc-date" value="2026-11-11"></label>
+        <label>Severity <select id="rc-sev" aria-label="Severity"><option value="critical">Critical</option><option value="high" selected>High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+        <label class="chk"><input type="checkbox" id="rc-exploited"> It is being actively exploited</label>
+        <label class="chk"><input type="checkbox" id="rc-eu"> We sell a product with software in the EU</label>
+      </div>
+      <p class="comment" id="rc-note"></p>
+    </div>
+    <div class="stack">
+      <ol class="rc-list" id="rc-list" aria-live="polite"></ol>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Pick a date and a severity. The list shows what's due and who owns each deadline. Your own: acknowledge the report (CISA's template says three business days; sooner is kinder), confirm or explain, and ship a fix. The fix targets here are invented examples: critical in seven days, high in thirty, medium in ninety, low in a hundred and eighty. The researcher's clock is separate: Google Project Zero publishes after 90 days, or after 7 if the bug is being actively exploited, and other researchers set their own. Now tick "actively exploited" and "we sell a product in the EU": three more lines appear, because under the Cyber Resilience Act, from 11 September 2026, manufacturers must send an early warning within 24 hours of becoming aware, a full notification within 72 hours and a final report no later than 14 days after a fix is available. That is why the first 24 hours matter.</span></li><li><b class="ask">Ask</b><span>(Checkpoint question, previewed.) A researcher emails you about a vulnerability. What should happen in the first 24 hours? <em>Answer: someone acknowledges it, one person owns it, you reproduce it, you decide severity and whether it's exploited, and you start the clocks.</em></span></li><li><b class="tip">Tip</b><span>Agree your own targets with the team, publish the ones you can keep, and test the first response with a drill. Business-day arithmetic here ignores public holidays. Project Zero's policy (90 days to fix, details 30 days after the patch ships, a 14-day extension on request, 7 days when a bug is actively exploited) was read on its policy page (now projectzero.google); the CRA deadlines on the Commission's CRA reporting page (digital-strategy.ec.europa.eu/en/policies/cra-reporting, read 11 November 2026).</span></li><li><b class="show">Check</b><span>This applies to manufacturers placing products with digital elements on the EU market, and only to actively exploited vulnerabilities and severe incidents: I didn't check scope exemptions or the exact trigger for "becoming aware"; the Commission's page says open-source software stewards' reporting duties start later, on 11 December 2027, and that a severe incident's final report is due within a month of the 72-hour notification. It is not legal advice. The platform was reported to be at version 1.2.1 on 20 October 2026 (secondary): check the current process on ENISA's site.</span></li><li><b class="next">Next</b><span>"A bounty multiplies reports. Are you ready?" (skippable)</span></li></ul></div>
+</section>
+
+<section class="slide" id="bounty" data-part="2" data-num="12" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// PEOPLE AND PROCESS 05 · SKIPPABLE</p><h2>Bug bounties: when they help, and when they're premature</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lr-label">Tick what's true today</p>
+      <div class="bb-list" id="bb-list"></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="bb-stats"></div>
+      <p class="verdict" id="bb-verdict" aria-live="polite"></p>
+      <div class="card"><b>The idea</b><span>A bounty pays for volume. If your policy, replies, triage and fixing can't yet cope with the reports you get for free, paying for more makes things worse, and unanswered reporters talk.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>A bounty is paying researchers for valid reports. It works when you can already handle reports well. OWASP's cheat sheet says bounty programmes should only be run by organisations that already have a mature disclosure process. The checklist is my own heuristic built from that advice: the four basics (a live policy, replies within your promise, a named triager, capacity to fix) are the gate. Without them the verdict is "not yet" however many other boxes you tick. With all eight, start with a private invite-only pilot.</span></li><li><b class="ask">Ask</b><span>What did your last unpaid report cost you in time, and would you cope with ten a week? <em>Answer: that is the real readiness test.</em></span></li><li><b class="tip">Tip</b><span>Alternatives: a plain disclosure policy with public thanks (a hall of fame), swag, or a managed triage service. Check the legal and tax side before paying anyone.</span></li><li><b class="show">Check</b><span>The "mature disclosure process first" advice is from OWASP's Vulnerability Disclosure Cheat Sheet, read for this talk. The eight items and the verdict thresholds are mine.</span></li><li><b class="next">Next</b><span>"After an incident: blame, or learning."</span></li></ul></div>
+</section>
+
+<section class="slide" id="blameless" data-part="2" data-num="13" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// PEOPLE AND PROCESS 06 · SKIPPABLE</p><h2>Blameless reviews for security bugs</h2></header>
+  <div class="slide-body stack">
+    <p class="lr-label">Click a sentence to rewrite it as a question about the system</p>
+    <div class="bl-list" id="bl-list"></div>
+    <p class="comment" id="bl-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>After a security bug or an incident, the review asks "what let this happen?", not "who did it?". Each sentence starts as the blameful version. Click it to see the same fact written about the system, and the change it points to. If the review ends with a person's name, you've learned nothing that stops the next one: the same pipeline will let the next person do it. Blameless doesn't mean nobody is accountable. It means the first question is about conditions.</span></li><li><b class="ask">Ask</b><span>What was the last security bug you reviewed, and what changed in the system because of it? <em>Answer: if nothing changed, the review was a ceremony.</em></span></li><li><b class="tip">Tip</b><span>Run the review within a week, include the people involved, write down contributing factors and give each action an owner and a date. Share it more widely than the team. The sample sentences are invented.</span></li><li><b class="next">Next</b><span>"Now: how do you know any of this is working?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="metrics" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// MEASURING 01</p><h2>Numbers that drive improvement</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Quarter" id="mt-pick"><button type="button" data-q="1" aria-pressed="true">Quarter 1</button><button type="button" data-q="2" aria-pressed="false">Quarter 2</button></div>
+      <p class="lr-label">Median days to fix, by severity (invented data)</p>
+      <div class="table-wrap"><table class="grid-table mt-table" id="mt-ttf"></table></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="mt-stats"></div>
+      <div class="card"><b>Repeat bug classes</b><span id="mt-repeat"></span></div>
+      <p class="comment" id="mt-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Three numbers that tell you whether the process is working. First, time to fix by severity: how long the important things stay open. In quarter one the median critical took about two weeks and high ones about six; in quarter two criticals took four days. Second, paved-road coverage: three of ten services in quarter one, six of ten in quarter two. That's a cause, not a symptom. Third, repeat bug classes: when the same class shows up quarter after quarter (here, authorization), the fix at the instance level isn't working, and the answer is a paved road or a test, not another reminder. Switch quarters and read the notes under the numbers.</span></li><li><b class="ask">Ask</b><span>Which of these could you compute today from your tracker? <em>Answer: time to fix, if tickets have severity and dates; the other two usually need a tag.</em></span></li><li><b class="tip">Tip</b><span>Report medians and how many are past their target, not averages. Keep the numbers with the team that owns the fix, not on a league table. All the findings, services and quarters are invented.</span></li><li><b class="next">Next</b><span>"The numbers that look good and teach nothing."</span></li></ul></div>
+</section>
+
+<section class="slide" id="gaming" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// MEASURING 02</p><h2>Metrics to avoid (or to guard)</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="seg-pick gm-pick" role="group" aria-label="Metric" id="gm-pick"></div>
+      <div class="card" id="gm-detail" aria-live="polite"></div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Reward "findings closed" and see what a team does with capacity for <output id="gm-cap-out"></output> closures</p>
+      <input type="range" id="gm-cap" min="2" max="12" value="8" aria-label="Closures this quarter">
+      <div class="table-wrap"><table class="grid-table gm-table" id="gm-table"></table></div>
+      <p class="comment" id="gm-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>When a number becomes a target, people optimise the number. Pick a metric to see what it rewards and how it gets gamed. "Findings reported" rewards splitting bugs into many tickets. "Lines of code scanned" rewards scanning generated code. "Zero open criticals" is fine if re-rating needs a second pair of eyes and every acceptance expires. On the right, reward "findings closed" and a team with room for eight closures can close the four lows and the three mediums first, plus one high: eight closed, the same count as closing the worst first, but two criticals and two highs still open. The dashboard turns green while the risk stays. Time to fix by severity, paved-road coverage and repeat classes are harder to game, and they measure causes.</span></li><li><b class="ask">Ask</b><span>Which number do you report upwards today, and how would a clever team improve it without making anything safer? <em>Answer: that question finds the weak metric.</em></span></li><li><b class="tip">Tip</b><span>This is Goodhart's law: a measure that becomes a target stops being a good measure. Pair every number with a guard (a re-test, a second reviewer, an expiry) and review the set once a year. The findings are the same invented set as the previous slide.</span></li><li><b class="next">Next</b><span>"A quick self-check to see where you stand."</span></li></ul></div>
+</section>
+
+<section class="slide" id="maturity" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// MEASURING 03</p><h2>A maturity self-check</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <p class="lr-label">Twelve questions. Answers stay in this browser.</p>
+      <div class="mu-list" id="mu-list"></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="mu-stats"></div>
+      <ul class="mu-areas" id="mu-areas"></ul>
+      <p class="verdict" id="mu-next" aria-live="polite"></p>
+      <p class="comment" id="mu-note"></p>
+      <div class="seg-pick"><button type="button" id="mu-reset">Clear answers</button></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Two questions for each of the six stages, answered No, Partly or Yes. You get a score per area and one suggested next step: the first thing you answered with less than a Yes in the weakest area. It's a conversation starter for a team, not an audit. Do it alone first, then compare answers: the interesting part is where two people on the same team answer differently. The answers are saved in this browser and nowhere else.</span></li><li><b class="ask">Ask</b><span>Where did two honest people disagree? <em>Answer: usually "are findings really owned?" and "do we really test the criteria?".</em></span></li><li><b class="tip">Tip</b><span>The questions are mine, loosely shaped by SAMM's functions. For a real assessment use SAMM's own questionnaire and toolbox. Repeat it every six months and compare.</span></li><li><b class="show">Check</b><span>Not an official or validated instrument. Nothing here maps to a SAMM maturity level.</span></li><li><b class="next">Next</b><span>Checkpoint.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>People, process and numbers</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A researcher emails you about a vulnerability. What should happen in the first 24 hours?</p><details><summary>Hint</summary><p>Think: who owns it, who replies, and which clocks might have started.</p></details><details class="answer"><summary>Answer</summary><p>Someone acknowledges it (CISA's template says within three business days, but sooner is kinder), one person owns it, you reproduce it and rate it, you check whether it's being exploited, and you tell the team. If it's actively exploited in a product sold in the EU, the early warning is due within 24 hours.</p></details></li>
+      <li><p>Your dashboard says findings closed went up 40%. What do you ask before celebrating?</p><details><summary>Hint</summary><p>Which findings?</p></details><details class="answer"><summary>Answer</summary><p>Which severities were closed and how long the important ones stayed open. Look at time to fix for critical and high findings, and whether the same bug class keeps returning.</p></details></li>
+      <li><p>What would make an engineer choose the paved road without being told to?</p><details><summary>Hint</summary><p>Think about effort, and about the cases it doesn't cover.</p></details><details class="answer"><summary>Answer</summary><p>It's faster than going alone and it covers most real cases. When it doesn't, the exceptions are heard and the road gets wider.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="trackmap" data-part="4" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>The whole developer track, on the lifecycle</h2></header>
+  <div class="slide-body stack">
+    <div class="seg-pick" role="group" aria-label="Stage filter" id="tk-pick"></div>
+    <div class="tk-grid" id="tk-grid"></div>
+    <p class="comment" id="tk-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Every earlier talk in this track fits a stage of the lifecycle. Pick a stage to light up the talks that teach its techniques. This talk is about the glue: how a team decides to do all of this routinely. If you're starting from nothing, the order of the track is a reasonable order of adoption: habits, Git, crypto, web, APIs, login, secrets, dependencies, and so on.</span></li><li><b class="ask">Ask</b><span>Which stage has the thinnest coverage on your team? <em>Answer: that's where the next step goes.</em></span></li><li><b class="tip">Tip</b><span>Several talks cover more than one stage; the mapping is my own. Click a talk to open it.</span></li><li><b class="next">Next</b><span>"And a checklist to take away."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>A checklist for your team</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="sd-list">
+      <label><input type="checkbox" data-k="criteria"> Stories that touch sign-in, data or money carry security acceptance criteria, and they become tests</label>
+      <label><input type="checkbox" data-k="design"> Changes that add a boundary or a data store get a short design review</label>
+      <label><input type="checkbox" data-k="paved"> The most repeated task has a paved road that is easier than going alone</label>
+      <label><input type="checkbox" data-k="ci"> CI scans dependencies, secrets and code on every change, and suppressions expire</label>
+      <label><input type="checkbox" data-k="champions"> Every team that carries risk has a champion with protected time</label>
+      <label><input type="checkbox" data-k="txt"> A security.txt and a short disclosure policy are live, and the mailbox has two readers</label>
+      <label><input type="checkbox" data-k="clock"> We know our own reply and fix targets, and who to tell if a bug is being exploited</label>
+      <label><input type="checkbox" data-k="blameless"> Security bugs get a blameless review that changes something</label>
+      <label><input type="checkbox" data-k="metrics"> We watch time to fix, paved-road coverage and repeat classes, each with a guard</label>
+      <label><input type="checkbox" data-k="revisit"> We re-run a self-check every six months and pick two things to improve</label>
+    </div>
+    <p class="comment" id="sd-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what's true for your team today and treat each unticked box as a ticket. Ticks are saved in this browser only, and the PDF button prints the list. Don't try to tick everything by next quarter: pick two.</span></li><li><b class="ask">Ask</b><span>Which unticked box is cheapest this month? <em>Answer: usually the security.txt, because it's an afternoon.</em></span></li><li><b class="tip">Tip</b><span>This hub doesn't have a security.txt yet, which is a fair homework example.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">What's one step you could add this quarter, and what would tell you it worked?</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The slides and demos stay live; nothing you type leaves your browser.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../threat-modeling/">Threat modeling in practice</a><span>The design-stage step, as a workshop.</span></li>
+        <li><a href="../security-testing/">Security testing in your workflow</a><span>The automated checks, and how to triage what they find.</span></li>
+        <li><a href="../vulnerability-management/">Vulnerability management</a><span>Ranking and fixing what the scanners and researchers find.</span></li>
+        <li><a href="../logging-and-incident-response/">Logging and incident response</a><span>The operate stage, and what to do when it goes wrong.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only, and not legal advice. Every team, finding and number in the demos is invented. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. If it's quiet: ask what the first thing is that would break if their security person left next month, and what one step would make it stop depending on them.</span></li><li><b class="show">Check</b><span>Facts checked 11 November 2026. Read from primary pages: RFC 9116 (fields, HTTPS and location rules); NIST's CSRC pages for SP 800-218 (final 1.1, February 2022) and the Rev. 1 draft (17 December 2025, comments closed 30 January 2026); SAMM's model page (five functions, fifteen practices); CISA's Secure by Design pledge page (seven goals, voluntary), VDP template (three business days) and BSIMM's page via Black Duck; OWASP's Vulnerability Disclosure Cheat Sheet; Google Project Zero's disclosure policy (90+30, 7 days if exploited); the European Commission's CRA reporting page (24 h, 72 h, 14 days after a fix; from 11 September 2026). Via secondary sources only: ISO/IEC 29147:2018 and 30111:2019; the Missouri case (including the Highway Patrol report's "since 2011"); the US Justice Department's May 2022 CFAA policy; the SAMM v2.2.0 release year; SSDF 1.2's final status (still an initial public draft on NIST's page on 11 November 2026); ENISA platform version details. Not legal advice. All targets, ratios and numbers in the demos are invented teaching values.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="sdlc.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
