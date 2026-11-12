@@ -32,6 +32,25 @@ Start with **Crypto 101**: every track builds on it. Then pick the track that fi
 | General 7 | **Privacy Tools Explained** | Beginner | about 80 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/privacy-tools/) |
 | General 8 | **Modern Messaging Protocols** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/modern-messaging/) |
 | General 9 | **Zero-Knowledge Proofs** | Advanced | about 95 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/zero-knowledge-proofs/) |
+| Security 5 | **Logging, Monitoring and Incident Response** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/logging-and-incident-response/) |
+| Security 6 | **Detection Engineering** | Advanced | about 110 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/detection-engineering/) |
+| Security 7 | **Case Studies in Cryptographic Failures** | Advanced | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/cryptographic-failures/) |
+| Security 8 | **Post-Quantum Migration** | Advanced | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/post-quantum-migration/) |
+| Developer 5 | **Building Secure APIs** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/secure-apis/) |
+| Developer 6 | **Building Login and Accounts Safely** | Intermediate | about 100 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/building-login/) |
+| Developer 7 | **Secrets Management** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/secrets-management/) |
+| Developer 8 | **Securing Dependencies and CI/CD** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/dependencies-and-ci/) |
+| Developer 9 | **Hashing Beyond Passwords** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/hashing-beyond-passwords/) |
+| Developer 10 | **Container and Kubernetes Security** | Intermediate | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/containers/) |
+| Developer 11 | **Security Testing in Your Workflow** | Intermediate | about 85 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/security-testing/) |
+| Developer 12 | **Threat Modeling in Practice** | Advanced | about 2.5 hours, a workshop | [Slides](https://zevaryx.github.io/cybersec-hub/talks/threat-modeling/) |
+| Developer 13 | **Secure Code Review Workshop** | Advanced | about 2 hours, a workshop | [Slides](https://zevaryx.github.io/cybersec-hub/talks/secure-code-review/) |
+| Developer 14 | **Memory Safety** | Advanced | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/memory-safety/) |
+| Developer 15 | **Securing AI and LLM Applications** | Advanced | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/ai-application-security/) |
+| Developer 16 | **Elliptic Curves, Properly** | Advanced | about 2 hours | [Slides](https://zevaryx.github.io/cybersec-hub/talks/elliptic-curves/) |
+| Developer 17 | **Fuzzing for Developers** | Advanced | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/fuzzing/) |
+| Developer 18 | **Privacy Engineering** | Advanced | about 95 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/privacy-engineering/) |
+| Developer 19 | **Security in Your Development Process** | Advanced | about 90 minutes | [Slides](https://zevaryx.github.io/cybersec-hub/talks/secure-sdlc/) |
 
 
 **Cyber in the News** is a monthly roundup for every track, outside the sequence: the month's security stories, the idea behind each, and what to do. Every story slide lists its sources. All episodes are listed at <https://zevaryx.github.io/cybersec-hub/news/>, sortable by latest or oldest; the front page shows the latest one.
@@ -61,6 +80,211 @@ Four parts, with checkpoints after parts 1 and 3:
 4. **Wrap-up** (8 min): a 90-day plan that remembers your ticks
 
 Authentication guidance follows NIST SP 800-63B revision 4, checked 30 October 2026.
+
+### Security in Your Development Process
+
+Four parts, with two checkpoints (about 90 minutes, about 82 with the two skippable slides skipped):
+
+1. **Why a process beats a hero** (25 min): three sourced cards (the Missouri journalist case, the EU Cyber Resilience Act reporting duty, the SSDF revision), a lifecycle board, requirements as acceptance criteria, and the frameworks to borrow from (SAMM, SSDF, BSIMM, CISA Secure by Design, ISO 29147 and 30111)
+2. **Making it happen** (32 min): a champions planner, a paved-road adoption model, a security.txt builder that lints against RFC 9116, a report clock with CRA deadlines, bug-bounty readiness and blameless rewrites (both skippable)
+3. **Measuring** (20 min): useful metrics, metrics that get gamed, a maturity self-check
+4. **Wrap-up** (10 min): the whole track on the lifecycle, a team checklist
+
+Teaching code lives in `sdlc.js` (`SdlcLab`, also loads in Node, no `crypto.js`). Facts checked 11 November 2026; the Missouri case, the DOJ's CFAA policy, ISO standards (paywalled), the SAMM release number and whether SSDF 1.2 was finalised are from secondary sources and hedged in the speaker notes. All demo numbers are invented.
+
+### Privacy Engineering
+
+Four parts, with three checkpoints (about 95 minutes, about 85 without the two skippable slides):
+
+1. **Collect less** (26 min): why "anonymised" isn't, re-identification on 60 invented people with k-anonymity, minimising each field, purpose and consent
+2. **Protect what you keep** (33 min): a data map, one key per person (real AES-GCM, crypto-shredding), plain hash vs keyed pseudonyms, privacy noise and access audit (both skippable), a log redactor
+3. **Let it go** (27 min): retention jobs, deletion across every copy, request deadlines and export, LINDDUN
+4. **Wrap-up** (7 min): a 10-box checklist
+
+Teaching code lives in `privacy.js` (`PrivLab`, reusing SHA-256 and HMAC from `crypto.js`). Not legal advice. Facts checked 11 November 2026; the Irish DPC's decision text for the Meta fine, EDPB Guidelines 01/2025's status, the ICO anonymisation guidance date and NIST Privacy Framework 1.1's status are hedged in the speaker notes. All people, datasets and retention periods are invented.
+
+### Fuzzing for Developers
+
+Four parts, with two checkpoints (about 90 minutes):
+
+1. **How fuzzing works** (28 min): the 1990 story, gate maths, a step-by-step loop, a race between random, mutation and coverage-guided fuzzers, real libFuzzer and AddressSanitizer output, a property test
+2. **Doing it** (30 min): picking targets, harness anatomy in C++, Go, Rust and Python, a harness doctor, seeds and dictionaries, structure-aware fuzzing, find, shrink, fix and keep
+3. **Running it** (23 min): CI vs continuous fuzzing, crash triage, tools and programmes, a coverage chart
+4. **Wrap-up** (8 min): a 10-box checklist
+
+Teaching code lives in `fuzz.js` (`FuzzLab`, also loads in Node, no `crypto.js`); the toy parser and its three bugs are invented, and the sanitizer slide shows real captured libFuzzer output from a C port. Facts checked 11 November 2026; OSS-Fuzz totals are "as of May 2025", and the Go, Rust and Python snippets were not run.
+
+### Elliptic Curves, Properly
+
+Four parts, with three checkpoints (about 2 hours):
+
+1. **The group** (27 min): order, generator and cofactor on two toy curves, Montgomery vs Edwards forms of one group, choosing curves (SafeCurves), point encoding and validation
+2. **Signatures** (38 min): ECDSA step by step, nonce reuse and key recovery, biased nonces, RFC 6979, Ed25519 cross-checked with Web Crypto, malleability and strict verification
+3. **Doing it safely** (34 min): invalid-curve and low-order points, two constant-time slides, side channels, known-answer tests vs edge cases
+4. **Wrap-up** (12 min): choosing today, a 10-box checklist
+
+Teaching code lives in `ec.js` (`ECLab`, also loads in Node, built on `crypto.js`); Node tests check Ed25519 byte for byte and 15 known-answer vectors. Facts checked 11 November 2026; the PS3 nonce, Android 2013 and Minerva details rest on secondary sources and are hedged in the speaker notes.
+
+### Securing AI and LLM Applications
+
+Four parts, with three checkpoints (about 90 minutes):
+
+1. **The core problem** (22 min): six incidents, one channel for instructions and data (with a forged-marker button), six hidden-text sources, and a phrase blocklist that learns one phrase at a time and still misses a template of 4,320 variants
+2. **Designing for it** (32 min): the Rule of Two, a permission switchboard (8 tools, approvals, scope, destinations, a fixed plan and a phrase filter against 5 attacks in 3 wordings), approval gates, one loop vs plan-first vs a quarantined reader, output handling (including the markdown-image leak) and a prompt linter
+3. **Testing and operating** (21 min): a four-question threat model for 4 features, a 15-case injection test suite run against 4 setups, a tool-call log with 4 alert rules, and tool-server vetting with SHA-256 pinning of a tool description
+4. **Wrap-up** (10 min): an OWASP risk map where each tile links to a slide, a 10-box checklist
+
+No model is used anywhere: every demo is a labelled simulation with invented data, run by teaching code in `ai.js` (`AILab`, also loads in Node, no `crypto.js`). Facts checked 11 November 2026; OWASP's 2026 edition names (secondary reports disagree), EchoLeak's "first zero-click" claim and the MCP specification version are hedged in the speaker notes.
+
+### Memory Safety
+
+Five parts, with checkpoints after parts 1, 2 and 4 (about 90 minutes):
+
+1. **The problem** (25 min): the numbers, a toy 24-cell heap with six bug classes in Unchecked and Checked modes, and a six-snippet "be the reviewer" quiz
+2. **What mitigations buy** (20 min): mitigations by bug class, "same bug, different shields", memory tagging
+3. **Finding the bugs** (20 min): sanitizers with three captured reports, fuzzing, and a static-analysis table from real runs
+4. **Moving to safe languages** (20 min): C vs Go/Java vs Rust on three bugs, where to start in a codebase, the guidance timeline
+5. **Wrap-up** (5 min): a 10-box checklist
+
+The demos run in the page with teaching code in `memory.js` (`MemLab`, also loads in Node); it doesn't load `crypto.js`. The heap model uses cells rather than bytes, and the fuzzer's parser, the invented codebase and the mitigation ratings are teaching aids. The sanitizer, compiler and Rust output is real, captured with clang 23.1.4, gcc 16.2.1 and rustc 1.99.1 on 11 November 2026. Facts checked 11 November 2026; the items not read in full (the CISA and NSA June 2025 information sheet, the ONCD report, Linux Rust's status, the 4-bit tag size) are listed in the speaker notes.
+
+### Secure Code Review Workshop
+
+A workshop in three parts, with a checkpoint after the four rounds (about 2 hours):
+
+1. **A method** (25 min): a source-to-sink tracer, what to read first in a diff, six questions for every change with "empty, huge or hostile" probes, and how the rounds work
+2. **Four rounds** (70 min): ten invented diffs with 21 required findings and a clean one on purpose, in Python, Node and JavaScript, covering injection, authorization, secrets and crypto, and configuration and errors, with clickable line flagging, fixes and model review comments, then a scoreboard
+3. **Making it stick** (20 min): a review-comment builder, a machine-or-human sort of 8 items, and a 10-box checklist
+
+The demos run in the page with teaching code in `review.js` (`ReviewLab`, also loads in Node). The diffs are invented and the line checker is a toy matcher, not a real analyser. Facts checked 11 November 2026; the goto fail excerpt is a labelled paraphrase, and the CWE numbers other than 639 are from memory (flagged in the speaker notes).
+
+### Threat Modeling in Practice
+
+A workshop in four parts, with checkpoints after parts 1 and 3 and three exercises (about 2.5 hours):
+
+1. **The four questions** (20 min): what are we working on, what can go wrong, what will we do about it, did we do a good job, on a password reset; a "how big a threat model?" picker
+2. **Drawing the system** (30 min): the four element kinds, trust boundaries, and Exercise 1, a data-flow diagram builder with a reference answer and drawing-mistake hints
+3. **Finding threats** (55 min): STRIDE, a walkthrough of the Crypto 101 website, 24 threat cards, LINDDUN and abuse cases, an attack tree with AND/OR cost maths, and Exercise 2, a threat log with a coverage tracker
+4. **Deciding and tracking** (36 min): a likelihood-by-impact ranking grid, responses with owners (an accepted risk needs a review date), tickets with a "done when" test, Exercise 3, and a 10-box habit checklist
+
+The demos run in the page with teaching code in `tm.js` (`TMLab`, also loads in Node); it doesn't load `crypto.js`. The threats you log in Exercise 2 carry through ranking, responses and tickets, and the log lives only in the browser tab. The sample systems, threats, scores and review defaults are invented. Facts checked 11 November 2026; the STRIDE-per-element chart (from secondary summaries), the exact wording of the Manifesto's fourth question, LINDDUN's category names and the Microsoft Threat Modeling Tool's current status are hedged in the speaker notes.
+
+### Security Testing in Your Workflow
+
+Three parts, with checkpoints after parts 1 and 3 (about 85 minutes):
+
+1. **What each tool finds** (28 min): a tool map of 8 bug types against 7 tool classes, a toy static scanner (pattern and data-flow modes), dynamic scanning, dependency and secret scanning, fuzzing in one slide
+2. **Tests only you can write** (24 min): an authorization test runner with 5 switchable bugs, an input-handling battery of 12 nasty filenames, regression tests
+3. **Fitting it in** (30 min): a pipeline planner, baselines and a suppression linter, the triage game, measuring what matters, and a 10-box checklist
+
+The demos run in the page with teaching code in `tests.js` (`TestLab`, also loads in Node); it doesn't load `crypto.js`. The tool-map ratings are a rule of thumb, not a measurement, and all findings, durations and numbers are invented. Facts checked 11 November 2026; the items not confirmed (ZAP's ownership wording and container command, Dependabot reachability while it was a JavaScript-only preview, the Windows device-name behaviour) are listed in the speaker notes.
+
+### Container and Kubernetes Security
+
+Two parts, with checkpoints after each (about 90 minutes):
+
+1. **Building images** (34 min): the shared-kernel quiz, base images, tag versus digest, multi-stage builds, "if code gets in, what can it do?", a layer explorer and a Dockerfile grader
+2. **Shipping and running** (50 min): scan triage, signing and admission, settings that end isolation, security context and Pod Security Standards, memory limits, blast radius, Kubernetes Secrets, a manifest review, and a 12-box checklist
+
+The demos run in the page with teaching code in `containers.js` (`ContainersLab`, also loads in Node) on top of the shared SHA-256 and ECDSA code. The scan findings, memory simulation, blast-radius targets and grader rules are invented or simplified, and the Pod Security Standards check covers a subset. Facts checked 11 November 2026; the items not read in full (seccomp default, cosign 3 bundle format, bound-token versions) are listed in the speaker notes.
+
+### Hashing Beyond Passwords
+
+Four parts, with checkpoints after parts 1 and 3 (about 90 minutes):
+
+1. **Content addressing** (20 min): a fingerprint demo, a mini Git with commits, trees and blobs, and Git's move from SHA-1 to SHA-256
+2. **Merkle trees** (24 min): a tree builder, inclusion proofs for eight entries, where Merkle trees are used, domain separation, consistency proofs with an append and a quiet rewrite
+3. **Keeping downloads honest** (28 min): checksum versus signature in five scenarios, a keyless-signing stepper (Sigstore), reproducible builds, SLSA levels, a pin checker
+4. **Choosing a hash** (13 min): a hash chooser for seven jobs and an 8-box checklist
+
+The demos run in the page with teaching code in `hashes.js` (`HashLab`, also loads in Node) on top of the shared SHA and ECDSA code. Git object IDs are tested against real Git and the Merkle roots against the RFC 6962 test vectors. Facts checked 11 November 2026; Git 3.0 timing, SLSA's Source track and CT log RFC status are flagged in the speaker notes.
+
+### Securing Dependencies and CI/CD
+
+Four parts, with checkpoints after parts 1, 3 and 4 (about 90 minutes):
+
+1. **Your dependency tree** (21 min): direct and transitive dependencies, known vulnerabilities, a look-alike package spotter, choosing packages
+2. **Keeping it under control** (15 min): lock files with a cooldown timeline, an update-PR reviewer, private registries (dependency confusion), SBOM queries
+3. **The pipeline** (21 min): why CI is a target, token permissions, pinned actions, short-lived credentials, an injection demo (it never runs anything)
+4. **Proving what you built** (15 min): signing with a log, provenance and SLSA, verifying before you deploy, and a 12-box checklist
+
+The demos run in the page with teaching code in `deps.js` (`DepsLab`, also loads in Node) on top of the shared SHA and ECDSA code. All package names and advisories are invented; only left-pad is real. Facts checked 11 November 2026. GitHub's `pull_request_target` change and the Dependabot cooldown default are date-dependent and flagged in the speaker notes.
+
+### Secrets Management
+
+Three parts, with checkpoints after parts 1 and 2:
+
+1. **Where secrets leak** (24 min): an eight-place leak map, container image layers, "deleted is not gone" in Git history (a simulation), a secret scanner with false-alarm and what-it-misses presets
+2. **Keeping them safe** (29 min): the ladder of options against six threats, envelope encryption, HSMs and a 3-of-5 key ceremony, short-lived credentials (a signed identity token and a trust policy)
+3. **Rotation and response** (28 min): two-key rotation, rotation in practice, a leak runbook, a tabletop, and a 12-box checklist
+
+The demos run in the page with teaching code in `secrets.js` (a scanner, image-build model, toy repository, envelope encryption, Shamir sharing, token and trust-policy logic, a rotation key ring) on top of the shared AES-GCM, ECDSA and SHA code. Facts checked 11 November 2026; the unconfirmed items (Toyota's and Microsoft's own notices, AWS rotation labels, the OIDC subject format) are listed in the speaker notes.
+
+### Building Login and Accounts Safely
+
+Four parts, with checkpoints after parts 2, 3 and 4 (about 100 minutes with four skippable slides):
+
+1. **Scope** (9 min): buy versus build, and the seven parts of an account system
+2. **Passwords and sessions** (35 min): real Argon2id rehash on login, NIST-style password rules with an offline breach check, cookie settings, session fixation and expiry, refresh-token rotation with reuse detection
+3. **Second factors** (24 min): a TOTP verifier (tested against the RFC 6238 vectors) and simulated passkeys with real P-256 signatures
+4. **Recovery and abuse** (40 min): reset links, recovery codes, email change, a credential-stuffing model, account enumeration with real hash timings, a 14-box checklist
+
+The server-side logic lives in `auth.js`, which also loads in Node. Facts checked 11 November 2026 (NIST SP 800-63B-4, WebAuthn); unconfirmed items, such as Twitter's 2018 notice, are listed in the speaker notes.
+
+### Building Secure APIs
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Who may do what** (31 min): authentication versus authorization, object-level and function-level authorization (an invoice explorer and a route matrix), patterns that scale
+2. **Credentials** (25 min): API keys with rotation, sessions versus bearer tokens, a JWT inspector that signs real ES256 tokens and compares decode-only, naive and full validators, OAuth scopes
+3. **Shaping traffic** (26 min): schemas on input (mass assignment) and output, a token-bucket rate limiter, SSRF, errors and logs
+4. **Wrap-up** (11 min): the OWASP API Top 10 map, a 12-item checklist
+
+Everything is simulated in the page, using the shared P-256 and HMAC code. Facts checked 11 November 2026 (RFCs 8725, 9068, 9700, 10017); the Optus case is ACMA's allegations as reported, and the OAuth 2.1 and RateLimit-header drafts are flagged as drafts.
+
+### Post-Quantum Migration
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **The threat, precisely** (26 min): what a quantum computer breaks and what it doesn't, harvest-now-decrypt-later versus forge-later (a planner you can move), the published resource estimates and what each one assumes, Mosca's inequality as a planner over eight kinds of data, and which government and industry deadlines apply to you
+2. **The new algorithms** (29 min): a toy lattice puzzle where you turn the noise up and down, ML-KEM, ML-DSA and SLH-DSA with the real FIPS sizes, a TLS handshake size explorer (round trips on TCP and QUIC, five link types), and the lesson of SIKE
+3. **Hybrid today** (26 min): a live hybrid handshake with real X25519 and a toy lattice stand-in (break either half and see what holds), what to check for TLS, SSH, VPNs, messaging and storage, why certificates are harder (a chain simulator and Merkle Tree Certificates as a proposal), and long-lived signatures in firmware
+4. **Planning a migration** (31 min): a crypto inventory, a triage sorter for twelve invented systems, a crypto-agility quiz, where bytes and hardware won't fit, a ClientHello size calculator for testing, a roadmap builder that checks your dates against six deadline sets and remembers your answers, and a hype-versus-reality quiz
+
+The demos use real X25519 (checked against the RFC 7748 test vectors) and the shared SHA-256, HMAC and HKDF in teaching code, never for real secrets; the lattice KEM is a labelled toy that stands in for ML-KEM and is not secure. Sizes are the real ones from FIPS 203, 204 and 205 and RFC 10024. NIST IR 8547 (final, October 2026), the FIPS documents, RFC 10024, the NCSC and EU timelines, OpenSSH, OpenSSL, Firefox and Apple documentation, and the resource-estimate papers were checked against primary sources on 10 November 2026; the unconfirmed items (such as NSA's CNSA 2.0 dates, which NSA's site wouldn't serve to a script) are listed in the slides' speaker notes.
+
+### Case Studies in Cryptographic Failures
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Randomness and keys** (28 min): Debian OpenSSL 2008 (a blocklist you can build, and why a small seed can be listed), ROCA 2017 (a fingerprint test that needs only the public key), the Sony PS3's repeated signing value, and Dual_EC_DRBG and Juniper
+2. **Hashes and trust** (23 min): MD5 from a rogue CA to Flame, a birthday-bound demo on shortened hashes, SHA-1's long retirement, and DigiNotar and eMudhra in six beats
+3. **Modes, padding and negotiation** (30 min): padding oracles (POODLE, Lucky Thirteen, ROBOT) with a toy oracle, FREAK, Logjam and DROWN with a negotiation lab for the fallback signal and TLS 1.3's downgrade sentinel, Sweet32 with a data-until-collision calculator, and CRIME and BREACH with a toy compression leak
+4. **Protocols, code and lessons** (29 min): KRACK, Heartbleed, two from 2024 (Blast-RADIUS and EUCLEAK), a chart of how long each flaw lived, a root-cause sorter, a control finder, and a 12-box defender's audit that remembers your ticks
+
+Every case follows six beats (design, failure, found, impact, fix, lesson) and stays at post-incident-review level: no exploit code and no reproduction steps. The demos are teaching code on invented data (toy keys, a toy cipher, a toy compressor and an invented web page) and nothing you type is sent anywhere. Dates, numbers and CVEs were checked against the researchers' pages, advisories and RFCs (including RFC 9325 for current TLS practice) on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes.
+
+### Detection Engineering
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **From threat to detection** (24 min): the detection lifecycle, the Pyramid of Pain (click each rung), a made-up threat report where you choose what to detect and see which rung each choice sits on, and mapping behaviours to ATT&CK techniques
+2. **Writing detections** (37 min): why a rule depends on the telemetry you have (Sysmon versus Windows Security 4688), the anatomy of a Sigma rule, a playground that runs a Sigma-subset engine over a made-up log, a matrix of what survives when the attacker changes something, a tuning lab that computes which allow-list entries hide real attacks, and Palantir's ADS template
+3. **Testing and coverage** (23 min): a test lab with positive, negative and variant cases, atomic tests and purple-team results, and a coverage grid that puts a painted heatmap beside a tested one
+4. **Detections as code** (21 min): a CI pipeline you can break, rule metrics with sliders, drift and canaries, and a twelve-point checklist that remembers your ticks
+
+The demos use a small rule engine written for this talk (`rules.js`) that reads a subset of Sigma 2.1.0 on made-up events: teaching code, not a converter or a production tool. It reads 3,771 of the 3,782 detection rules in SigmaHQ's repository (checked 9 November 2026). The events, hosts, accounts, products and the threat report are invented, and nothing you type is sent anywhere. Sigma 2.1.0, ATT&CK v20.1, Bianco's Pyramid of Pain, Summiting the Pyramid, Palantir's ADS framework, Atomic Red Team, SigmaHQ's pipeline and the CISA living-off-the-land guidance were checked against primary sources on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes.
+
+### Logging, Monitoring and Incident Response
+
+Four parts, with checkpoints after parts 1, 2 and 3:
+
+1. **Logging that helps** (23 min): the five questions every log line should answer (with a live linter), what to log first and what it costs to keep, clocks that tell the wrong story, a small log to search for an attacker's path, a tamper-evident hash chain with real SHA-256 and HMAC (and what it can't prove), and keeping secrets and injected lines out of logs
+2. **Detection** (20 min): alerts versus dashboards versus hunts, five good first alerts, a tuning lab on a simulated week (one rule can't catch everything), and ATT&CK as a map of what you can't see
+3. **Responding** (20 min): the incident lifecycle (with NIST's 2025 CSF 2.0 view), roles, containing versus eradicating while keeping evidence, telling people (and the clocks that may be running), and blameless reviews
+4. **Tabletop exercise** (23 min): two scenarios with random surprises, meters that prompt discussion, a debrief, and a first-hour checklist that remembers your ticks
+
+Every demo is a simulation in your browser: the logs, accounts, addresses and incidents are invented, and nothing you type is sent anywhere. The hash chain is teaching code, never for real logs. Guidance and data (M-Trends 2026, the CSRB's Exchange Online report, the ACSC and CISA logging guide, OMB M-26-14, NIST SP 800-61 Rev. 3, the CISA playbooks, ATT&CK v20.1, RFC 3227, and the GDPR, SEC and CIRCIA notification rules) were checked against primary sources on 9 November 2026; the unconfirmed items are listed in the slides' speaker notes.
 
 ### Zero-Knowledge Proofs
 
@@ -320,7 +544,7 @@ docs/
     fonts/            bundled fonts (Chakra Petch, JetBrains Mono)
     vendor/           hash-wasm, used to time bcrypt, scrypt and Argon2id
   talks/
-    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/, mobile-safety/, web-app-security/, vulnerability-management/, home-network/, backups-and-ransomware/, privacy-tools/, modern-messaging/, zero-knowledge-proofs/
+    crypto-101/, passwords-and-accounts/, how-https-works/, security-habits/, git-github-security/, identity-and-access/, cloud-security/, phishing-and-scams/, crypto-in-code/, pki-in-depth/, mobile-safety/, web-app-security/, secure-apis/, building-login/, secrets-management/, dependencies-and-ci/, hashing-beyond-passwords/, containers/, security-testing/, threat-modeling/, secure-code-review/, memory-safety/, ai-application-security/, elliptic-curves/, fuzzing/, privacy-engineering/, secure-sdlc/, vulnerability-management/, home-network/, backups-and-ransomware/, privacy-tools/, modern-messaging/, zero-knowledge-proofs/, logging-and-incident-response/, detection-engineering/, cryptographic-failures/, post-quantum-migration/
       index.html      the slides, with their speaker notes and deck-config
       app.js          the talk's live demos
       talk.css        styles for the talk's own demos
