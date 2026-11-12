@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Building Secure APIs</title>
+<meta name="description" content="Building Secure APIs: object-level authorization, API keys, sessions and JWT validation, OAuth scopes, schemas for input and output, rate limits and safe errors. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/secure-apis/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Building Secure APIs">
+<meta property="og:description" content="The checks every endpoint needs: who may touch this object, which token is this, what may the body contain, and how often. Live demos, no vulnerable server.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/secure-apis/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/secure-apis/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Building Secure APIs in neon, beside a terminal that lists the four questions every request must answer.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M11 9l-6 7 6 7M21 9l6 7-6 7' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Cpath d='M18 7l-4 18' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "secure-apis", "title": "Building Secure APIs", "footer": "APISEC", "subtitle": "DEVELOPER TRACK · 05",
+  "parts": [{ "name": "Who can do what", "minutes": 31 }, { "name": "Tokens and keys", "minutes": 25 },
+            { "name": "Input, output and limits", "minutes": 26 }, { "name": "Wrap-up", "minutes": 11 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">API<span>SEC</span></a>
+  <div class="scroll-parts">
+    <a href="#authn" data-part="1"><b>01</b>Who can do what</a>
+    <a href="#keys" data-part="2"><b>02</b>Tokens and keys</a>
+    <a href="#mass" data-part="3"><b>03</b>Input, output, limits</a>
+    <a href="#owasp-map" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 05 · FOR BACKEND AND FULL-STACK DEVELOPERS · INTERMEDIATE</p>
+      <h1><span class="pre">Building</span> <span class="glitch" data-text="Secure APIs">Secure APIs</span></h1>
+      <p class="lede">The checks every endpoint needs: who may touch this object, which token is this, what may the body contain, and how often can you ask.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/secure-apis/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ request <input id="hero-in" value="GET /api/invoices/1041" spellcheck="false" autocomplete="off"></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About an hour and a half with three short checkpoints, for people who build the backend of web and mobile apps. No attack tools today: every demo is a simulation in this page, there is no vulnerable server, and every bug is one you could find in your own code.</span></li><li><b class="show">Show</b><span>Type any request line. The terminal lists the four questions every request must answer before your handler does its job: who is calling, may they do this to this object, is the input what you expect, and are they asking too often. Try a different method, a path with an ID, an admin path or a body method like POST. That's the talk's shape: four gates, in this order.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try BREW /coffee, GET /api/invoices/42, GET /.env, GET /admin, an empty box or GET /health; in the status-code quiz, get all six right, and in the mechanism quiz all four; in the invoice explorer, ask for invoice 42; in the route matrix, ship five endpoints; in the key-rotation demo, revoke the old key too early; in the token inspector, send a token with alg none; in the scope demo, give Flashlight Deluxe every scope; in the mass-assignment demo, add a __proto__ or isAdmin field; in the response demo, tick password_hash; in the rate limiter, get 100 rejections in a row; open all ten OWASP tiles; and tick all twelve boxes of the checklist. There's also a console message.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#authn"><small>PART 1 · 31 MIN</small><b>Who can do what</b></a><span>Authentication vs authorization</span><span>Object-level checks</span><span>Function-level checks</span><span>Patterns that scale</span></li>
+      <li><a href="#keys"><small>PART 2 · 25 MIN</small><b>Tokens and keys</b></a><span>API keys</span><span>Sessions vs bearer tokens</span><span>Validating JWTs</span><span>OAuth scopes</span></li>
+      <li><a href="#mass"><small>PART 3 · 26 MIN</small><b>Input, output and limits</b></a><span>Schemas on input</span><span>Schemas on output</span><span>Rate limits, SSRF, errors</span></li>
+      <li><a href="#owasp-map"><small>PART 4 · 11 MIN</small><b>Wrap-up</b></a><span>The OWASP API Top 10 as a map</span><span>A checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part 1 is the one that matters most: who may do what, to which object. Part 2 is how an API knows who is calling: keys, sessions and tokens. Part 3 is what goes in and out and how often. Last, a map and a checklist to take home. If you've seen the Web Application Security talk, this is its API-shaped sibling: same bugs, different clothes.</span></li><li><b class="next">Next</b><span>"Why APIs?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>APIs are where the data is</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">Your screens are one client of your API. Anyone with a token and a terminal can be another.</p>
+      <ul class="rules">
+        <li>The API is the <b>real boundary</b>. Hiding things in the UI hides nothing.</li>
+        <li>Most API breaches are <b>missing checks</b>, not clever cryptography.</li>
+        <li>Make the checks <b>central and default</b>, so a new endpoint can't forget them.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.sec.gov/Archives/edgar/data/1283699/000119312523010949/d641142d8k.htm" target="_blank" rel="noopener">T-Mobile 8-K</a> · <a href="https://www.itnews.com.au/news/optus-breach-allegedly-enabled-by-access-control-coding-error-608985" target="_blank" rel="noopener">iTnews on ACMA's claim</a> · <a href="https://www.infosecurity-magazine.com/news/us-postal-service-exposes-60m/" target="_blank" rel="noopener">Infosecurity Magazine</a> · <a href="https://api-security.owasp.org/editions/2023/en/0x11-t10/" target="_blank" rel="noopener">OWASP API Top 10</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>T-Mobile, 2022–23 · one API</b><span>Basic details of about 37 million accounts were pulled through a single API from around 25 November 2022. No card numbers or passwords, it said.</span></div>
+      <div class="card"><b>Optus, 2022 · a forgotten endpoint</b><span>Australia's regulator alleges a weakened access control, fixed on the main site but not on an unused API subdomain. Optus disputes parts of this.</span></div>
+      <div class="card"><b>USPS, 2018 · any signed-in user</b><span>An API let anyone logged in to usps.com look up other users' account details: about 60 million users, as reported.</span></div>
+      <div class="card"><b>OWASP · number one for APIs</b><span>Broken object-level authorization has led the API Top 10 in 2019 and 2023.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three real incidents, each with the same shape: an API that answered a request it shouldn't have, for a caller who was allowed to ask something, just not this. None needed a clever exploit. The fix in each was a check on the server.</span></li><li><b class="tip">Tip</b><span>T-Mobile: all from its SEC Form 8-K of 19 January 2023 (read on 11 November 2026): identified 5 January, activity stopped within a day, "approximately 37 million" accounts, many without the full data set, and the 8-K says no evidence of a breach of its systems; the filing doesn't say what the flaw in the API was. Optus: these are ACMA's allegations from its Federal Court statement of claim as reported by iTnews on 20 June 2024, not findings; the endpoint went offline on 21 September 2022 per iTnews, and Optus said it was a "previously unknown vulnerability" arising from "a historical coding error" and intends to defend the action. Some commentary says Optus used sequential customer IDs: that claim comes from vendor blogs, not the regulator, so don't say it as fact. USPS: Brian Krebs reported it in November 2018; I read the Infosecurity Magazine write-up, not Krebs's own page, so the count and wording are secondary. Other reports say a researcher had warned USPS a year earlier: not on the slide.</span></li><li><b class="check">Check</b><span>Optus is a live case: as of 11 November 2026 no judgment had been reported in ACMA's case or in the OAIC's separate Federal Court action (filed 2025); look for an outcome before presenting. ACMA's own media release wasn't readable here.</span></li><li><b class="next">Next</b><span>"Part 1: who may do what."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="authn" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// WHO CAN DO WHAT 01</p><h2>Authentication is who; authorization is what, to which</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table">
+        <thead><tr><th scope="col">Question</th><th scope="col">Called</th><th scope="col">Failure code</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Who are you?</th><td>Authentication</td><td><code>401</code> Unauthorized</td></tr>
+          <tr><th scope="row">May you do this at all?</th><td>Function-level authorization</td><td><code>403</code> Forbidden</td></tr>
+          <tr><th scope="row">May you do it to <i>this</i> object?</th><td>Object-level authorization</td><td><code>403</code> or <code>404</code></td></tr>
+        </tbody>
+      </table>
+      <p class="big-lede">Frameworks hand you the first one. The other two are yours, endpoint by endpoint, forever.</p>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc9110#section-15.5.4" target="_blank" rel="noopener">RFC 9110 §15.5.4</a> (403 may be hidden behind 404) · <a href="https://www.rfc-editor.org/rfc/rfc6750#section-3.1" target="_blank" rel="noopener">RFC 6750 §3.1</a></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Quiz: which status code?</small>
+      <table class="grid-table qz-table"><tbody id="st-rows"></tbody></table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="st-check">Check my answers</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="st-reset">Reset</button>
+        <span class="tf-score" id="st-score"></span>
+      </div>
+      <p class="comment" id="st-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Authentication answers "who is this?"; authorization answers "may they?". The names of the status codes are famously confusing: 401 is called Unauthorized but means unauthenticated. 403 means "I know who you are, and no".</span></li><li><b class="show">Show</b><span>Let people pick answers, then press Check. The "someone else's invoice" row accepts 403 or 404: RFC 9110 says a server that wants to hide that a forbidden resource exists may answer 404 instead. For object-level checks, 404 is usually the better choice because 403 confirms the object exists.</span></li><li><b class="tip">Tip</b><span>A 401 should say how to authenticate (a WWW-Authenticate header). For bearer tokens, RFC 6750 says the resource server uses 401 with error="invalid_token" for expired or bad tokens, and 403 with error="insufficient_scope" when the token is valid but lacks the scope. Consistency matters more than the exact choice: whatever you pick, don't let the responses for "no such invoice" and "not yours" differ.</span></li><li><b class="next">Next</b><span>"The commonest API bug in one demo."</span></li></ul></div>
+</section>
+
+<section class="slide" id="bola" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// WHO CAN DO WHAT 02</p><h2>Object-level authorization: whose invoice is this?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Signed in as" id="bo-user">
+        <button type="button" data-u="1" aria-pressed="true">Alice (user 1)</button>
+        <button type="button" data-u="2" aria-pressed="false">Bob (user 2)</button>
+      </div>
+      <p class="m" id="bo-mine"></p>
+      <div class="ac-bar">
+        <select id="bo-method" aria-label="Method"><option>GET</option><option>DELETE</option></select>
+        <code id="bo-prefix">/api/invoices/</code>
+        <input id="bo-id" class="mono" value="1041" spellcheck="false" autocomplete="off" aria-label="Invoice ID">
+        <button type="button" class="btn btn-sm" id="bo-send">Send</button>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="bo-prev">‹ id − 1</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="bo-next">id + 1 ›</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="bo-leak">A UUID someone shared</button>
+        <label class="check"><input type="checkbox" id="bo-uuid"> IDs are random UUIDs</label>
+        <label class="check"><input type="checkbox" id="bo-check"> Scope the query to the caller</label>
+      </div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Response</small>
+      <pre class="term ac-out" id="bo-out"></pre>
+      <p class="verdict" id="bo-verdict"></p>
+      <p class="comment" id="bo-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>Signed in as Alice, GET her own invoice: fine. Press "id + 1": Bob's invoice comes back, because the server checked that someone was signed in, not whose invoice it was. Switch to DELETE and try again: now Alice destroys Bob's data. Tick "IDs are random UUIDs": guessing gets hard, so the numeric walk stops working. Press "A UUID someone shared" (a link in a ticket, a log line, a screenshot): it works again. Now tick "Scope the query to the caller" and repeat everything: 404 each time.</span></li><li><b class="say">Say</b><span>This is broken object-level authorization, number one on OWASP's API list. Random IDs change how hard it is to find someone else's object; they don't change whether you're allowed to read it. IDs leak through logs, referrers, emails, support tickets and screenshots, and a leaked ID plus a missing check is the same bug. Use random IDs if you like (they also stop people estimating your volume), but as hygiene, never as the lock.</span></li><li><b class="ask">Ask</b><span>"Your UI never shows other people's invoice IDs. Why isn't that protection?" It's checkpoint question 1: hold the answer until then if you like.</span></li><li><b class="tip">Tip</b><span>OWASP API1:2023 describes exactly this: an endpoint that takes an object ID and doesn't check that the caller may access it. Also check the write side (PATCH, DELETE) and the less obvious inputs: IDs in query strings, request bodies, headers and nested objects. Invoices are mock data owned by invented users; nothing here touches a server.</span></li><li><b class="next">Next</b><span>"What about functions, not objects?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="bfla" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// WHO CAN DO WHAT 03</p><h2>Function-level: hidden endpoints aren't protected endpoints</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="How checks are applied" id="bf-mode">
+        <button type="button" data-m="handler" aria-pressed="true">Each handler remembers</button>
+        <button type="button" data-m="central" aria-pressed="false">Central policy, deny by default</button>
+      </div>
+      <table class="grid-table bf-table">
+        <thead><tr><th scope="col">Route</th><th scope="col">Anonymous</th><th scope="col">Alice (user)</th><th scope="col">Dana (admin)</th></tr></thead>
+        <tbody id="bf-rows"></tbody>
+      </table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="bf-add">Ship a new endpoint</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="bf-rule">Write its policy rule</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="bf-reset">Reset</button>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="bf-verdict"></p>
+      <ul class="rules">
+        <li>The admin page's link is <b>hidden</b> for normal users. The endpoint behind it is a URL like any other.</li>
+        <li>Per-handler checks work until the <b>one handler that forgot</b>. New endpoints are where it happens.</li>
+        <li>With a <b>central policy</b>, a route with no rule is closed. Shipping it open takes effort, not forgetfulness.</li>
+        <li>Keep an <b>inventory</b> of every route and version, and retire what's unused.</li>
+      </ul>
+      <p class="comment" id="bf-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>With "Each handler remembers", two of the five routes (refunds and metrics) were written by someone in a hurry and let anyone in. The verdict counts the cells where someone gets a 200 they shouldn't (four here: anonymous and Alice, on two routes). Switch to "Central policy": the same five routes are now safe, because the policy table says who may call each. Press "Ship a new endpoint": in handler mode the new admin route is open to the internet until someone remembers; in central mode it answers 403 for everyone until you press "Write its policy rule". Keep shipping endpoints for the full set of names.</span></li><li><b class="say">Say</b><span>Object-level asks "this invoice?"; function-level asks "this kind of action?": admin routes, exports, impersonation, bulk delete. Two things go wrong: the check is missing, or the check is applied inconsistently between GET and DELETE on the same URL. A central policy fixes the first by making the default "no".</span></li><li><b class="tip">Tip</b><span>This is OWASP API5:2023 (function level) and API9:2023 (improper inventory management: old versions, debug routes and forgotten hosts, like the dormant API in the Optus allegations). The route table and the users are invented; the point is the default.</span></li><li><b class="next">Next</b><span>"What does a central policy look like?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="patterns" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// WHO CAN DO WHAT 04</p><h2>Patterns that scale: policy, scoped queries, tests</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="code-pair">
+        <figure class="card-bad"><figcaption>Checks live in each handler</figcaption><pre class="code">@app.get("/invoices/{id}")
+def get_invoice(id, user):
+    return db.invoices.get(id)</pre></figure>
+        <figure class="card-good"><figcaption>One policy, and queries scoped by it</figcaption><pre class="code">POLICY = {("GET", "/invoices/*"): "member",
+          ("POST", "/admin/*"): "admin"}
+
+def get_invoice(id, user):
+    require(user, "member")          # deny by default
+    inv = db.invoices.get(
+        id=id, tenant=user.tenant, owner=user.id)
+    if inv is None:
+        raise NotFound()
+    return Invoice.from_row(inv)     # explicit schema</pre></figure>
+      </div>
+      <p class="src">See <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Authorization</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">IDOR Prevention</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html" target="_blank" rel="noopener">REST Security</a></p>
+    </div>
+    <div class="stack">
+      <ul class="rules rules-num">
+        <li><b>Deny by default.</b> A route with no rule is closed.</li>
+        <li><b>Fetch through the caller.</b> You can't load an object without saying whose: scope by owner or tenant in the query itself.</li>
+        <li><b>One place.</b> Policy functions or middleware, so a change is one change.</li>
+        <li><b>Resolve identity on the server.</b> The caller comes from the token, never from <code>?user_id=</code> or a body field.</li>
+        <li><b>Write the cross-user test:</b> user A gets 404 on user B's object, for every route, in CI.</li>
+        <li><b>Use IDs people can't guess</b> as hygiene, never as the lock.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The right-hand shape makes the safe version the easy version: you cannot load an invoice without saying whose. Multi-tenant products should scope by tenant as well, ideally in a shared data-access layer (or database row-level security) so individual developers can't forget it. The cross-user test is the cheapest, most valuable security test you can write: it turns "we think it's checked" into a red build.</span></li><li><b class="ask">Ask</b><span>Where in your codebase would I look to find who may read an invoice? If the answer is "in each handler", that's the risk.</span></li><li><b class="tip">Tip</b><span>The code is pseudocode shaped like Python; use your framework's real equivalents (dependencies, middleware, guards, policies). Authorization libraries (policy engines, ORMs with global scopes, database row-level security) all aim at the same thing: the check isn't something a developer has to remember.</span></li><li><b class="next">Next</b><span>"Checkpoint 1."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Your UI never shows other users' invoice IDs. Why isn't that protection?</p><details><summary>Hint</summary><p>Who else can send a request to your API, and what do IDs leak through?</p></details><details class="answer"><summary>Answer</summary><p>The API is the boundary, not the page: anyone with a token can call it directly with any ID. IDs also leak through logs, links, emails and screenshots. The fix is a server-side check that this caller may access this object, ideally by scoping the query to the caller.</p></details></li>
+      <li><p>A teammate says "that admin route is fine, there's no link to it". What do you say?</p><details><summary>Hint</summary><p>How would someone find a URL?</p></details><details class="answer"><summary>Answer</summary><p>Hiding a link isn't a check: URLs are guessable, appear in client code and old docs, and get shared. Protect the route itself with a rule, and make routes with no rule closed by default.</p></details></li>
+      <li><p>Which should a missing token and a token for the wrong user each return, and why do they differ?</p><details><summary>Hint</summary><p>Who are you, versus what may you do?</p></details><details class="answer"><summary>Answer</summary><p>No or bad credentials: 401 (authentication failed). Valid credentials but not allowed: 403, or 404 if you want to avoid confirming the object exists. They differ because they're different questions.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="keys" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// TOKENS AND KEYS 01</p><h2>API keys: for machines, scoped, rotatable</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">Keys for the Invoices API (the server stores only a hash of each)</small>
+      <table class="grid-table kr-table">
+        <thead><tr><th scope="col">Key</th><th scope="col">Scope</th><th scope="col">Status</th><th scope="col">Used by</th></tr></thead>
+        <tbody id="kr-rows"></tbody>
+      </table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="kr-new">1 · Issue a new key</button>
+        <button type="button" class="btn btn-sm" id="kr-switch">2 · Move billing</button>
+        <button type="button" class="btn btn-sm" id="kr-switch2">2 · Move reports-cron</button>
+        <button type="button" class="btn btn-sm" id="kr-revoke">3 · Revoke the old key</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="kr-send">Send a request from each client</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="kr-reset">Reset</button>
+      </div>
+      <pre class="term ac-out kr-out" id="kr-out"></pre>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="kr-verdict"></p>
+      <ul class="rules">
+        <li>Keys identify a <b>program</b>, not a person. People sign in; programs hold keys.</li>
+        <li><b>Scope</b> each key to what its job needs, and give it an owner and a last-used date.</li>
+        <li><b>Rotate with an overlap</b>: two keys live, move clients, then revoke.</li>
+        <li><b>Server-side only.</b> A key in a web or mobile app is a published key.</li>
+        <li>Store a <b>hash</b>; show the key once; use a recognisable prefix so scanners can find leaks.</li>
+      </ul>
+      <p class="comment" id="kr-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Two clients use key 1: the billing service (which you control) and an old reports cron job nobody remembers. Press "Send a request from each client": both work. Now press 3 straight away and send again: both get 401, an outage. Reset and do it properly: 1 issue a new key, 2 move billing, send (both still work, and the table shows reports-cron is still on the old key), 2 move reports-cron, send, then 3 revoke. No outage. The "used by" column is what makes revoking a decision instead of a gamble.</span></li>
+  <li><b class="say">Say</b><span>An API key is a long random password for a program. It's fine for server-to-server calls, but it has no user in it, it usually doesn't expire, and it is trivial to leak, so give it the smallest scope and an owner. "Last used" turns revocation from a gamble into a decision. Hashing the stored key means a database leak doesn't leak working keys; because keys are long and random, a fast hash such as SHA-256 is acceptable here, unlike for human passwords.</span></li><li><b class="tip">Tip</b><span>A recognisable prefix (for example a vendor tag) lets secret scanners and your own CI spot leaked keys; many providers do this. Pair this slide with the Git and GitHub Security talk for what to do when a key leaks: revoke first. The keys, clients and dates here are invented.</span></li><li><b class="next">Next</b><span>"How do people's requests prove who they are?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sessions" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// TOKENS AND KEYS 02</p><h2>Sessions or bearer tokens: choose on purpose</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <table class="grid-table tk-table">
+        <thead><tr><th scope="col"></th><th scope="col">Session cookie</th><th scope="col">Bearer token</th><th scope="col">API key</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Sent as</th><td>Cookie, added by the browser</td><td><code>Authorization</code> header</td><td>Header, by your code</td></tr>
+          <tr><th scope="row">Who holds it</th><td>A person's browser</td><td>An app acting for a user</td><td>A server program</td></tr>
+          <tr><th scope="row">Main risk</th><td>CSRF (the browser sends it for you)</td><td>Theft: from storage, logs, URLs</td><td>Leaks, never expires</td></tr>
+          <tr><th scope="row">Defend with</th><td>HttpOnly, Secure, SameSite, CSRF checks</td><td>Short life, audience, scopes, TLS</td><td>Scope, rotation, owner</td></tr>
+          <tr><th scope="row">Revoke</th><td>Delete the server session</td><td>Short expiry, or a denylist</td><td>Delete the key</td></tr>
+        </tbody>
+      </table>
+      <p class="src">Sources: <a href="https://www.rfc-editor.org/rfc/rfc10017" target="_blank" rel="noopener">RFC 10017</a> (OAuth 2.0 for browser-based apps, Aug 2026) · <a href="https://www.rfc-editor.org/rfc/rfc9700" target="_blank" rel="noopener">RFC 9700</a> (OAuth security BCP) · <a href="https://www.rfc-editor.org/rfc/rfc6750" target="_blank" rel="noopener">RFC 6750</a></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Quiz: pick the best fit</small>
+      <table class="grid-table qz-table"><tbody id="tk-rows"></tbody></table>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="tk-check">Check</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="tk-reset">Reset</button>
+        <span class="tf-score" id="tk-score"></span>
+      </div>
+      <p class="comment" id="tk-note"></p>
+      <ul class="rules">
+        <li>Never put tokens in <b>URLs</b>: they land in logs and referrers.</li>
+        <li>For a browser app, the IETF's advice is a <b>backend that holds the tokens</b> and gives the page a cookie.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>There's no single right answer, but there are wrong fits. Cookies suit your own web app on your own site: the browser stores them and you can mark them HttpOnly so scripts can't read them, at the price of needing CSRF defences. Bearer tokens suit apps and other services acting on a user's behalf: nothing is attached automatically, so there's no CSRF, but whoever holds the token can use it, and a token in script-readable storage can be stolen by any cross-site scripting bug. API keys suit your own servers.</span></li><li><b class="show">Show</b><span>Work through the four scenarios. Pick the answer, press Check, and read the one-line reason for each.</span></li><li><b class="tip">Tip</b><span>RFC 10017 (OAuth 2.0 for Browser-Based Applications, BCP 212, August 2026) ranks three architectures: a backend-for-frontend (BFF) that acts as the OAuth client and keeps tokens out of the browser is the top recommendation for business and sensitive apps; a token-mediating backend is the middle option; a browser-only client holding all tokens is the least secure. RFC 9700 (OAuth 2.0 Security BCP, January 2025) says clients must not pass access tokens in URI query parameters. JWTs can't be recalled before they expire unless the API checks a denylist, so keep access tokens short-lived.</span></li><li><b class="check">Check</b><span>OAuth 2.1 is still an Internet-Draft (draft-17, 31 October 2026, not yet an RFC), so don't cite it as a standard.</span></li><li><b class="next">Next</b><span>"If you use JWTs, validate all of it."</span></li></ul></div>
+</section>
+
+<section class="slide" id="jwt" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// TOKENS AND KEYS 03</p><h2>Validating a JWT: the signature is the first check, not the only one</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Token to send" id="jw-pick">
+        <button type="button" data-s="valid" aria-pressed="true">Valid</button>
+        <button type="button" data-s="expired">Expired</button>
+        <button type="button" data-s="aud">Other API's audience</button>
+        <button type="button" data-s="iss">Wrong issuer</button>
+        <button type="button" data-s="typ">An ID token</button>
+        <button type="button" data-s="tamper">Edited payload</button>
+        <button type="button" data-s="none">alg: none</button>
+        <button type="button" data-s="hs">alg: HS256 + public key</button>
+        <button type="button" data-s="other">Someone else's key</button>
+      </div>
+      <pre class="term jw-token" id="jw-token"></pre>
+      <div class="jw-decoded"><div><small class="lr-label">Header</small><pre class="term" id="jw-header"></pre></div><div><small class="lr-label">Payload</small><pre class="term" id="jw-payload"></pre></div></div>
+    </div>
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Validator" id="jw-mode">
+        <button type="button" data-v="decode">Decode only</button>
+        <button type="button" data-v="naive">Naive: trusts the header</button>
+        <button type="button" data-v="full" aria-pressed="true">Full validation</button>
+      </div>
+      <ol class="jw-checks" id="jw-checks"></ol>
+      <p class="verdict" id="jw-verdict"></p>
+      <p class="comment" id="jw-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="show">Show</b><span>The token is a real ES256 JWT, signed in this page with a throwaway P-256 key (the page's own signature code, the same maths as the Crypto 101 talk). Under "Full validation", the Valid token passes all seven checks. Then step through the others: each fails at exactly one check. Switch to "Decode only": everything is accepted, because decoding isn't validating. Then "Naive: trusts the header" (a library that believes the token's own alg field): alg none and the HS256-with-the-public-key token both pass, and the wrong-audience and expired tokens pass too, because it checks only the signature.</span></li><li><b class="say">Say</b><span>A JWT is a signed claim, nothing more. The signature says "the issuer made this", not "it's for you" or "it's still good". Your server decides the algorithm and the key, never the token: pin the algorithm, take the key from your own configuration, then check issuer, audience, expiry and the token's type. Fail closed on any doubt.</span></li><li><b class="tip">Tip</b><span>The two classic bugs are from Tim McLean's March 2015 post: libraries that accepted alg "none" as validly signed, and libraries that, expecting an RSA signature, treated the public key as an HMAC secret when the header said HS256. RFC 8725 (JWT Best Current Practice, BCP 225, February 2020) lists the rules (verify the algorithm, validate issuer and audience, use explicit typing, don't trust received claims), and RFC 9068 (October 2021) says access-token JWTs carry typ "at+jwt" and that servers must reject alg none and any token whose aud lacks the server. Validation code has bugs too: CVE-2022-21449 ("psychic signatures") made Java 15 to 18 accept an all-zero ECDSA signature as valid for any message, until the April 2022 patch. Keep libraries updated. Don't fetch keys from a URL named inside the token (jku, x5u): that's SSRF with extra steps. The tokens and issuer here are invented, and clock times come from your own browser.</span></li><li><b class="next">Next</b><span>"What may a valid token do? Scopes."</span></li></ul></div>
+</section>
+
+<section class="slide" id="oauth" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// TOKENS AND KEYS 04</p><h2>OAuth scopes: least privilege for other people's apps</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m"><b>Flashlight Deluxe</b> asks to act on a user's behalf. Which scopes does the token carry?</p>
+      <div class="seg-pick" role="group" aria-label="Token holder" id="oa-user">
+        <button type="button" data-u="alice" aria-pressed="true">For Alice (user)</button>
+        <button type="button" data-u="dana" aria-pressed="false">For Dana (admin)</button>
+      </div>
+      <div class="oa-scopes" id="oa-scopes">
+        <label class="check"><input type="checkbox" data-s="invoices:read" checked> <code>invoices:read</code></label>
+        <label class="check"><input type="checkbox" data-s="invoices:write"> <code>invoices:write</code></label>
+        <label class="check"><input type="checkbox" data-s="users:read"> <code>users:read</code></label>
+        <label class="check"><input type="checkbox" data-s="admin"> <code>admin</code></label>
+      </div>
+      <p class="comment" id="oa-note"></p>
+      <ul class="rules">
+        <li><b>Effective access = what the token's scope allows AND what the user may do.</b> Check both.</li>
+        <li>A scope grants a <b>kind</b> of access, never other users' objects.</li>
+        <li>Ask for the <b>fewest scopes</b>; make narrow scopes easy to request.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What the API does with each call</small>
+      <ul class="oa-list" id="oa-list"></ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Start with only invoices:read for Alice. Her own invoice works; writing, the user profile and the admin list don't, each for a different reason, shown on the right. Tick scopes one at a time. Then switch to Dana: with the admin scope she can reach the admin list; without it she can't, even though Dana is an admin. Give Alice the admin scope: still no, because the user isn't an admin. Finally, Bob's invoice is never reachable for Alice, whatever she ticks.</span></li><li><b class="say">Say</b><span>Scopes limit what an app may do for a user; they don't give the user powers they don't have. Third-party apps are where least privilege is easiest to forget: every extra scope is a bigger blast radius if that app is breached. When a token is valid but lacks a scope, RFC 6750 says answer 403 with error="insufficient_scope".</span></li><li><b class="tip">Tip</b><span>Name scopes by resource and action (invoices:read), not by app. RFC 9700 also says tokens should be restricted to the resource servers they're meant for (audience) and, where possible, bound to the client (mutual TLS or DPoP, RFC 9449) so a stolen token is harder to use. Flashlight Deluxe, its scopes and users are invented.</span></li><li><b class="next">Next</b><span>"Checkpoint 2."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What must you check when your API receives a JWT, besides the signature?</p><details><summary>Hint</summary><p>A valid signature says who made it. What else could be wrong with it?</p></details><details class="answer"><summary>Answer</summary><p>That the algorithm is the one you expect (pinned, never taken from the token), the issuer is yours, the audience is this API, the token hasn't expired (with a small clock allowance), and its type is right. Take keys from your own configuration, not from the token.</p></details></li>
+      <li><p>A teammate stores the access token in localStorage "because it's simpler". What's the trade-off?</p><details><summary>Hint</summary><p>What can any script on your page read?</p></details><details class="answer"><summary>Answer</summary><p>Any cross-site scripting bug (or malicious script) on the page can read it and use it elsewhere. An HttpOnly cookie, ideally behind a backend that holds the tokens, keeps it out of script reach, but then you need CSRF defences. No storage choice makes XSS harmless.</p></details></li>
+      <li><p>An app has the scope <code>invoices:read</code>. Can it read another customer's invoice?</p><details><summary>Hint</summary><p>Is a scope a kind of access, or a pass to every object?</p></details><details class="answer"><summary>Answer</summary><p>No. A scope limits what the app may do for the user, and the user's own rights still apply: the object-level check runs anyway. Effective access is the intersection of scope and user permission.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="mass" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// INPUT, OUTPUT, LIMITS 01</p><h2>Schemas on input: reject what you didn't ask for</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Alice updates her profile: <code>PATCH /api/users/7</code>. Her form only has a name and an email.</p>
+      <div class="seg-pick" role="group" aria-label="Body to send" id="ma-presets">
+        <button type="button" data-b="normal">Normal</button>
+        <button type="button" data-b="role">+ role: admin</button>
+        <button type="button" data-b="isadmin">+ isAdmin: true</button>
+        <button type="button" data-b="credit">+ credit</button>
+        <button type="button" data-b="type">Wrong types</button>
+        <button type="button" data-b="proto">+ __proto__</button>
+      </div>
+      <textarea id="ma-body" rows="7" spellcheck="false" aria-label="Request body (JSON)"></textarea>
+      <div class="seg-pick" role="group" aria-label="Server behaviour" id="ma-mode">
+        <button type="button" data-m="copy" aria-pressed="true">Copy every field</button>
+        <button type="button" data-m="allow">Allow-list, ignore the rest</button>
+        <button type="button" data-m="schema">Schema: reject unknown</button>
+      </div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Response</small>
+      <pre class="term ac-out" id="ma-out"></pre>
+      <p class="verdict" id="ma-verdict"></p>
+      <p class="comment" id="ma-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>With "Copy every field" (the framework shortcut: take the JSON, assign it to the model), send the Normal body: fine. Send "+ role: admin": Alice becomes an admin. Try "+ isAdmin", "+ credit" and "Wrong types" too. Switch to "Allow-list, ignore the rest": safe, but the client gets a 200 as if it worked and can't tell its extra field was dropped. Switch to "Schema: reject unknown": the extra field gets a 422 that names it, and wrong types and lengths are caught at the same time.</span></li><li><b class="say">Say</b><span>Mass assignment, today called broken object property level authorization (API3:2023), is the write-side twin of over-sharing: the client may set properties the user was never meant to touch. The fix is a schema per endpoint that lists every allowed field with its type and limits. Rejecting unknown fields, instead of ignoring them, turns silent drift into a loud error: you hear about the client that thinks it can set a role, and a future field added to the model can't become writable by accident.</span></li><li><b class="ask">Ask</b><span>"Why reject unknown fields instead of ignoring them?" (Checkpoint question 3.)</span></li><li><b class="tip">Tip</b><span>The 2012 GitHub incident is the textbook case: Egor Homakov used Rails' mass assignment to submit a user_id field on the form that adds an SSH public key, pointed it at the Rails organization's account, and pushed a file to prove it; GitHub removed the key and suspended his account, later reinstated (reported by Shiflett and others; GitHub's own post wasn't read). Today's frameworks mostly default to safer behaviour, but the bug returns wherever code binds a whole request body to a model. __proto__ is a classic key in JavaScript: naive merge code can let it change prototypes, and a schema never lets it in. The records and fields are invented.</span></li><li><b class="check">Check</b><span>Homakov details come from secondary write-ups; GitHub's original blog post wasn't retrieved.</span></li><li><b class="next">Next</b><span>"The same idea for what you send back."</span></li></ul></div>
+</section>
+
+<section class="slide" id="output" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// INPUT, OUTPUT, LIMITS 02</p><h2>Schemas on output: return what the client needs</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="How the response is built" id="os-mode">
+        <button type="button" data-m="row" aria-pressed="true">return user (the whole row)</button>
+        <button type="button" data-m="schema">Explicit response schema</button>
+      </div>
+      <small class="lr-label">Fields in the response schema (editable in schema mode)</small>
+      <div class="os-fields" id="os-fields"></div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">GET /api/users/12 → response</small>
+      <pre class="term ac-out" id="os-out"></pre>
+      <p class="verdict" id="os-verdict"></p>
+      <p class="comment" id="os-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>In "return user" mode the endpoint serialises the database row: the response carries a password hash, an internal note, a payment-provider ID and the last IP. The verdict counts the sensitive fields. Switch to "Explicit response schema": only the ticked fields leave the server. Tick a sensitive field yourself and see the verdict react: a schema is code, so it can be wrong, which is why it's reviewed.</span></li><li><b class="say">Say</b><span>The UI shows three fields, so developers assume the API returns three fields. But the browser's network tab shows everything you send. Returning whole objects and "letting the front end pick" is how data leaks; OWASP calls the property-level problem API3:2023, merging the older "excessive data exposure" and "mass assignment" categories. Build responses from explicit types, and give public and private views of the same object different shapes.</span></li><li><b class="tip">Tip</b><span>Add a test that fails when a new database column appears in a response without being added to the schema on purpose. Smaller responses are faster, too. Everything on the slide is invented data.</span></li><li><b class="next">Next</b><span>"And how often can they ask?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="rate" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// INPUT, OUTPUT, LIMITS 03</p><h2>Rate limits, quotas and page-size caps</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Whose bucket" id="rl-by">
+        <button type="button" data-b="global" aria-pressed="true">One shared bucket</button>
+        <button type="button" data-b="key">A bucket per API key</button>
+      </div>
+      <div class="rl-buckets" id="rl-buckets"></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="rl-a1">Alice: 1 request</button>
+        <button type="button" class="btn btn-sm" id="rl-s5">Scraper: 5 requests</button>
+        <button type="button" class="btn btn-sm" id="rl-s100">Scraper: 100 requests</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rl-reset">Reset</button>
+      </div>
+      <ol class="rl-log" id="rl-log"></ol>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="rl-verdict"></p>
+      <p class="comment" id="rl-note"></p>
+      <small class="lr-label">Page-size cap: GET /api/invoices?limit=</small>
+      <div class="ac-bar"><code>limit=</code><input id="rl-limit" class="mono" value="100000" inputmode="numeric" spellcheck="false" autocomplete="off" aria-label="Requested page size"></div>
+      <p class="m" id="rl-page"></p>
+      <ul class="rules">
+        <li>Limit per <b>key or user</b>, not just per IP or for everyone together.</li>
+        <li>Answer <b>429</b> with <code>Retry-After</code>; give costly endpoints (search, export, login) tighter limits.</li>
+        <li><b>Cap page sizes</b> and the work behind each request.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Each bucket holds 10 tokens and refills at 2 per second; every request takes one. With "One shared bucket", press "Scraper: 100 requests": the bucket empties, and Alice's single request now gets 429 although she did nothing wrong. Switch to "A bucket per API key" and repeat: the scraper is throttled, Alice is untouched. The log shows what each response would be, including the Retry-After value. Then type big numbers in the page-size box: the server clamps them to 100.</span></li><li><b class="say">Say</b><span>Unrestricted resource consumption (API4:2023) isn't only about attackers: a buggy client in a retry loop looks the same. A token bucket lets bursts through and enforces an average rate. Limit by whoever you can identify (key, user, tenant) and add tighter limits to expensive or sensitive operations (login, password reset, SMS sends, exports, search). Cap every collection endpoint's page size, and cap what a single request can cost (query depth, batch size, upload size, timeouts).</span></li><li><b class="tip">Tip</b><span>RFC 6585 defines 429 Too Many Requests, allows a Retry-After header and says responses with 429 must not be cached. Stripe's 2017 engineering post describes using the token bucket algorithm for its request rate limiter, alongside concurrency limiters and load shedders. GitHub's REST API caps per_page at 100 for most endpoints. The IETF's RateLimit and RateLimit-Policy header fields are still an Internet-Draft (draft-ietf-httpapi-ratelimit-headers-11, 23 May 2026, expiring 24 November 2026), so treat them as emerging. Business-flow abuse (API6:2023) is related: also limit things like bulk sign-ups and ticket buying. The buckets here use your browser's clock; the numbers are invented.</span></li><li><b class="check">Check</b><span>The rate-limit headers draft may have changed or become an RFC after 11 November 2026.</span></li><li><b class="next">Next</b><span>"When your API fetches URLs."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ssrf" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// INPUT, OUTPUT, LIMITS 04</p><h2>When your API fetches URLs: SSRF and untrusted upstreams</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="code-pair">
+        <figure class="card-bad"><figcaption>Fetch whatever the client says</figcaption><pre class="code">@app.post("/webhooks")
+def add(url):
+    r = requests.get(url)    # your server, your network
+    return r.text</pre></figure>
+        <figure class="card-good"><figcaption>Decide on the address, not the text</figcaption><pre class="code">u = parse(url)
+require(u.scheme == "https")
+require(u.host in ALLOWED_HOSTS)     # best
+ip = resolve(u.host)
+require(not is_internal(ip))         # else
+r = fetch(ip, u, redirects=False,
+          timeout=5, max_bytes=1_000_000)</pre></figure>
+      </div>
+      <p class="src">See <a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP SSRF Prevention</a> · the <a href="../web-app-security/#ssrf">Web Application Security</a> talk has the full demo</p>
+    </div>
+    <div class="stack">
+      <table class="grid-table">
+        <thead><tr><th scope="col">Where APIs fetch URLs</th><th scope="col">Watch for</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Webhooks, callbacks</th><td>Internal addresses, redirects</td></tr>
+          <tr><th scope="row">"Import from URL", avatars</th><td>Size, type, slow servers</td></tr>
+          <tr><th scope="row">Link previews, PDF makers</th><td>Whole browsers fetching anything</td></tr>
+          <tr><th scope="row">Key and metadata URLs in tokens</th><td><code>jku</code>, <code>x5u</code>: don't fetch them</td></tr>
+          <tr><th scope="row">Third-party APIs you call</th><td>Treat replies as <b>untrusted input</b></td></tr>
+        </tbody>
+      </table>
+      <p class="callout"><b>API10</b> Unsafe consumption: validate what upstream services send you as strictly as what clients send you.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>You met server-side request forgery in the Web Application Security talk, with a demo of why string checks lose. In APIs it appears wherever a client hands you a URL: webhooks, imports, previews, and issuer or key URLs. The server is inside your network and the client isn't, so the server must not be the client's proxy. Prefer an allow-list of hosts; otherwise parse the URL, resolve the name, reject internal ranges, connect to the address you checked, and refuse redirects. Then put the fetcher on a network that can't reach anything private.</span></li><li><b class="tip">Tip</b><span>OWASP's 2023 API list has SSRF as API7 and unsafe consumption of APIs as API10. The pseudocode isn't complete (DNS rebinding means you must connect to the checked address, not resolve again): the full demo is in the earlier talk. Capital One's 2019 incident, discussed there, is the cloud-metadata example; the hardened metadata service (AWS IMDSv2) is the cloud-side defence.</span></li><li><b class="next">Next</b><span>"Last in this part: what you say when something fails."</span></li></ul></div>
+</section>
+
+<section class="slide" id="errors" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// INPUT, OUTPUT, LIMITS 05</p><h2>Errors and logs: say little to clients, plenty to yourself</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="What went wrong" id="er-pick">
+        <button type="button" data-s="json" aria-pressed="true">Malformed JSON</button>
+        <button type="button" data-s="db">Database down</button>
+        <button type="button" data-s="nf">Invoice not found</button>
+        <button type="button" data-s="nouser">Sign-in: unknown user</button>
+        <button type="button" data-s="badpw">Sign-in: wrong password</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Error handling" id="er-mode">
+        <button type="button" data-m="debug" aria-pressed="true">Debug mode left on</button>
+        <button type="button" data-m="safe">Safe: problem+json and a correlation ID</button>
+      </div>
+      <small class="lr-label">What the client sees</small>
+      <pre class="term ac-out" id="er-client"></pre>
+      <small class="lr-label">What the server logs</small>
+      <pre class="term ac-out" id="er-log"></pre>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="er-verdict"></p>
+      <ul class="er-leaks" id="er-leaks"></ul>
+      <ul class="rules">
+        <li>Clients get a <b>stable, generic message</b> and a correlation ID. Detail goes to the log.</li>
+        <li>Make "no such user" and "wrong password" <b>look the same</b>.</li>
+        <li>Never log <b>tokens, keys or passwords</b>.</li>
+        <li>Fail <b>closed</b>: an error in the check means no.</li>
+      </ul>
+      <p class="comment" id="er-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>With "Debug mode left on", run each scenario: the client sees a stack trace, file paths, the SQL text with table names, a framework version, an internal hostname, and a different message for unknown users and wrong passwords (which tells attackers which emails have accounts). Switch to the safe mode: the client gets the same fields every time (RFC 9457's type, title, status, instance) plus a correlation ID, while the server log keeps everything you need to debug, with the Authorization header redacted. Both sign-in failures now look identical.</span></li><li><b class="say">Say</b><span>Error messages are documentation for whoever's probing you. Give clients enough to fix their own request (which field was invalid) and nothing about your internals. Give yourself everything through logs, tied together by a correlation ID the client can quote to support. And when your own check throws an error, deny: an exception in the authorization code must never fall through to "allowed".</span></li><li><b class="tip">Tip</b><span>RFC 9457 (Problem Details for HTTP APIs, July 2023, replacing RFC 7807) defines application/problem+json with type, title, status, detail and instance, and its security section warns against exposing implementation details such as stack dumps. OWASP's 2025 Top 10 added "mishandling of exceptional conditions" (A10) for exactly the fail-open and leak-the-details cases. Account enumeration also leaks through timing and the sign-up and reset flows, not only sign-in messages. Every message, path, host and ID here is invented.</span></li><li><b class="next">Next</b><span>"Checkpoint 3."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why reject unknown fields instead of ignoring them?</p><details><summary>Hint</summary><p>What does the client believe if you answer 200? And what happens when someone adds a column next year?</p></details><details class="answer"><summary>Answer</summary><p>Ignoring is safe today but silent: the client thinks the field was accepted, and bugs hide. Rejecting is loud, and a new model field can never become writable by accident, because only what the schema lists is accepted. (An allow-list that ignores extras is still far better than copying everything.)</p></details></li>
+      <li><p>One customer's script retries in a tight loop and everyone else gets 429s. What went wrong?</p><details><summary>Hint</summary><p>Whose bucket was it?</p></details><details class="answer"><summary>Answer</summary><p>The limit was shared. Limit per key, user or tenant, so one noisy client uses up its own budget, not everyone's. Add tighter limits on costly endpoints, and return Retry-After so well-behaved clients back off.</p></details></li>
+      <li><p>A 500 response shows the SQL query and a file path. Name two problems.</p><details><summary>Hint</summary><p>What can an attacker learn, and what can your team still do?</p></details><details class="answer"><summary>Answer</summary><p>It reveals internals (table names, versions, paths) that help attackers, and it may include user data. Return a generic problem response with a correlation ID instead, and keep the full detail in the server log, where your team can still find it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="owasp-map" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>The OWASP API Security Top 10 (2023) as a map of this talk</h2></header>
+  <div class="slide-body stack">
+    <ol class="ow-grid" id="ow-grid"></ol>
+    <p class="ow-detail" id="ow-detail">Click a category to see where it came up today.</p>
+    <p class="src">Source: <a href="https://api-security.owasp.org/editions/2023/en/0x11-t10/" target="_blank" rel="noopener">OWASP API Security Top 10, 2023 edition</a>. An awareness list, not a standard; for a checklist to build and test against, see the <a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener">OWASP ASVS</a>.</p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Click through the ten. Most map straight onto a slide from today; the tile links jump there. Two are only touched on: sensitive business flows (API6) and misconfiguration (API8), which deserve their own sessions.</span></li><li><b class="say">Say</b><span>The list is built from contributed data and community input, so it's a good map of where to look, not a checklist of everything. If you remember one line: most of it comes down to "check on the server, every time, for this caller and this object".</span></li><li><b class="tip">Tip</b><span>The 2023 edition is the newest one on api-security.owasp.org that I could find, listed beside the 2019 edition; a search on 11 November 2026 turned up no newer API edition (the main web Top 10 and the LLM Top 10 are separate lists). Category names were checked against that page.</span></li><li><b class="check">Check</b><span>Before presenting, look at api-security.owasp.org for a newer edition.</span></li><li><b class="next">Next</b><span>"Take the checklist home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>An API security checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="deny"> Every route requires authentication unless it's deliberately public; a route with no policy rule is closed</label>
+      <label><input type="checkbox" data-k="bola"> Every object lookup is scoped to the caller or tenant, and a test proves user A can't read or change user B's data</label>
+      <label><input type="checkbox" data-k="func"> Privileged functions (admin, export, impersonation) sit behind a central policy, and every route is in an inventory</label>
+      <label><input type="checkbox" data-k="jwt"> JWTs: algorithm pinned, keys from our own config, and issuer, audience, expiry and type all checked</label>
+      <label><input type="checkbox" data-k="keys"> API keys are scoped, stored hashed, owned, rotatable with overlap, and never in client code</label>
+      <label><input type="checkbox" data-k="where"> Tokens never go in URLs or logs; browser apps use a backend that holds them, or HttpOnly cookies</label>
+      <label><input type="checkbox" data-k="scope"> OAuth scopes are minimal, and the API checks both the scope and the user's own rights</label>
+      <label><input type="checkbox" data-k="in"> Request bodies are checked against a schema: unknown fields rejected, types and lengths enforced</label>
+      <label><input type="checkbox" data-k="out"> Responses are built from explicit schemas, never raw database rows</label>
+      <label><input type="checkbox" data-k="limit"> Limits per key and user, tighter on login and costly endpoints; page sizes and request costs capped</label>
+      <label><input type="checkbox" data-k="fetch"> URLs we fetch pass an allow-list or IP checks, and replies from upstream APIs are validated like input</label>
+      <label><input type="checkbox" data-k="err"> Errors are generic with a correlation ID; logs hold the detail but no secrets; failures deny</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what your current API does, and treat each unticked box as a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box covers the bug most likely to be in your API today?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or an endpoint in your own API you're unsure about. (Keep real customer data, tokens and keys out of it.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP REST Security Cheat Sheet</a><span>Short, practical rules for every topic today.</span></li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8725" target="_blank" rel="noopener">RFC 8725: JWT best current practice</a><span>The validation rules, in plain RFC language.</span></li>
+        <li><a href="../web-app-security/">Web Application Security Essentials</a><span>The sibling talk: injection, XSS, CSRF and SSRF.</span></li>
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>Signatures, hashing and the misuses behind token bugs.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no server, no real requests, and nothing you type is sent anywhere. Tokens are signed in the page with a throwaway key. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe an endpoint from their own API (with names removed) and run the checklist on it together: who may call it, which object, what body, how often.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
