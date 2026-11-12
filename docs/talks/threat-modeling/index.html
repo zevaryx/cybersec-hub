@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threat Modeling in Practice</title>
+<meta name="description" content="Threat Modeling in Practice: a workshop on drawing a system, asking what can go wrong, ranking what you find and turning it into tickets with owners. Live demos in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/threat-modeling/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Threat Modeling in Practice">
+<meta property="og:description" content="Draw the system, ask what can go wrong, rank it and leave with tickets that have owners: a three-exercise workshop with a data-flow diagram builder, STRIDE cards and an attack tree.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/threat-modeling/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/threat-modeling/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Threat Modeling in Practice in neon, beside a terminal that lists the STRIDE prompts for a photo bucket.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M16 5l9 5v12l-9 5-9-5V10z' fill='none' stroke='%2300f0ff' stroke-width='2'/%3E%3Cpath d='M16 5v22M7 10l18 12M25 10L7 22' stroke='%23ff2e88' stroke-width='1.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "threat-modeling", "title": "Threat Modeling in Practice", "footer": "THREAT MODELING", "subtitle": "DEVELOPER TRACK · 12",
+  "parts": [{ "name": "The four questions", "minutes": 20 }, { "name": "Drawing the system", "minutes": 30 }, { "name": "Finding threats", "minutes": 55 }, { "name": "Deciding and following up", "minutes": 36 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">THREAT<span>MODELING</span></a>
+  <div class="scroll-parts">
+    <a href="#fourq" data-part="1"><b>01</b>Four questions</a>
+    <a href="#elements" data-part="2"><b>02</b>Drawing</a>
+    <a href="#stride" data-part="3"><b>03</b>Finding threats</a>
+    <a href="#rank" data-part="4"><b>04</b>Deciding</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 12 · WORKSHOP · ADVANCED</p>
+      <h1><span class="pre">Workshop</span> <span class="glitch" data-text="Threat Modeling in Practice">Threat Modeling in Practice</span></h1>
+      <p class="lede">Find design flaws while they're still a drawing. Draw the system, ask what can go wrong, rank what you find, and leave with tickets that have owners.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/threat-modeling/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ stride "<input id="hero-in" value="photo bucket" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. This is a workshop: about two and a half hours with three exercises, for anyone who designs or builds software. You don't need to be a security person. The demos run in this page: nothing is sent anywhere, and every system, threat and number in it is invented for the day.</span></li><li><b class="show">Show</b><span>The terminal guesses what kind of thing you typed (something outside the system, something that runs, somewhere data rests, or data moving) and lists the STRIDE prompts that kind of thing earns. It's a keyword guess, not intelligence: try a few names. That "what kind of thing is it?" question is the whole of part 2.</span></li><li><b class="tip">Eggs</b><span>On the title slide try <em>the attacker</em>, <em>everything</em>, <em>the internet</em>, <em>stride</em>, <em>audit log</em> (a log earns an extra letter), <em>coffee machine</em> or an empty box. In the builder, add an element called <em>The Cloud</em>, or join two data stores directly, or put everything in one zone. In the cards, draw all 24. In the tree, defend every leaf. In the threat log, log a meteor. In the responses, accept a risk with no owner or date. In the ranking, rate everything 3 by 3. Tick all ten boxes of the habit checklist. There's also a console message.</span></li><li><b class="check">Check</b><span>Facts checked 11 November 2026 (see the last slide). Hedged items are marked Check in each slide's notes.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#fourq"><small>PART 1 · 20 MIN</small><b>The four questions</b></a><span>What a threat model is</span><span>When it's worth doing</span><span>Checkpoint</span></li>
+      <li><a href="#elements"><small>PART 2 · 30 MIN</small><b>Drawing the system</b></a><span>Data-flow diagrams</span><span>Trust boundaries</span><span><b>Exercise 1:</b> draw one</span></li>
+      <li><a href="#stride"><small>PART 3 · 55 MIN</small><b>Finding threats</b></a><span>STRIDE, cards and privacy</span><span>Attack trees</span><span><b>Exercise 2:</b> two per letter</span></li>
+      <li><a href="#rank"><small>PART 4 · 36 MIN</small><b>Deciding and following up</b></a><span>Rank, respond, ticket</span><span><b>Exercise 3:</b> top three to the backlog</span><span>Making it a habit</span></li>
+    </ol>
+    <p class="callout"><b>ONE THREAD:</b> the threats you log in exercise 2 are the ones you rank, answer and turn into tickets later. If your group is stuck, every slide can load a reference answer.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Four parts, three exercises. Part 1 is the idea and when to use it. Part 2 is drawing the system, which is most of the value. Part 3 is finding threats, and part 4 is deciding what to do and writing it down so it gets done.</span></li><li><b class="tip">Tip</b><span>Run this with groups of three or four around a laptop or a whiteboard. The builder keeps everything in this browser tab, so one person per group drives. If a group stalls, the "Load the reference answer" buttons exist so nobody waits.</span></li><li><b class="next">Next</b><span>"Why do this at all?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS WORKSHOP</p><h2>Some problems are in the design, not the code</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="big-lede">A <b>bug</b> is code that doesn't do what the design says. A <b>flaw</b> is a design that does exactly what it says, and that's the problem.</p>
+      <ul class="rules">
+        <li>A reset link that works for <b>any account number</b> isn't a typo: the design never said whose link it was.</li>
+        <li>An admin function that the client simply <b>hides</b> works as designed. The design forgot the server.</li>
+        <li>Scanners and tests look for what the code does. <b>Nothing in the code says what's missing.</b></li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.threatmodelingmanifesto.org/" target="_blank" rel="noopener">Threat Modeling Manifesto</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Threat Modeling Cheat Sheet</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Cheapest while it's a drawing</b><span>Moving a box on a whiteboard costs a minute. Moving where data lives, or who may call what, costs a quarter. No number needed: you've felt this.</span></div>
+      <div class="card"><b>It's a conversation first</b><span>The Manifesto puts it plainly: "people and collaboration over processes, methodologies, and tools". The value is the shared picture, not the document.</span></div>
+      <div class="card"><b>It can be small</b><span>A 15-minute pass on one changed flow beats a 40-page model nobody opens. We'll practise the small version.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Ask how many people have fixed something in production that was, honestly, a design decision. The point is that some security problems are decisions: nobody wrote the check because nobody decided there should be one. A threat model is a structured way to find those decisions while they're cheap to change.</span></li><li><b class="ask">Ask</b><span>Think of the last "bug" you fixed that took a design change. Could someone have asked about it a month earlier? <em>Answer: usually yes, and that question is what we're practising.</em></span></li><li><b class="tip">Tip</b><span>The quotation is from the Threat Modeling Manifesto's values ("People and collaboration over processes, methodologies, and tools"), read on its site on 11 November 2026. The three examples are generic illustrations, not a specific incident. There's no cost-of-fixing multiplier on the slide on purpose: the famous numbers are shaky.</span></li><li><b class="next">Next</b><span>"The four questions."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="fourq" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// THE FOUR QUESTIONS 01</p><h2>Four questions are the whole method</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <ol class="fq">
+        <li><b>1 · What are we working on?</b><span>Produces a <em>diagram</em>: who, what runs, where data rests, how it moves.</span></li>
+        <li><b>2 · What can go wrong?</b><span>Produces a <em>list of threats</em>, found with prompts rather than inspiration.</span></li>
+        <li><b>3 · What are we going to do about it?</b><span>Produces <em>decisions</em>: a fix, a design change, a hand-off or an accepted risk with an owner.</span></li>
+        <li><b>4 · Did we do a good enough job?</b><span>Produces <em>checks</em>: tests, and a date to look again.</span></li>
+      </ol>
+      <p class="src">Source: <a href="https://www.threatmodelingmanifesto.org/" target="_blank" rel="noopener">Threat Modeling Manifesto</a>, which uses these four questions (Adam Shostack's framing, shorter on his own site: "Did we do a good job?").</p>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Try it on a small thing: a password reset</p>
+      <div class="seg-pick" role="group" aria-label="Question" id="fq-pick">
+        <button type="button" data-q="0" aria-pressed="true">1 · Working on</button>
+        <button type="button" data-q="1">2 · Go wrong</button>
+        <button type="button" data-q="2">3 · Do about it</button>
+        <button type="button" data-q="3">4 · Good enough?</button>
+      </div>
+      <div class="card fq-out" id="fq-out" aria-live="polite"></div>
+      <p class="comment" id="fq-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>Everything else today is a way of answering these four. Click through the password-reset example: it's small enough to do in your head, and it uses all four. Notice question 4 produces something concrete: tests, and a date.</span></li><li><b class="show">Show</b><span>Click the four buttons in order, and read each answer aloud. The answers are an illustration of the shape, not a complete model of a reset flow.</span></li><li><b class="ask">Ask</b><span>Which question would your team skip if you were short of time? <em>Answer: usually the fourth, and it's the one that makes the exercise worth repeating.</em></span></li><li><b class="check">Check</b><span>The Manifesto page (no date shown on the page, PDF labelled "release 1") says "Did we do a good enough job?". Shostack's own page words it "Did we do a good job?"; the OWASP cheat sheet follows the Manifesto. The slide says "good enough" and notes the difference. Re-read the Manifesto before presenting.</span></li><li><b class="next">Next</b><span>"When is it worth doing?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="fits" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// THE FOUR QUESTIONS 02</p><h2>When it's worth doing, and how big to make it</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lr-label">What does the change do? Tick all that apply</p>
+      <div class="rv-list rv-one" id="wf-flags"></div>
+      <p class="lr-label">Or try an example</p>
+      <div class="seg-pick" role="group" aria-label="Example change" id="wf-presets"></div>
+    </div>
+    <div class="stack">
+      <div class="card wf-out" id="wf-out" aria-live="polite"></div>
+      <ul class="rules">
+        <li>Triggers: a <b>new boundary</b>, <b>new kind of data</b>, <b>new third party</b>, or a change to <b>who may do what</b>.</li>
+        <li>Fit it into what you already do: <b>design reviews</b>, big changes and new vendors, not a separate ceremony.</li>
+        <li>Revisit when the system <b>changes</b>: a model nobody updates is a historical document.</li>
+      </ul>
+      <p class="comment" id="wf-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>You don't threat-model every pull request. Four questions about a change decide how much: does it cross a trust boundary that's new, handle new data, add a third party, or change who's allowed to do what? None of them means a one-line note. One means a quick pass. Two, a short session. Three or more, a workshop. This is a rule of thumb I use, not a standard.</span></li><li><b class="show">Show</b><span>Press the example buttons, then tick your own. Try "Let admins impersonate users": only one trigger, but it's a big one, which is the limit of counting. Say so: the counter is a starting point and judgement overrides it.</span></li><li><b class="tip">Tip</b><span>The OWASP cheat sheet says to threat model early in the lifecycle and treat it as a standard step, and to maintain the model as the system changes. The trigger list and the sizes on this slide are the speaker's own guidance, not from a standard.</span></li><li><b class="next">Next</b><span>Checkpoint.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Is a threat model a document or a conversation?</p><details><summary>Hint</summary><p>What does a document capture, and what does a conversation create?</p></details><details class="answer"><summary>Answer</summary><p>Both, in that order. The shared understanding comes from the conversation; the document records it so it can be checked and updated.</p></details></li>
+      <li><p>A teammate changes a button's colour. Do you threat model it?</p><details><summary>Hint</summary><p>Count the four triggers.</p></details><details class="answer"><summary>Answer</summary><p>No: it crosses no boundary, adds no data, party or permission. A one-line note in the pull request is plenty.</p></details></li>
+      <li><p>Which of the four questions turns a one-off into a habit?</p><details><summary>Hint</summary><p>Which one has a date in it?</p></details><details class="answer"><summary>Answer</summary><p>The fourth: checking the model and the fixes against reality, and looking again when the system changes.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="elements" data-part="2" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// DRAWING THE SYSTEM 01</p><h2>Data-flow diagrams: four kinds of thing</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Kind of element" id="de-pick">
+        <button type="button" data-t="entity" aria-pressed="true">External entity</button>
+        <button type="button" data-t="process">Process</button>
+        <button type="button" data-t="store">Data store</button>
+        <button type="button" data-t="flow">Data flow</button>
+      </div>
+      <div class="de-shape" id="de-shape" aria-hidden="true"></div>
+      <div class="card" id="de-out" aria-live="polite"></div>
+      <label class="check de-log" id="de-logrow" hidden><input type="checkbox" id="de-log"> This store holds <b>logs</b></label>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li><b>Data moves through processes.</b> Two stores or two outside parties don't talk directly: something runs in between.</li>
+        <li>Name things with <b>nouns</b>, and flows with <b>what moves</b>, not "data".</li>
+        <li>Draw <b>one level</b> first. If it doesn't fit on a whiteboard, split it.</li>
+        <li>A process that only receives is a <b>black hole</b>; one that only sends is a <b>miracle</b>. Both mean something is missing.</li>
+        <li>The STRIDE letters on the left are the prompts each kind <b>earns</b>: that's why the kind matters.</li>
+      </ul>
+      <p class="comment" id="de-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Four shapes are enough. Something outside our control (a person, another company). Something that runs our code. Somewhere data rests. And the arrows. The reason to bother with kinds is on the left of each card: each kind of thing has its own list of what can go wrong, which saves you from asking six questions of everything.</span></li><li><b class="show">Show</b><span>Click through the four. Tick "logs" on a data store: it earns an extra letter, Repudiation, because logs are where "who did that?" is answered. Processes earn all six; outside parties only two, because we don't control them, we only decide what to trust from them.</span></li><li><b class="check">Check</b><span>The "STRIDE per element" chart: the usual version has external entities S and R, processes all six, stores and flows T, I and D, with stores that hold logs also earning R. Confirmed against Microsoft's own description of STRIDE-per-element (Larry Osterman's MSDN blog, September 2007, archived on Microsoft Learn, read 11 November 2026): external entities Spoofing and Repudiation; processes all six; data stores Tampering, Information Disclosure, Denial of Service "and repudiation", with a note that logs in data stores are "almost always the mitigation against a repudiation threat"; data flows Tampering, Information Disclosure, Denial of Service. Shostack's book adds that data-flow spoofing is contested. The Threat Dragon and Microsoft tools may mark these slightly differently, so still call it "the usual chart".</span></li><li><b class="next">Next</b><span>"Trust boundaries."</span></li></ul></div>
+</section>
+
+<section class="slide" id="boundaries" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// DRAWING THE SYSTEM 02</p><h2>Trust boundaries: where the rules change</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <label class="check"><input type="checkbox" id="tb-bounds" checked> Show the boundaries</label>
+        <label class="check"><input type="checkbox" id="tb-cross" checked> Highlight flows that cross them</label>
+      </div>
+      <div class="dfd-wrap"><svg id="tb-svg" class="dfd" role="img" aria-label="A data-flow diagram of a photo-sharing app, split into three zones by trust boundaries"></svg></div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Flows that cross a boundary</p>
+      <ul class="tb-list" id="tb-list"></ul>
+      <ul class="rules">
+        <li>A boundary is where <b>who controls it</b>, or <b>what it's allowed to do</b>, changes.</li>
+        <li>Crossings are where to <b>start</b>: checks belong at the line, on the side we control.</li>
+        <li>Inside a zone isn't safe, just <b>shared trust</b>. Boundaries can sit inside our own cloud too.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>A trust boundary is a line you draw where the situation changes: a different owner, a different network, a different level of permission. Switch the highlight on: the pink arrows cross a line, and most of what goes wrong happens at one. The app on the phone is in the user's hands, so anything it says is a claim, not a fact. The payment provider is somebody else's computer.</span></li><li><b class="show">Show</b><span>Toggle the boundaries and crossings off and on. Read the list on the right aloud: each crossing is one place to ask who's calling, whether the data could have changed, and what happens if it's too much.</span></li><li><b class="ask">Ask</b><span>Where would you draw a boundary inside "Our cloud"? <em>Answer: between the public API and the image processor, which handles untrusted files; and around the audit log, which admins shouldn't be able to edit.</em></span></li><li><b class="tip">Tip</b><span>The OWASP cheat sheet says a useful DFD shows trust boundaries and notes they often mark possible attack points. The three zones and the photo app are invented for the workshop.</span></li><li><b class="next">Next</b><span>"Exercise 1: draw one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="exercise-1" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// EXERCISE 1 · 15 MIN</p><h2>Draw it: a photo-sharing app</h2></header>
+  <div class="slide-body stack ex-body">
+    <div class="ex-controls">
+      <div class="ex-row">
+        <label class="grow"><span class="lr-label">Element name</span><input id="b-name" maxlength="32" placeholder="e.g. API" autocomplete="off" spellcheck="false"></label>
+        <label><span class="lr-label">Kind</span><select id="b-type" aria-label="Kind"><option value="entity">External entity</option><option value="process" selected>Process</option><option value="store">Data store</option></select></label>
+        <label><span class="lr-label">Zone</span><select id="b-zone" aria-label="Zone"></select></label>
+        <label class="check"><input type="checkbox" id="b-log"> Logs</label>
+        <button type="button" class="btn btn-sm" id="b-add">Add element</button>
+      </div>
+      <div class="ex-row">
+        <label><span class="lr-label">From</span><select id="f-from" aria-label="Flow from"></select></label>
+        <label><span class="lr-label">To</span><select id="f-to" aria-label="Flow to"></select></label>
+        <label class="grow"><span class="lr-label">What moves</span><input id="f-label" maxlength="28" placeholder="e.g. photos" autocomplete="off" spellcheck="false"></label>
+        <button type="button" class="btn btn-sm" id="f-add">Add flow</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="b-photo">Load the reference answer</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="b-clear">Clear</button>
+      </div>
+      <p class="verdict" id="b-msg" role="status"></p>
+    </div>
+    <div class="cols-2 cols-wide-left ex-main">
+      <div class="dfd-wrap"><svg id="b-svg" class="dfd" role="img" aria-label="Your data-flow diagram"></svg></div>
+      <div class="stack">
+        <details class="ex-brief" open>
+          <summary>The brief</summary>
+          <p>People take photos on a <b>mobile app</b> and upload them to an <b>API</b>. Photos are kept in <b>storage</b> and a worker makes thumbnails. Accounts live in a <b>user database</b>, and admin actions go to an <b>audit log</b>. Subscriptions are paid through an outside <b>payment provider</b>, which calls back with a webhook. Groups: draw it, then compare with the reference.</p>
+        </details>
+        <div class="stat-row stat-row-3" id="b-stats"></div>
+        <ul class="sc-list" id="b-lint"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="show">Show</b><span>Groups of three or four. Five minutes to read the brief and add elements and flows; five to put each element on the right side of a line; then compare with the reference answer. Elements sit in columns by zone, so the zone is the trust boundary. The builder points out common mistakes: a flow that skips a process, a process that only receives or only sends, everything in one zone.</span></li><li><b class="say">Say</b><span>Don't aim for completeness. Aim for an argument: "is the audit log inside our cloud or separate?" is exactly the useful kind. If two groups disagree about where a line goes, that's the finding.</span></li><li><b class="tip">Tip</b><span>Reference answer: 8 elements (User, Mobile app, API, Image processor, Photo storage, User database, Audit log, Payment provider) and 9 flows, with 3 crossing a boundary (app to API, API to the payment provider, and the webhook back); the user to the app stays inside the device zone. Prepare for groups that draw the user as a process, or skip the webhook: both are good conversations.</span></li><li><b class="check">Check</b><span>The element names, zones and flows are the workshop's own sample, not a real product. On a phone the diagram scrolls sideways inside its box.</span></li><li><b class="next">Next</b><span>"Finding threats: STRIDE."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="stride" data-part="3" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// FINDING THREATS 01</p><h2>STRIDE: six questions, one for each way to break a promise</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="STRIDE letter" id="st-pick"></div>
+      <div class="card" id="st-out" aria-live="polite"></div>
+      <p class="lr-label">Which kind of thing earns which letter</p>
+      <div class="st-chart" id="st-chart"></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Each letter <b>breaks a property</b> you wanted: authenticity, integrity, accountability, confidentiality, availability, authorization.</li>
+        <li>Go <b>per element and per flow</b>: for every box and arrow, ask its letters. It's a checklist, not an inspiration contest.</li>
+        <li>Start at the <b>boundary crossings</b> from the last slide.</li>
+        <li>Write <b>one sentence</b> per threat: who does what, and what goes wrong.</li>
+        <li>Not a finding yet: <b>"we use TLS"</b>. That's a response. The threat is what TLS is for.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats" target="_blank" rel="noopener">Microsoft Learn: STRIDE</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP cheat sheet</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>STRIDE is a mnemonic from Microsoft's security work, and each letter is the opposite of something you wanted to be true. Click through them. The table at the bottom shows which letters each kind of thing earns. Processes get all six; an outside party only gets spoofing and repudiation, because we can't tamper with their systems, only decide what we believe from them.</span></li><li><b class="show">Show</b><span>Click each letter and read the question. Ask for one example from the room per letter before showing the slide's example.</span></li><li><b class="tip">Tip</b><span>Microsoft's page says the Threat Modeling Tool uses STRIDE and describes each category; OWASP lists the same six with the property each violates (for Repudiation OWASP says "accounting"; Microsoft says non-repudiation). The slide says "non-repudiation (accountability)". The "defence" column is the speaker's summary.</span></li><li><b class="check">Check</b><span>The per-element chart is the usual one, confirmed against Microsoft's 2007 STRIDE-per-element post (see the notes two slides back).</span></li><li><b class="next">Next</b><span>"A worked example, then the reference answer."</span></li></ul></div>
+</section>
+
+<section class="slide" id="walk" data-part="3" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// FINDING THREATS 02</p><h2>Walking a diagram: STRIDE, one element at a time</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Sample system" id="wk-pick">
+        <button type="button" data-s="website" aria-pressed="true">The Crypto 101 secure website</button>
+        <button type="button" data-s="photo">Photo app (the reference answer)</button>
+      </div>
+      <div class="dfd-wrap"><svg id="wk-svg" class="dfd" role="img" aria-label="A sample data-flow diagram: click an element or flow to see its threats"></svg></div>
+    </div>
+    <div class="stack">
+      <div class="card" id="wk-out" aria-live="polite"></div>
+      <p class="comment" id="wk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>Here's the walk, live. Click the connection between the browser and the web server: three letters, three threats. This is the "secure website" from Crypto 101 and How HTTPS Really Works, so the answers should look familiar: TLS is the response to tampering and disclosure on that flow. The threat model is what tells you <em>why</em> you needed it.</span></li><li><b class="show">Show</b><span>Click elements and flows in the website diagram first, then switch to the photo app: that's the reference answer for exercise 1 and the source of the sample threats for exercise 2. Click anything that earns letters but has no listed threat: that's a prompt, not an omission. The reference list is one possible answer.</span></li><li><b class="tip">Tip</b><span>The threats and fixes are the speaker's illustrations of standard patterns (certificate transparency, CAA records, HSTS, signed webhooks, ownership checks). None of it is from a specific incident, and every sample system is invented.</span></li><li><b class="check">Check</b><span>The website model is simplified: no CDN, no CT log, no OCSP. If someone asks, say so.</span></li><li><b class="next">Next</b><span>"STRIDE cards."</span></li></ul></div>
+</section>
+
+<section class="slide" id="cards" data-part="3" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// FINDING THREATS 03</p><h2>Threat cards: prompts to draw when you're stuck</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Suit" id="cd-pick"></div>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="cd-draw">Draw a card</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cd-all" aria-pressed="false">Show all 24</button>
+        <span class="note" id="cd-count"></span>
+      </div>
+      <div class="cd-card" id="cd-card" aria-live="polite"></div>
+      <div class="cd-grid" id="cd-grid" hidden></div>
+      <p class="comment" id="cd-note"></p>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>Four prompts per STRIDE suit. Draw one, pick an element or flow from your diagram, and <b>answer it for that thing</b>.</li>
+        <li>No threat? <b>Say why not</b> in one line: that's also a result.</li>
+        <li>Rotate the card-holder so the <b>loud person</b> doesn't hold every card.</li>
+        <li>Published decks exist: <b>Elevation of Privilege</b> (Shostack, 2010, Creative Commons) and <b>OWASP Cornucopia</b>. These 24 prompts are our own.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://shostack.org/eop" target="_blank" rel="noopener">Elevation of Privilege game</a> · <a href="https://owasp.org/www-project-cornucopia/" target="_blank" rel="noopener">OWASP Cornucopia</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>Stuck groups are the norm, not the exception. Cards turn a blank page into a question: "a webhook arrives from the provider: how would we know it was?" Draw one per round, aim it at a specific box or arrow on your diagram, and answer it.</span></li><li><b class="show">Show</b><span>Draw a few. Filter to a suit (Repudiation is usually the one people leave out). Show all 24 to see the whole deck at once.</span></li><li><b class="tip">Tip</b><span>Elevation of Privilege was created by Adam Shostack in 2010 after Laurie Williams described Protection Poker, and its files are Creative Commons licensed (shostack.org/eop, read 11 November 2026). OWASP Cornucopia is a separate deck for web and mobile apps, listed as a Production project at version 3.5. The 24 prompts here are written for this workshop; they aren't a copy of either deck. Printing is not built in: take a screenshot of the grid, or use the real decks.</span></li><li><b class="next">Next</b><span>"Privacy and abuse."</span></li></ul></div>
+</section>
+
+<section class="slide" id="privacy" data-part="3" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// FINDING THREATS 04</p><h2>Privacy threats, and people using the system "wrongly"</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lr-label">LINDDUN: the privacy cousin of STRIDE</p>
+      <div class="seg-pick" role="group" aria-label="LINDDUN category" id="pv-pick"></div>
+      <div class="card" id="pv-out" aria-live="polite"></div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Abuse cases: ask what a legitimate user could do</p>
+      <ul class="rules pv-abuse" id="pv-abuse"></ul>
+      <p class="src">Sources: <a href="https://linddun.org/" target="_blank" rel="noopener">LINDDUN (KU Leuven DistriNet)</a> · <a href="https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP cheat sheet</a></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>STRIDE asks what an attacker can break. Privacy asks a different question: what does the system know about people, and who can learn it? LINDDUN has seven prompts, from linking and identifying to non-compliance. Use it when the system holds personal data. Abuse cases are the same idea from another side: nobody is "attacking" anything, they're using the system out of order, repeatedly, at the same moment, or for a purpose it wasn't meant for.</span></li><li><b class="show">Show</b><span>Click through the seven. Notice "non-repudiation" appears on both lists but means the opposite: for security you want people not to be able to deny an action; for privacy, sometimes you want them to be able to.</span></li><li><b class="check">Check</b><span>The seven names come from linddun.org (read 11 November 2026), which lists Linking, Identifying, Non-repudiation, Detecting, Data Disclosure, Unawareness and Non-compliance, and credits the DistriNet Research Unit at KU Leuven. The site showed no version number; some publications add "and unintervenability" to Unawareness. The examples are the speaker's. The abuse-case prompts follow the OWASP cheat sheet's description (workflows used out of order, repeatedly, concurrently or for unintended outcomes) with two extras added.</span></li><li><b class="next">Next</b><span>"Attack trees."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tree" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// FINDING THREATS 05</p><h2>Attack trees: start from what they want</h2></header>
+  <div class="slide-body stack">
+    <div class="at-root" id="at-root"></div>
+    <div class="at-grid" id="at-grid"></div>
+    <div class="cols-2 at-foot">
+      <div class="verdict" id="at-out" role="status" aria-live="polite"></div>
+      <ul class="rules at-rules">
+        <li><b>OR</b> branches are alternatives: the attacker takes the cheapest. <b>AND</b> branches need every step: costs add.</li>
+        <li>Click a step to <b>add a defence</b>. Watch the cheapest path move, not vanish.</li>
+      </ul>
+    </div>
+    <p class="comment" id="at-note"></p>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>STRIDE walks the diagram. An attack tree starts from one thing an attacker wants and works backwards: how could they get there? OR nodes are alternatives and the attacker takes the cheapest; AND nodes need every step. The costs are an invented "effort" scale, not dollars. The point is the second click: defend the cheapest path and the next cheapest becomes the new weakest point.</span></li><li><b class="show">Show</b><span>Start with nothing defended: the cheapest path is a one-step API change. Defend it, and it moves to the storage branch (two steps). Keep going until every path costs about the same: that's balance. Defend everything and the tree says no path remains, which really means "no path we thought of".</span></li><li><b class="ask">Ask</b><span>What did we leave out of this tree? <em>Answer: the user is tricked into sharing it themselves, a bug in an image library, a stolen backup. A tree is only as complete as the people drawing it.</em></span></li><li><b class="tip">Tip</b><span>Bruce Schneier's "Attack Trees" (Dr. Dobb's Journal, December 1999) is the classic source: the goal is the root, ways to reach it are the nodes below, with OR and AND nodes and values like cost that propagate up (article read 11 November 2026). The photo-app tree and every number are invented.</span></li><li><b class="next">Next</b><span>"Exercise 2."</span></li></ul></div>
+</section>
+
+<section class="slide" id="exercise-2" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// EXERCISE 2 · 15 MIN</p><h2>Find at least two threats per letter</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="ex-row">
+        <label class="grow"><span class="lr-label">On which element or flow?</span><select id="t-target" aria-label="Target"></select></label>
+        <label><span class="lr-label">Letter</span><select id="t-cat" aria-label="Category"></select></label>
+      </div>
+      <p class="note" id="t-hint"></p>
+      <label class="grow"><span class="lr-label">The threat: who does what, and what goes wrong</span><input id="t-text" maxlength="160" placeholder="e.g. Someone changes a photo ID and sees another user's photo" autocomplete="off" spellcheck="false"></label>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="t-add">Add threat</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="t-ref">Add the reference threats</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="t-clear">Clear</button>
+      </div>
+      <p class="verdict" id="t-msg" role="status"></p>
+    </div>
+    <div class="stack">
+      <div class="cv-row" id="t-cov" aria-label="Coverage"></div>
+      <ul class="tl-list" id="t-list"></ul>
+      <p class="comment" id="t-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~15 min</p><ul><li><b class="show">Show</b><span>Back at your group's diagram. Each group logs threats here: pick the element or flow, the letter, and one sentence. The six chips fill up to two each. The hint under the target shows which letters that kind of thing earns, as guidance rather than a rule. If a group is stuck, "Add the reference threats" loads 16 sample ones: use them to compare, not to copy. If you built your own diagram, targets come from it; otherwise the photo app is used.</span></li><li><b class="say">Say</b><span>Quantity first. Don't argue about whether it's likely yet: ranking comes in part 4. The goal is a long honest list. If a threat isn't a sentence about a person doing something, rewrite it.</span></li><li><b class="tip">Tip</b><span>Common stalls: writing the response instead of the threat ("use TLS"), writing the category instead of the sentence ("spoofing"), and listing threats to something that isn't on the diagram. All three are fine to flag gently.</span></li><li><b class="check">Check</b><span>Everything logged lives in this browser tab only and is lost on reload. Copy out what you want to keep.</span></li><li><b class="next">Next</b><span>Checkpoint, then ranking.</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Share your most surprising threat</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Each group shares one, then we compare notes.</p>
+    <ol class="checkpoint">
+      <li><p>Which threat surprised you most, and on which element or flow?</p><details><summary>Hint</summary><p>Think about the one you'd never have found without the prompt.</p></details><details class="answer"><summary>Answer</summary><p>No single answer. The useful part is that it came from a prompt (a letter, a card, a boundary), not from inspiration: that's repeatable.</p></details></li>
+      <li><p>Which letters were hardest to fill?</p><details><summary>Hint</summary><p>Which ones are about how the system behaves, rather than what a clever attacker does?</p></details><details class="answer"><summary>Answer</summary><p>Often Repudiation and Denial of service: they're about missing records and limits, which are easy to overlook. If that was your group, that's normal, and those gaps are often the cheapest to fix.</p></details></li>
+      <li><p>Did you find anything that wasn't about the diagram at all?</p><details><summary>Hint</summary><p>Think about people, processes and the build pipeline.</p></details><details class="answer"><summary>Answer</summary><p>Good: note it. Threats outside the diagram usually mean the diagram needs another box, or a second diagram for the process around it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Take one surprise per group in turn. Listen for the ones that came from a boundary crossing. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="rank" data-part="4" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// DECIDING AND FOLLOWING UP 01</p><h2>Ranking: likelihood × impact, kept simple</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="controls">
+        <button type="button" class="btn btn-ghost btn-sm" id="rk-load">Load the reference threats</button>
+        <span class="note" id="rk-count"></span>
+      </div>
+      <ul class="rk-list" id="rk-list"></ul>
+      <p class="comment" id="rk-note"></p>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Where your threats fall</p>
+      <div class="rk-grid" id="rk-grid" role="img" aria-label="A three by three grid of likelihood against impact, with the number of threats in each cell"></div>
+      <ul class="rules">
+        <li>Three levels each, because <b>finer scales invent precision</b> nobody has.</li>
+        <li>Rate <b>as a group</b>, and write down why a rating moved.</li>
+        <li>It ignores <b>how hard the fix is</b>: a high threat with a one-line fix goes first.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>You can't fix everything on day one, so you rank. Likelihood times impact, three levels each: nine possible scores. Don't argue the difference between a 6 and a 7; argue about whether it's high or low. And if everything comes out a 9, the scale has stopped telling you anything, so re-rate relative to each other.</span></li><li><b class="show">Show</b><span>Load the reference threats (or use your own from exercise 2). Change a rating and watch the list reorder and the grid update. Set every threat to 3 and 3 to see what that does.</span></li><li><b class="tip">Tip</b><span>The OWASP cheat sheet says, in theory, rank by likelihood multiplied by impact, notes this is hard to calculate and ignores the effort to fix, and that some teams add effort to the prioritisation. The bands (1 to 2 low, 3 to 4 medium, 6 and 9 high) and the 1 to 3 scales are the speaker's convention for the workshop, not a standard; CVSS and other scoring systems exist for vulnerabilities, not for design threats.</span></li><li><b class="check">Check</b><span>Reference ratings are the speaker's judgement: groups will disagree, and that discussion is the point.</span></li><li><b class="next">Next</b><span>"Responses."</span></li></ul></div>
+</section>
+
+<section class="slide" id="responses" data-part="4" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// DECIDING AND FOLLOWING UP 02</p><h2>Responses: four answers, each with an owner</h2></header>
+  <div class="slide-body stack">
+    <div class="cards-2 rs-defs">
+      <div class="card"><b>Mitigate</b><span>Add a control that makes it harder or less harmful.</span></div>
+      <div class="card"><b>Eliminate</b><span>Change the design so it can't happen: drop the feature, data or permission.</span></div>
+      <div class="card"><b>Transfer</b><span>Someone better placed takes it on: a provider, a contract, insurance.</span></div>
+      <div class="card"><b>Accept</b><span>Knowingly live with it, <b>written down</b>, with an owner and a date to look again.</span></div>
+    </div>
+    <div class="controls"><button type="button" class="btn btn-ghost btn-sm" id="rs-load">Load the reference threats</button><span class="note" id="rs-count"></span></div>
+    <div class="rs-list" id="rs-list"></div>
+    <p class="comment" id="rs-note"></p>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Four possible answers, and "ignore it" isn't one of them. Eliminate is the best and the one teams forget: can we simply not hold that data? Accept is legitimate, but only if it's written down with a name and a date. The most common bad response is an accepted risk that nobody owns and nobody revisits.</span></li><li><b class="show">Show</b><span>The top three threats by rank appear here. Choose a response, add an owner and a few words about the fix. Try accepting one with no owner or no date: the page won't call it done.</span></li><li><b class="tip">Tip</b><span>Mitigate, eliminate, transfer and accept are the common four; some lists use "avoid" or "reduce" and call them "treat". Owners are people by name; "the platform team" is acceptable only if it exists and someone there has said yes. The review date defaults to 90 days from today, which is the speaker's habit, not a rule.</span></li><li><b class="next">Next</b><span>"Writing them down."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tickets" data-part="4" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// DECIDING AND FOLLOWING UP 03</p><h2>Write threats as tickets, with a test that says "done"</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="grow"><span class="lr-label">Pick a threat</span><select id="tk-pick" aria-label="Threat"></select></label>
+      <pre class="term tk-out" id="tk-out"></pre>
+      <div class="controls"><button type="button" class="btn btn-sm" id="tk-copy">Copy the ticket</button><span class="note" id="tk-msg" role="status"></span></div>
+    </div>
+    <div class="stack">
+      <ul class="rules">
+        <li>A ticket has <b>where</b>, <b>what goes wrong</b>, <b>the response</b>, <b>an owner</b> and <b>a way to know it's done</b>.</li>
+        <li>"Done when" is <b>a test</b>: given, when, then. If you can't test it, you can't tell it's fixed.</li>
+        <li>Put it in the <b>same backlog</b> as everything else. A separate security list is a list nobody schedules.</li>
+        <li>Link the ticket back to the <b>diagram</b> and the threat, so a later change can find it.</li>
+      </ul>
+      <p class="comment" id="tk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A threat that lives in a document doesn't get fixed. It has to become a ticket in the place the team already works, with a clear "done". The test sentence is the important part: "given a user without the role, when they call the function, then the server refuses it" is something a developer can turn into an automated test, and which then keeps the fix from quietly regressing.</span></li><li><b class="show">Show</b><span>Choose a threat from the list. The ticket is built from the fields you gave it: ratings, response, owner and fix. The "Done when" line is a template per letter: edit it for the real system. Without a log, the list shows the reference threats.</span></li><li><b class="tip">Tip</b><span>The ticket format and the test templates are the speaker's convention, not a standard. Use whatever your tracker supports.</span></li><li><b class="next">Next</b><span>"Exercise 3."</span></li></ul></div>
+</section>
+
+<section class="slide" id="exercise-3" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// EXERCISE 3 · 12 MIN</p><h2>Your top three, as backlog items</h2></header>
+  <div class="slide-body stack">
+    <p class="note">The three highest-ranked threats from your log. Fill in the response and owner on the previous slide first, or see what's missing here.</p>
+    <div class="controls">
+      <button type="button" class="btn btn-sm" id="x3-copy">Copy all three</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="x3-load">Load the reference threats</button>
+      <span class="note" id="x3-msg" role="status"></span>
+    </div>
+    <div class="x3-list" id="x3-list"></div>
+  </div>
+  <div class="notes"><p class="time">~12 min</p><ul><li><b class="show">Show</b><span>Each group takes its three highest-ranked threats and makes sure each has a response, an owner, and a test sentence the team could use. Anything missing is flagged in pink. Then groups read one ticket aloud: does a stranger know what to do and how to tell it's done?</span></li><li><b class="say">Say</b><span>You're done when somebody could pick the ticket up on Monday without asking you what you meant. Real follow-up happens in your own tracker: copy the text out. This page keeps nothing once you reload.</span></li><li><b class="next">Next</b><span>"Making it a habit."</span></li></ul></div>
+</section>
+
+<section class="slide" id="habit" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// DECIDING AND FOLLOWING UP 04</p><h2>Making it a habit: ten things that keep it going</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="small"> We start small: one flow, one hour, one diagram on a whiteboard</label>
+      <label><input type="checkbox" data-k="trig"> We know what triggers a threat model: new boundary, data, party or permission</label>
+      <label><input type="checkbox" data-k="review"> It's part of design review, not a separate ceremony</label>
+      <label><input type="checkbox" data-k="mixed"> Someone who builds it and someone who runs it are in the room</label>
+      <label><input type="checkbox" data-k="box"> We time-box it, and stop when the list stops growing</label>
+      <label><input type="checkbox" data-k="templ"> We keep a template: diagram, threats, owners, dates</label>
+      <label><input type="checkbox" data-k="rank"> We rank simply, and write down why a rating moved</label>
+      <label><input type="checkbox" data-k="tick"> Threats become tickets with owners and tests</label>
+      <label><input type="checkbox" data-k="again"> We revisit the model when the system changes, and on a date</label>
+      <label><input type="checkbox" data-k="blame"> Finding a threat is praised, and nobody is blamed for a design that missed one</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>This is the day's advice on one page. Tick what your team does today and treat every unticked box as a thing to try next sprint. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box would make the biggest difference to your next design review?</span></li><li><b class="tip">Tip</b><span>The Manifesto's values include "doing threat modeling over talking about it" and "continuous refinement over a single delivery": both are about habit. The list itself is the speaker's synthesis.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a design of your own you're not sure how to model. (Describe it, don't paste anything sensitive.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The builder, cards and tree stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://www.threatmodelingmanifesto.org/" target="_blank" rel="noopener">Threat Modeling Manifesto</a><span>The values, principles and the four questions.</span></li>
+        <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP Threat Modeling Cheat Sheet</a><span>The method in a few pages, with tools such as OWASP Threat Dragon.</span></li>
+        <li><a href="../web-app-security/">Web Application Security Essentials</a><span>The common threats you'll find on a web diagram, with the defences.</span></li>
+        <li><a href="../how-https-works/">How HTTPS Really Works</a><span>The secure-website example from this workshop, in full.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo runs in your browser: the sample systems, threats and scores are invented, and nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Open the floor. A good closing question: "what's one thing you'll draw this week?"</span></li><li><b class="check">Check</b><span>Facts checked 11 November 2026: the Manifesto (values, principles and four questions; no date or version shown on the page), the OWASP cheat sheet, Microsoft's STRIDE definitions, LINDDUN's seven categories, Schneier's attack-trees article, Shostack's Elevation of Privilege page, OWASP Cornucopia (3.5) and Threat Dragon (v2.6.2, Production project). The STRIDE-per-element chart was checked against Microsoft's 2007 blog post that introduced it (Larry Osterman, archived on Microsoft Learn). The Microsoft Threat Modeling Tool's release notes list 7.3.51110.1 (10 November 2025) as the latest release at that date; the slide doesn't name it. Threat Dragon is only named in a link description (the OWASP page was read), and no tool's current status is claimed on a slide.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="tm.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
