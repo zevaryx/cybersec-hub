@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elliptic Curves Properly</title>
+<meta name="description" content="Elliptic Curves Properly: how curves are chosen, why ECDSA is fragile, how Ed25519 fixes it, what strict verification and constant-time code mean, and how to choose today. With live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/elliptic-curves/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Elliptic Curves Properly">
+<meta property="og:description" content="Beyond adding points: why a repeated nonce leaks an ECDSA key, what Ed25519 changed, why a point must be validated, and what constant-time code means. Real P-256, Ed25519 and X25519 in your browser.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/elliptic-curves/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/elliptic-curves/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Elliptic Curves Properly in neon, beside a terminal that multiplies a point on a tiny curve.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M4 22 C 12 22 14 6 20 6 S 24 22 28 22' fill='none' stroke='%2300f0ff' stroke-width='2.5'/%3E%3Ccircle cx='20' cy='6' r='3' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "elliptic-curves", "title": "Elliptic Curves Properly", "footer": "ELLIPTIC CURVES", "subtitle": "DEVELOPER TRACK · 16",
+  "parts": [{ "name": "Curves and groups", "minutes": 27 }, { "name": "Signatures", "minutes": 38 }, { "name": "Implementation hygiene", "minutes": 34 }, { "name": "Wrap-up", "minutes": 12 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">ELLIPTIC<span>CURVES</span></a>
+  <div class="scroll-parts">
+    <a href="#groups" data-part="1"><b>01</b>Curves and groups</a>
+    <a href="#ecdsa" data-part="2"><b>02</b>Signatures</a>
+    <a href="#validate" data-part="3"><b>03</b>Hygiene</a>
+    <a href="#choose" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 16 · FOR ENGINEERS WHO IMPLEMENT OR REVIEW CRYPTO · ADVANCED</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Elliptic Curves Properly">Elliptic Curves Properly</span></h1>
+      <p class="lede">Beyond "add the points": how curves get chosen, why ECDSA is so easy to get wrong, what Ed25519 fixed, and what "constant-time" really asks of your code.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/elliptic-curves/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>toy curve · y² = x³ + 2x + 2 mod 17</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ k·G, k = <input id="hero-in" value="7" spellcheck="false" autocomplete="off" aria-label="A whole number k to multiply the generator point G by"></label>
+      <div class="hero-cells" id="hero-cells" aria-live="polite"></div>
+      <p class="hero-key"><span class="sw k-on"></span> the point k·G <span class="sw k-inf"></span> the point at infinity</p>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About two hours with three checkpoints. This is for people who write, wrap or review code that uses elliptic curves. We won't invent anything: the aim is to know which mistakes are common, why the newer designs avoid them, and what to look for in a review. The demos use the real P-256, Ed25519 and X25519, and tiny toy curves where a toy shows the idea better.</span></li><li><b class="show">Show</b><span>The terminal multiplies the generator G of the Crypto 101 toy curve by a number k. This curve has only 19 points, so the multiples repeat every 19 steps. Type 7, then 19, then 26.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try 0 or 19 (the point at infinity: you've gone all the way round), 20 (same as 1), 26 (same as 7), 42 (the answer, which here is 4G), 18 or −1 (the negative of G), an empty box, and some words. Others: the console has a message; slide "Choosing curves" has a row you can click for a SafeCurves quote; the nonce demo has a "Sony" button; ECDSA's Sign button has a joke if you press it ten times; the testing slide has a joke when the textbook verifier passes every test vector; and ticking all ten boxes on the checklist gets a line.</span></li><li><b class="show">Check</b><span>The toy curve (p = 17, a = b = 2, G = (5, 1), order 19) is the one from the Crypto 101 talk's curve slide.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap">
+      <li><a href="#groups"><small>PART 1 · 27 MIN</small><b>Curves and groups</b></a><span>Order, generator, cofactor</span><span>Three curve shapes, one group</span><span>How curves are chosen</span><span>Point encoding and validation</span></li>
+      <li><a href="#ecdsa"><small>PART 2 · 38 MIN</small><b>Signatures</b></a><span>ECDSA step by step</span><span>The nonce: secret, unique, unbiased</span><span>RFC 6979 and Ed25519</span><span>Malleability and strict checks</span></li>
+      <li><a href="#validate"><small>PART 3 · 34 MIN</small><b>Implementation hygiene</b></a><span>Validate what you receive</span><span>Constant-time code</span><span>Side channels</span><span>Testing: known answers and edge cases</span></li>
+      <li><a href="#choose"><small>PART 4 · 12 MIN</small><b>Wrap-up</b></a><span>Choosing today</span><span>A checklist</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour. The maths is the real thing where it can be, but all of it is written to be read, not to be safe: never copy it into a product.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one is about the objects: the group a curve defines, why there are different curve shapes, and how a curve is chosen. Part two is about signatures, where most of the real-world damage has been done. Part three is about the code around the maths: validation, constant time and testing. Part four is a decision guide.</span></li><li><b class="next">Next</b><span>"Start with what a curve gives you: a group."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="groups" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// CURVES AND GROUPS 01</p><h2>A curve is a group: order, generator, cofactor</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which toy curve" id="gr-curve">
+        <button type="button" data-c="17" aria-pressed="true">Mod 17: 19 points, cofactor 1</button>
+        <button type="button" data-c="37" aria-pressed="false">Mod 37: 44 points, cofactor 4</button>
+      </div>
+      <p class="lr-label">Pick a point</p>
+      <div class="pt-grid" id="gr-pts" role="group" aria-label="Every point on the curve"></div>
+    </div>
+    <div class="stack">
+      <div class="stats gr-stats" id="gr-facts"></div>
+      <p class="verdict" id="gr-sel" aria-live="polite"></p>
+      <pre class="term gr-seq" id="gr-seq" aria-label="Multiples of the chosen point"></pre>
+      <p class="comment" id="gr-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>All the points on a curve, plus a point at infinity, form a group: you can add any two, and you always land on another point of the group. Three numbers matter. The group order is the number of points. The generator is a point you keep adding to itself, and the order of that point, n, is how many steps until you reach infinity. The cofactor h is the group order divided by n. Real curves are chosen so n is a huge prime, and h is as small as possible.</span></li><li><b class="show">Show</b><span>Mod 17: 19 points in total and 19 is prime, so every point except infinity has order 19: any of them is a generator, and the cofactor is 1. Now switch to mod 37: 44 points, which is 4 times 11. Click points: some have order 11, some 22, 44, 4, 2, 1. Only the ones of order 11 or 1 sit in the prime-order subgroup. The rest have a small-order component, and that matters for validation later.</span></li><li><b class="ask">Ask</b><span>Which curves in real use have cofactor 1, and which have 8? <em>Answer: P-256, P-384 and secp256k1 have 1. Curve25519 / edwards25519 have 8, and Curve448 / edwards448 have 4 (RFC 7748 section 4).</em></span></li><li><b class="show">Check</b><span>The mod-37 curve is y² = x³ + x + 7. Its order, 44, was counted by the page's own code and checked in tests. Group sizes of real curves: RFC 7748 and the curve standards.</span></li><li><b class="next">Next</b><span>"There's more than one way to write a curve down."</span></li></ul></div>
+</section>
+
+<section class="slide" id="shapes" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// CURVES AND GROUPS 02</p><h2>Three shapes, one group, and why the formulas matter</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="cards-3 sh-cards">
+        <div class="card"><b>Weierstrass</b><span>y² = x³ + ax + b<br>P-256, P-384, secp256k1. The classic form.</span></div>
+        <div class="card"><b>Montgomery</b><span>By² = x³ + Ax² + x<br>Curve25519: made for a fast, simple ladder that only needs x.</span></div>
+        <div class="card"><b>Edwards</b><span>ax² + y² = 1 + dx²y²<br>edwards25519: one addition formula for every pair.</span></div>
+      </div>
+      <p class="m">One toy group (p = 71, 88 points) in two forms. Pick two points as multiples of a generator g:</p>
+      <div class="sh-pick">
+        <label>P = <input type="number" id="sh-i" min="0" max="87" value="5" aria-label="P as a multiple of g"> · g</label>
+        <label>Q = <input type="number" id="sh-j" min="0" max="87" value="5" aria-label="Q as a multiple of g"> · g</label>
+        <button type="button" class="btn btn-ghost btn-sm" id="sh-rand">Random pair</button>
+      </div>
+      <pre class="term sh-out" id="sh-out" aria-live="polite"></pre>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="sh-case" aria-live="polite"></p>
+      <div class="card"><b>Add every pair</b><span>All 88 × 88 = 7,744 sums, in the Montgomery form with the usual formula, and in the Edwards form with one formula.</span><button type="button" class="btn btn-ghost btn-sm" id="sh-all">Add all 7,744 pairs</button><output id="sh-tally" class="sh-tally"></output></div>
+      <p class="comment" id="sh-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>The same group can be written in different shapes, and the shape decides how easy it is to write code with no mistakes. In the classic short Weierstrass form, adding two points has separate cases: either point is the point at infinity, the two are opposites, the two are equal (use the tangent), or the general chord. Every case is a branch, and branches on secret data are a risk. A twisted Edwards curve of the right kind has one formula that works for every pair, including doubling and the neutral element. That's what "complete" means. Curve25519 is a Montgomery curve, designed so an x-only ladder is simple and uniform, and the same group has an Edwards form that Ed25519 uses for signatures.</span></li><li><b class="show">Show</b><span>The toy: p = 71, A = 23, 88 points, the Montgomery curve v² = u³ + 23u² + u and the Edwards curve 25x² + y² = 1 + 21x²y². Enter two numbers and watch both forms add. They agree: the map (u, v) → (u/v, (u−1)/(u+1)) takes one group to the other. Then press "Add all pairs": the Montgomery formula needs a special case for 348 of the 7,744 pairs (175 involve infinity, 87 are opposites, 86 are doublings); the Edwards formula uses the same line every time.</span></li><li><b class="say">Say</b><span>Real Ed25519 uses the curve with a = −1; the toy uses a = A + 2 so the map is the simplest one. The lesson is the same. It's also only about formulas: a complete formula makes branch-free code easier, it doesn't make a library safe by itself.</span></li><li><b class="show">Check</b><span>Checked in tests: both forms have 88 points, the map is a bijection and respects addition for all 7,744 pairs. For the real curves: RFC 7748 section 4.1 (Curve25519 and edwards25519 are birationally equivalent) and RFC 8032 section 5.1.</span></li><li><b class="next">Next</b><span>"So how do you pick a curve in the first place?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="choosing" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// CURVES AND GROUPS 03</p><h2>Choosing curves: rigidity and SafeCurves</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table cv-table" id="cv-table">
+        <caption class="m">Click a row. "Safe?" is Bernstein and Lange's SafeCurves verdict.</caption>
+        <thead><tr><th>Curve</th><th>Shape</th><th>Cofactor</th><th>Safe?</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr data-k="p256" tabindex="0"><th>NIST P-256</th><td>Weierstrass</td><td>1</td><td>no</td><td>TLS, passkeys (ES256), FIPS</td></tr>
+          <tr data-k="p384" tabindex="0"><th>NIST P-384</th><td>Weierstrass</td><td>1</td><td>no</td><td>Government policies, higher strength</td></tr>
+          <tr data-k="k1" tabindex="0"><th>secp256k1</th><td>Weierstrass</td><td>1</td><td>no</td><td>Bitcoin, Ethereum</td></tr>
+          <tr data-k="c25519" tabindex="0"><th>Curve25519 / edwards25519</th><td>Montgomery / Edwards</td><td>8</td><td>yes</td><td>X25519, Ed25519, SSH, Signal</td></tr>
+          <tr data-k="ed448" tabindex="0"><th>Curve448 / Ed448-Goldilocks</th><td>Montgomery / Edwards</td><td>4</td><td>yes</td><td>X448, Ed448</td></tr>
+        </tbody></table></div>
+      <p class="mi-detail" id="cv-detail" aria-live="polite">Select a row.</p>
+    </div>
+    <div class="stack cv-cards">
+      <div class="card"><b>Rigidity: "how did you pick it?"</b><span>A curve is rigid if its generation process is fully explained, so the designer had no room to pick from many curves. P-256's coefficient comes from hashing a seed whose origin nobody has explained. Curve25519's came from a stated rule: the prime closest to a power of two, and the smallest A meeting the security requirements.</span></div>
+      <div class="card"><b>"Not rigid" is not "broken"</b><span>No practical attack on P-256 is known. SafeCurves is an argument about design: choose curves so simple code is also secure code, and nobody has to take a seed on trust.</span></div>
+      <div class="card"><b>The part that hurts in practice</b><span>Most real attacks on elliptic-curve code didn't solve the discrete log. They used a missing check, a nonce, or a timing difference. Curves that make correct code simple remove some of them.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The old curves, from the late 1990s and 2000, were chosen for the discrete log problem to be hard and for speed on the hardware of the time. The SafeCurves project, by Daniel Bernstein and Tanja Lange, asks a different question: which curves make it easy to build a secure implementation? Its criteria include rigidity (how fully the choice is explained), twist security, completeness of the addition formula and whether a simple Montgomery ladder exists. Curve25519 passes them all. The NIST curves, and secp256k1, fail some. That's about how easy the curves are to implement safely, not an attack on their security. P-256 remains a good, widely deployed curve. The debate: NIST's side is that the seeds were generated with a published process and the curves have been scrutinised for 25 years; Bernstein and Lange's side is that "trust us" can't be verified, and that other criteria (completeness, simple ladders) cost real bugs.</span></li><li><b class="show">Show</b><span>Click each row. P-256: SafeCurves marks it "manipulatable" for rigidity (the coefficients are generated by hashing an unexplained seed) and also fails the ladder, completeness and indistinguishability criteria, while passing twist security. secp256k1: "somewhat rigid", no ladder, not complete.</span></li><li><b class="show">Check</b><span>Read on 11 November 2026 from safecurves.cr.yp.to (the index page is "version 2017.01.22"; its suggested citation says "accessed 1 December 2014" as a placeholder to replace with your own date). The rigidity page gives P-256 "manipulatable" and secp256k1 "somewhat rigid", as the slide says. The per-criterion detail for P-256 is my reading of its table, and the P-384 row was not read column by column, so the slide gives only the overall verdict for P-384. Cofactors from RFC 7748 (8 and 4). The "used for" column is a rough guide, not a standard.</span></li><li><b class="next">Next</b><span>"A point has to travel as bytes. What can go wrong with that?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="encoding" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// CURVES AND GROUPS 04</p><h2>Point encoding and the checks a receiver owes</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which curve" id="en-curve">
+        <button type="button" data-c="p256" aria-pressed="true">P-256 (cofactor 1)</button>
+        <button type="button" data-c="toy" aria-pressed="false">Toy mod 37 (cofactor 4)</button>
+      </div>
+      <label class="lr-label" for="en-hex">The bytes you received (hex)</label>
+      <textarea id="en-hex" rows="4" spellcheck="false" autocomplete="off" class="mono"></textarea>
+      <div class="seg-pick" role="group" aria-label="Examples" id="en-pre"></div>
+      <p class="comment" id="en-info"></p>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="en-verdict" aria-live="polite"></p>
+      <ol class="en-checks" id="en-checks" aria-label="The checks, in order"></ol>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A public key or a key-exchange share arrives as bytes from someone you don't trust. SEC 1 encodings: 04 followed by x and y; 02 or 03 followed by x alone (compressed, and the prefix says whether y is even or odd); 00 for infinity. A receiver owes the same checks in the same order, and TLS 1.3 spells them out for the NIST curves: not the point at infinity, both coordinates in the right range, and a solution of the curve equation. When the cofactor isn't 1, add a subgroup check, which is the step the toy mod-37 curve lets you break.</span></li><li><b class="show">Show</b><span>Start with the generator of P-256, uncompressed, then change one hex digit of y: the equation fails. Try compressed (the check becomes "does x give a real y?"). Try x ≥ p: it names the same point twice, which is a malleability and fingerprinting problem, so reject it. Switch to the toy curve and load the "on the curve, wrong subgroup" example: it passes the on-curve check and fails the subgroup check.</span></li><li><b class="say">Say</b><span>This is boring, mandatory work. Libraries that expose a safe "parse public key" function do it for you; code that does its own point arithmetic from bytes has to do it itself.</span></li><li><b class="show">Check</b><span>RFC 8446 section 4.2.8.2 (the three steps; for these curves implementors do not need to check the subgroup). RFC 8446 was obsoleted in July 2026 by RFC 9846, where the same text is section 4.3.8.2. SEC 1 encoding bytes: 02/03/04. The page's compressed decompression uses p ≡ 3 mod 4 for P-256.</span></li><li><b class="next">Next</b><span>"Checkpoint one."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A curve has 44 points, 4 × 11. A received point has order 4. What can go wrong if you use it in a key exchange without checking?</p><details><summary>Hint</summary><p>Which part of your secret does a small-order point not touch?</p></details><details class="answer"><summary>Answer</summary><p>Multiplying a small-order point by your secret only depends on your secret modulo the point's order, so the result can reveal a few bits of the secret, or make the shared key independent of it. That's why you check the subgroup when the cofactor isn't 1, or clear the cofactor by design (X25519's clamping does).</p></details></li>
+      <li><p>Why is a complete addition formula useful to someone writing constant-time code?</p><details><summary>Hint</summary><p>Count the branches in the Weierstrass formula.</p></details><details class="answer"><summary>Answer</summary><p>With a complete formula, adding any two points runs the same sequence of operations, so there's no special case to branch on and no secret-dependent difference in what the code does. It doesn't make the library safe on its own, but it removes a category of subtle bugs.</p></details></li>
+      <li><p>What is the argument for "rigid" curves, and what isn't it claiming?</p><details><summary>Hint</summary><p>Is it a claim that P-256 is broken?</p></details><details class="answer"><summary>Answer</summary><p>If a curve's parameters came from an unexplained seed, someone <em>could</em> have searched many curves for one with a secret weakness; a fully explained process leaves no room to do that. It doesn't claim any such weakness exists in P-256, and none is known.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="ecdsa" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// SIGNATURES 01</p><h2>ECDSA step by step, and where k comes in</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="chain chain-sm ec-chain"><span>h = H(m)</span><i></i><span class="hot">pick k</span><i></i><span>R = k·G, r = R<sub>x</sub> mod n</span><i></i><span>s = k⁻¹ (h + r·d) mod n</span><i></i><span class="hot c">signature (r, s)</span></div>
+      <label class="lr-label" for="ec-msg">Message</label>
+      <input id="ec-msg" class="mono" value="Pay Bob $100" spellcheck="false" autocomplete="off">
+      <div class="seg-pick" role="group" aria-label="Signing actions">
+        <button type="button" id="ec-sign">Sign with a fresh random k</button>
+        <button type="button" id="ec-again">Sign again</button>
+        <button type="button" id="ec-tamper">Change one letter, then verify</button>
+        <button type="button" id="ec-newkey">New key</button>
+      </div>
+      <p class="comment" id="ec-note"></p>
+    </div>
+    <div class="stack">
+      <pre class="term ec-out" id="ec-out" aria-live="polite"></pre>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>ECDSA is a small recipe. Hash the message to a number h. Pick a fresh random number k, the nonce. Compute the point k·G and take its x-coordinate, mod the group order n, as r. Then s is k⁻¹(h + r·d) mod n, where d is your private key. Verification uses only the public key Q = d·G: it recomputes a point from h, r and s and checks its x-coordinate against r. Look at the formula for s: the private key and the nonce are mixed in one equation, and only k stands between an observer and d.</span></li><li><b class="show">Show</b><span>Real P-256, in your browser. Sign, then sign again: r and s change because k changes, and both verify. Change one letter and verify: it fails. The page uses the shared crypto.js BigInt maths; a signature takes about a tenth of a second.</span></li><li><b class="ask">Ask</b><span>If s depends on k, h, r and d, which one of those must never be guessed or repeated? <em>Answer: k.</em></span></li><li><b class="show">Check</b><span>Formulas as in FIPS 186-5 section 6.4 and the Crypto 101 talk. This page's ECDSA is textbook with no hardening: variable-time and not safe to reuse.</span></li><li><b class="next">Next</b><span>"What happens if k repeats?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="nonce" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// SIGNATURES 02</p><h2>The nonce must be secret, unique and unbiased</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Two different messages, signed with the same private key. Where does k come from?</p>
+      <div class="seg-pick" role="group" aria-label="Where k comes from" id="nc-mode">
+        <button type="button" data-m="same" aria-pressed="true">The same k both times</button>
+        <button type="button" data-m="random" aria-pressed="false">A fresh random k each time</button>
+        <button type="button" data-m="rfc" aria-pressed="false">Derived from key + message (RFC 6979)</button>
+      </div>
+      <div class="nc-msgs"><input id="nc-m1" class="mono" value="Pay Bob $100" aria-label="First message" spellcheck="false"><input id="nc-m2" class="mono" value="Pay Eve $5,000" aria-label="Second message" spellcheck="false"></div>
+      <div class="seg-pick"><button type="button" id="nc-run">Sign both, then try to recover the key</button><button type="button" id="nc-sony">The PlayStation 3 case</button></div>
+      <p class="verdict" id="nc-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <pre class="term nc-out" id="nc-out" aria-live="polite"></pre>
+      <p class="comment" id="nc-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>If the same k signs two messages, both signatures have the same r. Subtract the two s equations and k falls out: k = (h₁ − h₂) / (s₁ − s₂) mod n. With k known, one signature's equation can be solved for the private key d. Nothing in the maths is broken: the recipe needs a fresh k every time, and one repeat hands over the key. It's the nonce, not the curve.</span></li><li><b class="show">Show</b><span>"The same k both times": the page computes k and d from the two public signatures and checks d against the real key. It works first time on real P-256. Then switch to fresh random k: nothing to recover. Then RFC 6979: also nothing, because the nonce is a function of the key and the message, so two different messages get unrelated nonces and the same message always gets the same one.</span></li><li><b class="say">Say</b><span>Real incidents, each a different way to fail. In 2010 the fail0verflow group showed Sony's PlayStation 3 code signed with a constant k, which let them recover the private signing key (the sources agree on "the same number every time"; I haven't verified the value some blogs quote). In 2013 a flaw in how Android initialised its random number generator led to repeated ECDSA nonces and stolen Bitcoin from some wallet apps: Google's developer blog confirmed the initialisation flaw and said apps using SecureRandom could get weak values. The pattern: the signer itself was fine, the randomness wasn't.</span></li><li><b class="show">Check</b><span>The "Sony" button only reuses a fixed k in the toy above: it's a model, and the page doesn't know Sony's real value. Sources: fail0verflow's 27C3 talk "Console Hacking 2010" (slides not retrieved; coverage from secondary sources); Android Developers Blog "Some SecureRandom Thoughts" (14 August 2013), read through search results; SafeCurves' page calls the PS3 case "the 2010 Sony PlayStation ECDSA security disaster".</span></li><li><b class="next">Next</b><span>"Repeats are the dramatic failure. There's a quieter one."</span></li></ul></div>
+</section>
+
+<section class="slide" id="bias" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// SIGNATURES 03</p><h2>A little bias is a leak</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A generator that always leaves the top bits of k at zero. 300 nonces, grouped by their top four bits:</p>
+      <div class="bi-ctl"><label for="bi-bits" class="lr-label">Top bits always zero: <output id="bi-n">0</output></label><input type="range" id="bi-bits" min="0" max="8" value="0" aria-label="Number of top bits of each nonce that are always zero"></div>
+      <div class="bi-chart" id="bi-chart" role="img" aria-label="Bar chart of how often each value of the top four bits appears"></div>
+      <p class="comment" id="bi-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Why a few bits matter</b><span>s = k⁻¹(h + r·d) is a linear equation in the unknowns k and d. Each signature adds one equation and one new unknown. If every k is known to be small, or to share some bits, the unknowns are constrained, and lattice methods turn enough of those constraints into the key.</span></div>
+      <div class="card"><b>Where bias comes from</b><span>A broken random generator, a modulo that favours small values, or a timing leak that reveals how long k was (the Minerva research, 2019 to 2020, recovered keys from smartcards and several libraries that way).</span></div>
+      <div class="card card-ok"><b>The fix</b><span>Derive k deterministically with a full-size hash of key and message, or use a scheme that doesn't expose a per-signature secret to the caller.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>A repeated nonce is the loud failure. The quiet one is a nonce that isn't uniform. Move the slider: with zero known bits the top four are evenly spread across all sixteen values; with four zero bits every nonce falls in one bucket, so the attacker knows about a quarter of each nonce for free. Each signature then contributes a small, imprecise fact about d, and lattice methods (the hidden number problem) combine hundreds of them. I'm not going to demonstrate that, and I won't go beyond the idea: the point for developers is that "random enough" has to mean uniform over the whole range, and a timing leak of the nonce's length counts too.</span></li><li><b class="show">Show</b><span>The slider only shows the generator's bias. There's no key recovery on this slide.</span></li><li><b class="show">Check</b><span>Minerva ("Minerva: The curse of ECDSA nonces", Jancar, Sedlacek, Svenda and Sys, TCHES 2020 issue 4, pp. 281 to 308): a timing leak of the nonce's bit length in an Atmel AT90SC smartcard chip and five libraries (libgcrypt, wolfSSL, MatrixSSL, SunEC/OpenJDK, Crypto++); the paper reports recovering keys from about 500 signatures with simulated leakage, 1,200 with real library data and 2,100 with smartcard data. CVEs and fixes, from the project page via search on 11 November 2026: libgcrypt CVE-2019-13627 (fix reported in 1.8.5; I didn't reach the release notes), wolfSSL CVE-2019-13628 (fixed in 4.1.0; the project calls that leak "minuscule"), Crypto++ fixed in 8.2.0. For the broader idea, "Biased Nonce Sense" (Breitner and Heninger, ePrint 2019/023) was found in search results but not read.</span></li><li><b class="next">Next</b><span>"The standard fix is to stop asking the caller for k."</span></li></ul></div>
+</section>
+
+<section class="slide" id="rfc6979" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// SIGNATURES 04</p><h2>Deterministic nonces: RFC 6979</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="chain chain-sm"><span>private key d</span><i></i><span>message hash h₁</span><i></i><span class="hot c">HMAC-DRBG (SHA-256)</span><i></i><span class="hot">k</span></div>
+      <label class="lr-label" for="rf-msg">Message</label>
+      <input id="rf-msg" class="mono" value="sample" spellcheck="false" autocomplete="off">
+      <pre class="term rf-out" id="rf-out" aria-live="polite"></pre>
+      <div class="seg-pick"><button type="button" id="rf-kat">Check against the RFC's own example</button></div>
+      <p class="verdict" id="rf-kat-out" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>What it buys you</b><span>Same key and message, same k, always. Different message, unrelated k. There's no random number generator to get wrong at signing time, and the signature is reproducible, so you can test it.</span></div>
+      <div class="card"><b>What it doesn't buy you</b><span>It doesn't hide k from a side channel, and a determinism-aware fault attack can exploit repeated computations. RFC 6979 itself says implementations should defend against side channels, and describes a "hedged" variant that mixes in fresh randomness.</span></div>
+      <div class="card"><b>Status</b><span>RFC 6979 is Informational (August 2013). FIPS 186-5 (final, February 2023) approves deterministic ECDSA as specified there.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>The fix proposed by Thomas Pornin in RFC 6979: don't ask for randomness at signing time. Feed the private key and the message hash into an HMAC-based generator and take k from its output. The signer needs no random source; anyone who repeats a message gets the same signature; two different messages can't collide on k except by a hash collision. It's now in widespread use, and NIST's FIPS 186-5 approves it.</span></li><li><b class="show">Show</b><span>Type a message: k is recomputed with the real HMAC-DRBG, using this page's own SHA-256. Change one character and k changes completely. Press the check button: it reproduces the nonce and the signature from RFC 6979 appendix A.2.5 for P-256 with SHA-256 and the message "sample". That vector is also the one I'll test every verifier against at the end.</span></li><li><b class="say">Say</b><span>Caveats, in the RFC's own words: determinism "may be useful to an attacker in some forms of side-channel attacks", so implementations should defend against them. Hedging, where fresh randomness is mixed into the HMAC input, is the answer many libraries take; a hedged signer is no longer deterministic, so it can't be checked against fixed test vectors.</span></li><li><b class="show">Check</b><span>RFC 6979 sections 3.2, 3.6 and 4 read on 11 November 2026 (it is Informational, by T. Pornin, August 2013). FIPS 186-5 section 6.3.2 and the note in section 6 read from NIST's PDF. NIST's page noted on 12 May 2025 that errata would lead to a future revision.</span></li><li><b class="next">Next</b><span>"EdDSA took the same idea and made it the only way to sign."</span></li></ul></div>
+</section>
+
+<section class="slide" id="eddsa" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// SIGNATURES 05</p><h2>Ed25519: deterministic by design</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="chain chain-sm"><span>seed (32 bytes)</span><i></i><span class="hot c">SHA-512</span><i></i><span>secret scalar a + prefix</span><i></i><span class="hot">r = H(prefix ‖ M)</span><i></i><span>R = r·B, S = r + H(R ‖ A ‖ M)·a</span></div>
+      <label class="lr-label" for="ed-msg">Message</label>
+      <input id="ed-msg" class="mono" value="hello curves" spellcheck="false" autocomplete="off">
+      <div class="seg-pick" role="group" aria-label="Ed25519 actions">
+        <button type="button" id="ed-sign">Sign</button>
+        <button type="button" id="ed-again">Sign again</button>
+        <button type="button" id="ed-new">New key</button>
+      </div>
+      <pre class="term ed-out" id="ed-out" aria-live="polite"></pre>
+    </div>
+    <div class="stack">
+      <div class="card"><b>The API difference</b><span>ECDSA: <code>sign(d, h, k)</code>: the caller supplies a secret nonce, and can get it wrong.<br>Ed25519: <code>sign(seed, message)</code>: no k to supply, no k to repeat.</span></div>
+      <div class="card"><b>Your browser's Web Crypto</b><span id="ed-wc">Checking…</span></div>
+      <p class="comment" id="ed-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>EdDSA, in Ed25519's form, bakes the RFC 6979 idea into the scheme itself. The 32-byte seed is hashed with SHA-512; half becomes the secret scalar (after clamping), the other half is a prefix. The per-message nonce r is a hash of the prefix and the message, so it is unpredictable to anyone without the seed, different for every message, and the same for the same message. The scheme is also simpler to implement: a complete formula, a fixed 64-byte signature, and no special-case ranges in the API. And the hash covers the public key, which closes off some related-key tricks.</span></li><li><b class="show">Show</b><span>This is the page's own implementation of RFC 8032 in BigInt, with its own SHA-512, checked against the RFC's test vectors and against Node's crypto. Sign twice: identical bytes. Then the cross-check: if your browser has Ed25519 in Web Crypto, the page signs the same message with it and verifies that signature with the page's code. The bytes are identical in Chrome and Firefox. Safari signs differently on purpose: WebKit's Ed25519 produces randomised signatures, following the CFRG draft for "hedged" EdDSA (draft-irtf-cfrg-det-sigs-with-noise), instead of the deterministic RFC 8032 ones (WebKit bug 262499 and the CFRG list discuss it). They still verify.</span></li><li><b class="say">Say</b><span>Ed25519's determinism is the same trade as RFC 6979's: no random-number bug at signing time, but you need to protect the implementation from side-channel and fault attacks, which is why some libraries and Apple's Safari add fresh randomness. NIST's FIPS 186-5 says as much in its EdDSA section.</span></li><li><b class="show">Check</b><span>RFC 8032 section 5.1 (Informational, January 2017) and test vectors in section 7.1, run in the page's tests. MDN's browser-compat data (the mdn/browser-compat-data repository, read 11 November 2026): Ed25519 in Web Crypto since Chrome 137, Firefox 129 and Safari 17. I couldn't find an MDN note on Safari's randomised signatures; that claim rests on the WebKit bug and the CFRG list. FIPS 186-5 section 7.1 approves EdDSA with Ed25519 and Ed448.</span></li><li><b class="next">Next</b><span>"Two signatures for one message: malleability."</span></li></ul></div>
+</section>
+
+<section class="slide" id="malleable" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// SIGNATURES 06</p><h2>Malleability and strict verification</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which scheme" id="ml-pick">
+        <button type="button" data-s="ed" aria-pressed="true">Ed25519: S + L</button>
+        <button type="button" data-s="ec" aria-pressed="false">ECDSA: (r, n − s)</button>
+      </div>
+      <pre class="term ml-sigs" id="ml-sigs" aria-live="polite"></pre>
+      <p class="comment" id="ml-why"></p>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table ml-table" id="ml-table">
+        <thead><tr><th>Second signature…</th><th>Textbook</th><th>RFC rules</th><th>Strict</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="m ml-legend">Textbook: just the equation. RFC rules: the checks the RFCs require. Strict: also rejects malleable forms and weak keys.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>A signature scheme can have more than one valid signature for the same message and key. ECDSA does: if (r, s) verifies, so does (r, n − s). That's harmless for confidentiality or forgery, but it breaks systems that identify a transaction by its signature bytes: a third party can change the identifier without knowing any key. Bitcoin's relay rules and Ethereum (EIP-2) reject the high-s form for that reason. Ed25519 has its own version: S is only defined modulo L, the group order, so S + L verifies too unless the verifier checks that S is below L. RFC 8032 requires that check, and says it's what makes Ed25519 non-malleable.</span></li><li><b class="show">Show</b><span>Pick Ed25519: the page takes a real signature from the RFC test vectors, adds L to S, and the table shows the verdicts of three verifier profiles. The textbook one, which is just the equation, accepts both. The RFC rules and the strict profile reject the second. Pick ECDSA: (r, n − s) is accepted by the textbook and RFC-rules profiles, because the ECDSA standard doesn't forbid it, and rejected by the strict profile (which adds the low-s rule).</span></li><li><b class="say">Say</b><span>The rest of the "strict" bucket is about what else libraries disagree on: non-canonical encodings, small-order keys, and whether to check the equation with or without multiplying by the cofactor. RFC 8032 says a cofactorless check is "sufficient, but not required" and that implementations should not disagree about the set of valid signatures. A 2020 paper by Chalkias, Garillot and Nikolaenko, "Taming the many EdDSAs", tested popular Ed25519 libraries and found that most do not comply with the latest recommendations. If you use signatures to identify things, or to reach consensus between systems, use one library and strict verification everywhere.</span></li><li><b class="show">Check</b><span>RFC 8032 sections 5.1.7, 8.4 and 8.8 (read). "Taming the many EdDSAs": ePrint 2020/1244, abstract read only. EIP-2 (Homestead, main-net block 1,150,000): "All transaction signatures whose s-value is greater than secp256k1n/2 are now considered invalid." Bitcoin: BIP 146 says the LOW_S rule has been enforced as relay policy by the reference client since v0.11.1. Both read 11 November 2026.</span></li><li><b class="next">Next</b><span>"Checkpoint two."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why does ECDSA leak the private key if k repeats, and how does EdDSA avoid choosing k at random?</p><details><summary>Hint</summary><p>Write down s₁ and s₂ with the same k and subtract.</p></details><details class="answer"><summary>Answer</summary><p>Two signatures with the same k have the same r, and subtracting their s equations leaves one equation in k, which is then solved; with k known, one s equation gives d. EdDSA derives the nonce from a hash of a secret prefix and the message, so it's different for every message and the same for the same one, and never depends on a random number generator at signing time.</p></details></li>
+      <li><p>A nonce generator leaves the top 4 bits of every k at zero. Is that a problem if the rest are random?</p><details><summary>Hint</summary><p>What does each signature tell an observer, even if k isn't repeated?</p></details><details class="answer"><summary>Answer</summary><p>Yes. Each signature gives a linear equation in which k is known to be small, and lattice methods can turn a few hundred such equations into the private key. A nonce must be uniform over its whole range, secret in every bit, including through timing.</p></details></li>
+      <li><p>Two valid signatures exist for one message. Who can that hurt, and what's the fix?</p><details><summary>Hint</summary><p>Think of something that uses the signature bytes as an identifier.</p></details><details class="answer"><summary>Answer</summary><p>Anything that identifies a message or a transaction by its signature: a third party can change the ID without any key. Fix: don't use signature bytes as identifiers (hash the signed content instead), and verify strictly: low-s for ECDSA, S &lt; L and canonical encodings for Ed25519.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="validate" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// IMPLEMENTATION HYGIENE 01</p><h2>Validate what you receive</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>A point that is not on the curve</h3>
+      <p class="m">The server's secret is d. A client sends a point that is <em>not</em> on the server's curve y² = x³ + x + 17 (mod 1009). The addition formula never uses the curve's constant, so the server's code still runs.</p>
+      <div class="seg-pick" role="group" aria-label="Which foreign point the client sends" id="iv-pick"></div>
+      <div class="seg-pick" role="group" aria-label="Does the server validate?" id="iv-val">
+        <button type="button" data-v="off" aria-pressed="true">Server skips validation</button>
+        <button type="button" data-v="on" aria-pressed="false">Server validates</button>
+      </div>
+      <pre class="term iv-out" id="iv-out" aria-live="polite"></pre>
+    </div>
+    <div class="stack">
+      <h3>X25519 and low-order points</h3>
+      <p class="m">Real X25519. Alice's key is fixed. Bob sends a value; she computes the shared secret.</p>
+      <div class="seg-pick" role="group" aria-label="What Bob sends" id="lo-pick">
+        <button type="button" data-u="good" aria-pressed="true">A real public key</button>
+        <button type="button" data-u="0" aria-pressed="false">u = 0 (order 2)</button>
+        <button type="button" data-u="1" aria-pressed="false">u = 1 (order 4)</button>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Does Alice check for an all-zero result?" id="lo-chk">
+        <button type="button" data-c="off" aria-pressed="true">No check</button>
+        <button type="button" data-c="on" aria-pressed="false">Abort on all zeros</button>
+      </div>
+      <pre class="term lo-out" id="lo-out" aria-live="polite"></pre>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>Left: the invalid-curve problem. Short Weierstrass point addition never uses the constant b, so a server that skips the on-curve check happily multiplies a foreign point by its secret. That point lives on a different curve, with a different group order, and some of those groups contain points of small order. If a point has order 5, then d times it only depends on d modulo 5, so the result reveals part of the secret. I'm showing what a single response leaks, not how attacks combine them; the lesson is that the check is mandatory, and the fix is one check.</span></li><li><b class="show">Show</b><span>Pick a foreign point, the server's response, and the line "this can take only 5 values". Turn validation on: the point is rejected before any secret is used. The toy's server key is fixed so the numbers are repeatable.</span></li><li><b class="say">Say</b><span>Right: X25519 was designed to be forgiving. Every 32-byte input is accepted, the scalar is "clamped" (low three bits cleared, so it's a multiple of the cofactor 8), and the ladder works on x only, so there's no on-curve check to forget. But a few inputs have small order. If Bob sends u = 0 or u = 1, Alice's result is all zeros whatever her key is, so a "shared secret" contributes nothing from her. RFC 7748 says implementations MAY check for an all-zero result, and notes that many don't. If your protocol needs both parties to contribute (most do), check, and hash the whole transcript into the key anyway.</span></li><li><b class="show">Check</b><span>The X25519 here is the page's own RFC 7748 implementation, tested against the RFC's vectors. RFC 7748 section 6.1 and section 7 on the all-zero check and the cofactor. TLS 1.3 (RFC 8446 section 4.2.8.2; RFC 9846 section 4.3.8.2) requires the point validation for the NIST curves, and its section 7.4.2 turns RFC 7748's MAY into a MUST: "Implementations MUST check whether the computed Diffie-Hellman shared secret is the all-zero value and abort if so." The toy parameters are mine.</span></li><li><b class="next">Next</b><span>"Now the code itself: constant time."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ct-compare" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// IMPLEMENTATION HYGIENE 02</p><h2>Constant time (1): early exits</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A secret value is stored. Your code compares a guess with it, one byte at a time. <b>Counted steps, not real timings</b>:</p>
+      <div class="seg-pick" role="group" aria-label="Which comparison" id="cc-mode">
+        <button type="button" data-m="early" aria-pressed="true">Stop at the first difference</button>
+        <button type="button" data-m="constant" aria-pressed="false">Always look at every byte</button>
+      </div>
+      <label class="lr-label" for="cc-guess">Your guess (the secret is 8 characters)</label>
+      <input id="cc-guess" class="mono" value="hunxxxxx" spellcheck="false" autocomplete="off" maxlength="8">
+      <p class="verdict" id="cc-out" aria-live="polite"></p>
+      <p class="comment" id="cc-note"></p>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Steps taken, by how many leading bytes of the guess are right</p>
+      <div class="cc-chart" id="cc-chart" role="img" aria-label="Bar chart: steps taken for guesses with 0 to 7 correct leading characters"></div>
+      <div class="card"><b>The rule</b><span>No branch, no loop exit, no table lookup and no early return may depend on a secret. For equality, XOR everything together and test once at the end.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>"Constant-time" means the time (and the memory accesses, and the branches taken) don't depend on secret values. The textbook example is comparing a MAC or a token: a loop that returns at the first differing byte takes longer when more leading bytes are right. An attacker who can measure the response time, even through noise, can guess one byte at a time. The fix looks silly: always look at every byte, accumulate the differences with OR, and test once at the end. Most languages and libraries ship a function for it (for HMAC tags, for example), and you should use that.</span></li><li><b class="show">Show</b><span>The chart counts steps, not real time: the page doesn't try to measure anything. With early exit, the bars climb as more leading bytes are right. In the constant version they're flat. Type a guess and see the steps.</span></li><li><b class="say">Say</b><span>For elliptic curves, the same rule applies to the scalar multiplication, which is next. Also remember that "constant time" is a property of the machine code, and compilers can break it: it has to be tested on the actual output, with tools such as dudect-style statistical tests, or checked with a constant-time verification tool.</span></li><li><b class="show">Check</b><span>Nothing external on this slide. Dudect and similar tool names are mentioned without links; confirm before naming one in your talk.</span></li><li><b class="next">Next</b><span>"The same problem inside scalar multiplication."</span></li></ul></div>
+</section>
+
+<section class="slide" id="ct-scalar" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// IMPLEMENTATION HYGIENE 03</p><h2>Constant time (2): the shape of scalar multiplication</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="lr-label" for="cs-bits">A secret scalar, in binary</label>
+      <input id="cs-bits" class="mono" value="10110010" spellcheck="false" autocomplete="off" maxlength="40">
+      <div class="seg-pick"><button type="button" id="cs-rand">Another random secret</button></div>
+      <div class="card"><b>Double-and-add</b><pre class="term cs-out" id="cs-dbl" aria-live="polite"></pre><span id="cs-dbl-n"></span></div>
+    </div>
+    <div class="stack">
+      <p class="m">D = double a point, A = add two points. Same operations, secret-dependent order:</p>
+      <div class="card card-ok"><b>Montgomery ladder</b><pre class="term cs-out" id="cs-lad" aria-live="polite"></pre><span id="cs-lad-n"></span></div>
+      <p class="comment" id="cs-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Scalar multiplication computes k·P for a secret k. The simple method walks the bits of k: double at every bit, and add only when the bit is 1. The pattern of doubles and adds then spells out the key: an A right after a D means a 1. If something observable (time, power, electromagnetic emission, cache activity) shows which operation ran, the key is on display. The Montgomery ladder does the same two operations for every bit, whatever its value: the sequence is identical for every key of that length.</span></li><li><b class="show">Show</b><span>The page prints the operation sequence for a short secret. Change a bit and the double-and-add sequence changes; the ladder's never does. Press "another random secret" and try two keys with different numbers of ones: different numbers of additions.</span></li><li><b class="say">Say</b><span>Be honest about the scale of this: this is a model of the sequence of operations, not a measurement and not an attack. In real code the leak can also come from how the inner maths is written (how a field multiplication branches), from table lookups indexed by secret bits (cache timing), and from the compiler. Real libraries use a ladder or fixed-window methods with constant-time table selection, complete formulas where the curve allows, and blinding.</span></li><li><b class="show">Check</b><span>The ladder in the pattern shown, "one add and one double per bit", is the textbook form; real implementations differ in detail. The Montgomery ladder is described in RFC 7748 section 5.</span></li><li><b class="next">Next</b><span>"What else leaks, and what do the defences look like?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="sidechannels" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// IMPLEMENTATION HYGIENE 04</p><h2>Side channels and their standard defences</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <ul class="tm-grid" id="sc-list" aria-label="Kinds of side channel"></ul>
+    </div>
+    <div class="stack">
+      <p class="mi-detail" id="sc-detail" aria-live="polite">Select a channel.</p>
+      <div class="card card-ok"><b>For you as a developer</b><span>Use a library whose authors test for this, keep it updated, don't write your own field arithmetic, and keep secrets out of logs, error messages and timing-visible branches in the code around the library too.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>A side channel is anything that leaks secret information besides the intended output. Timing: how long it takes. Cache: which memory lines were touched, visible to code sharing the machine. Power and electromagnetic: what a device draws or emits while computing, relevant to smartcards, tokens and IoT. Faults: deliberately inducing an error (a voltage glitch, a bit flip) and observing the wrong answer, which can give the key away if the code doesn't check its own work. Microarchitectural: effects of the CPU's own speculation and shared buffers. Each has a standard defence, listed on the right when you click: constant-time design, blinding, redundancy checks, and, for the CPU-level ones, platform patches and process isolation.</span></li><li><b class="say">Say</b><span>The theme: the defences mostly belong in the library, the compiler and the platform, not in the application. Your job is to pick well-maintained code, update it, and not add leaks of your own.</span></li><li><b class="show">Show</b><span>Click through the rows. For each: what leaks, who is exposed, and the common defence.</span></li><li><b class="show">Check</b><span>The table is a conceptual summary. NIST's FIPS 186-5 EdDSA section mentions side-channel and fault attacks as a particular concern for hardware implementations of deterministic schemes (read). The EUCLEAK work on a secure-element ECDSA implementation (2024) is a real-world example of a timing issue in a hardware product, but it wasn't re-read for this deck, so it isn't on the slide.</span></li><li><b class="next">Next</b><span>"How do you know your implementation doesn't have these mistakes?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="testing" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// IMPLEMENTATION HYGIENE 05</p><h2>Testing: known answers are not enough</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lr-label">Pick a verifier</p>
+      <div class="seg-pick" role="group" aria-label="Verifier profile" id="ts-prof"></div>
+      <div class="seg-pick"><button type="button" id="ts-run">Run known-answer tests, then edge cases</button></div>
+      <p class="verdict" id="ts-kat" aria-live="polite"></p>
+      <p class="comment" id="ts-note"></p>
+    </div>
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table ts-table" id="ts-table">
+        <thead><tr><th>Edge case</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>Known-answer tests are essential: they catch wrong maths. The Ed25519, X25519 and RFC 6979 vectors in this deck all pass here. But they're all <em>valid</em> inputs. They can't tell you whether your implementation rejects bad ones, handles edge values, or leaks. Pick the textbook verifier: every known-answer test passes, and it still accepts a second signature, a re-encoded point, and a weak key. That's the gap Project Wycheproof was built to close: a large collection of test vectors for the mistakes people actually make (invalid curve points, malleable signatures, special values, bad encodings), run against many libraries and now maintained as a C2SP project.</span></li><li><b class="show">Show</b><span>Choose a profile and press the button. The known-answer line goes green for all three. Then the edge cases show which ones each profile gets wrong: "good" means it did what a careful verifier would (accept the valid ones, reject the bad). The cases here are a handful I made by hand in the spirit of Wycheproof; the real suite is far larger and covers many more mistakes.</span></li><li><b class="say">Say</b><span>What to do: run the Wycheproof vectors in your CI for any code that touches curves, add the known-answer tests of the standard you implement, fuzz the parsers, and test the constant-time property on the compiled code. And don't take "it passed" as a safety statement: passing vectors shows the absence of the mistakes that someone thought of.</span></li><li><b class="show">Check</b><span>Wycheproof: github.com/C2SP/wycheproof, read 11 November 2026: "community managed" under C2SP, originally by Bleichenbacher, Duong, Kasper, Nguyen and Lee (then at Google), with vectors for ECDSA, EdDSA (including Ed25519 small- and mixed-order public keys), ECDH, X25519 and X448, and invalid-curve attacks among the mistakes it targets; vector counts aren't quoted. libsodium's Ed25519 verifier (ref10 open.c on GitHub, read 11 November 2026) rejects a non-canonical S, a small-order public key and a non-canonical public-key encoding in its default build. The "strict" profile here is my own definition.</span></li><li><b class="next">Next</b><span>"Checkpoint three."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What could go wrong if you skip checking that a received point is on the curve?</p><details><summary>Hint</summary><p>Does the addition formula use every curve constant?</p></details><details class="answer"><summary>Answer</summary><p>For short Weierstrass curves the formula doesn't use b, so a point from a different curve is processed without complaint. If that curve has small-order points, results computed with your secret reveal part of it, and repeated queries can combine the parts. The fix is the on-curve check (and a subgroup check when the cofactor is above 1).</p></details></li>
+      <li><p>Why is "it passes all the test vectors" not proof an implementation is safe?</p><details><summary>Hint</summary><p>Are known-answer vectors good or bad inputs?</p></details><details class="answer"><summary>Answer</summary><p>Standard vectors are valid inputs, so they check the maths, not the rejection of bad inputs, edge cases or timing. A verifier can pass every one and still accept malleable signatures or weak keys, or leak through branches. You need negative tests (Wycheproof-style), parser fuzzing and constant-time testing as well.</p></details></li>
+      <li><p>Find the secret-dependent branch or lookup in code you maintain. Where would you look first?</p><details><summary>Hint</summary><p>Comparisons, loops over secret-sized data, table lookups indexed by secret bytes.</p></details><details class="answer"><summary>Answer</summary><p>Tag and token comparisons (use the library's constant-time comparison), loops whose length depends on a secret, array indexing by a secret byte (such as an S-box in hand-written AES), and any early return in an error path. Then ask whether the library you call has been tested for it, and whether your language's compiler might undo it.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="choose" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>Choosing today</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lr-label">What is the main constraint?</p>
+      <div class="seg-pick" role="group" aria-label="The main constraint" id="ch-pick"></div>
+      <label class="rv-one"><input type="checkbox" id="ch-fips"> A validated (FIPS 140) cryptographic module is required</label>
+      <p class="comment" id="ch-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card card-ok"><b>Signatures</b><span id="ch-sig"></span></div>
+      <div class="card card-ok"><b>Key agreement</b><span id="ch-kex"></span></div>
+      <div class="card"><b>How</b><span id="ch-why"></span></div>
+      <p class="callout"><b>QUANTUM</b> Every curve in this talk falls to a large quantum computer. See the post-quantum migration talk for what to do about that.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>The decision is mostly made by constraints. If nothing outside forces your hand: Ed25519 for signatures and X25519 for key agreement, from a vetted library, with a current version. If compliance is the constraint: P-256 or P-384 with ECDSA, through a validated module; FIPS 186-5 also approves Ed25519 and Ed448, but check the specific module's list. If the ecosystem decides: passkeys speak ES256 nearly everywhere, TLS libraries negotiate for you (TLS 1.3 requires support for secp256r1 key exchange and recommends X25519), and Bitcoin and Ethereum use secp256k1. The question is never "which curve is mathematically best". It's "which has the safest, best-reviewed implementation I can use with my constraints".</span></li><li><b class="show">Show</b><span>Click through the constraints. The cards show a recommendation and the main caution for each.</span></li><li><b class="say">Say</b><span>One more rule: don't implement it yourself. Use libsodium, your platform's crypto library, or Web Crypto. Everything in this deck is for understanding what those libraries do and what to ask of them.</span></li><li><b class="show">Check</b><span>RFC 8446 section 9.1 (the MUST for secp256r1 key exchange and SHOULD for X25519), unchanged in RFC 9846 section 9.1, which obsoleted it in July 2026: read. FIPS 186-5 approving EdDSA: read. WebAuthn's algorithm identifiers (ES256 = −7, EdDSA = −8) are as in the Crypto 101 talk's passkey slide. Cloud key-management and HSM support for Ed25519 varies and wasn't checked here. BIP 340 ("Schnorr Signatures for secp256k1", status Deployed) read 11 November 2026.</span></li><li><b class="next">Next</b><span>"A checklist."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 02</p><h2>An elliptic-curve checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="lib"> We use a vetted library for the curve maths, not our own code</label>
+      <label><input type="checkbox" data-k="curve"> We chose X25519/Ed25519, or P-256/P-384 for a stated compliance or interop reason</label>
+      <label><input type="checkbox" data-k="nonce"> No code path chooses an ECDSA nonce: deterministic or hedged, from the library</label>
+      <label><input type="checkbox" data-k="rng"> Our random generator is the operating system's, and failure to get randomness stops the program</label>
+      <label><input type="checkbox" data-k="validate"> Every received public key or share is parsed by a function that validates it</label>
+      <label><input type="checkbox" data-k="zero"> We check for an all-zero X25519 result, or hash the whole transcript into the key</label>
+      <label><input type="checkbox" data-k="strict"> Verification is strict (low-s, S &lt; L, canonical encodings) wherever signature bytes act as IDs or consensus</label>
+      <label><input type="checkbox" data-k="ids"> We never use signature bytes as an identifier: we hash the signed content</label>
+      <label><input type="checkbox" data-k="tests"> CI runs the standard test vectors and Wycheproof for our curves</label>
+      <label><input type="checkbox" data-k="update"> We update the crypto library promptly and watch its advisories</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>The talk on one page. Tick what's true today; each unticked box is a ticket. The ticks are saved in this browser only, and the PDF button prints the list. If you can only do two things this month: find every place your code chooses or supplies an ECDSA nonce, and check that received public keys go through a validating parser.</span></li><li><b class="show">Check</b><span>The checklist is my own summary of the talk, not a standard.</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Where in your code does a nonce, a point from outside, or a comparison of secrets appear? Bring a real example and we'll go through it together.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the edge-case suite stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../crypto-in-code/">Using Crypto Correctly in Code</a><span>The everyday version: which API to call, and the common misuses.</span></li>
+        <li><a href="../crypto-101/">Crypto 101</a><span>Where the toy curve and the first ECDSA key-recovery demo live.</span></li>
+        <li><a href="../cryptographic-failures/">Case Studies in Cryptographic Failures</a><span>More real breaks, told from the defender's side.</span></li>
+        <li><a href="../post-quantum-migration/">Post-Quantum Migration</a><span>What replaces these curves, and how to plan for it.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. All the maths here is written to be read, not to be safe: do not use it to protect anything. Every demo runs in your browser; nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. If someone describes a real design, walk it through the checklist: curve choice, where k comes from, what gets validated and how signatures are checked.</span></li><li><b class="show">Check</b><span>Links go to other hub talks. Nothing external is linked from this slide.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="ec.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
