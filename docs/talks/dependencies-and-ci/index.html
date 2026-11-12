@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Securing Dependencies and CI/CD</title>
+<meta name="description" content="Securing Dependencies and CI/CD: how packages and pipelines get attacked, and the defaults that make you a hard target. Lock files, update bots, pinned actions, short-lived credentials, signing and provenance, with live demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/dependencies-and-ci/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Securing Dependencies and CI/CD">
+<meta property="og:description" content="Most of the code you ship isn't yours, and your build server holds the keys to production. How packages and pipelines get attacked, and the defaults that make you a hard target, with live demos.">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/dependencies-and-ci/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/dependencies-and-ci/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The title slide: Securing Dependencies and CI/CD in neon, beside a terminal that compares a package name with well-known ones and flags a look-alike.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307060f'/%3E%3Cpath d='M16 4l10 5v12l-10 6-10-6V9z' fill='none' stroke='%2300f0ff' stroke-width='2.5' stroke-linejoin='round'/%3E%3Cpath d='M6 9l10 5 10-5M16 14v13' fill='none' stroke='%23ff2e88' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<!-- Talk settings for the shared slide engine (shared/deck.js). Part minutes include each part's checkpoint. -->
+<script type="application/json" id="deck-config">
+{ "id": "dependencies-and-ci", "title": "Securing Dependencies and CI/CD", "footer": "DEPENDENCIES", "subtitle": "DEVELOPER TRACK · 08",
+  "parts": [{ "name": "Your dependency tree", "minutes": 21 }, { "name": "Keeping it under control", "minutes": 15 }, { "name": "The pipeline", "minutes": 21 }, { "name": "Proving what you built", "minutes": 15 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">DEPS<span>&amp;CI</span></a>
+  <div class="scroll-parts">
+    <a href="#tree" data-part="1"><b>01</b>Dependencies</a>
+    <a href="#lock" data-part="2"><b>02</b>Control</a>
+    <a href="#pipeline" data-part="3"><b>03</b>Pipeline</a>
+    <a href="#signing" data-part="4"><b>04</b>Proof</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<!-- ======================================================================= INTRO -->
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// DEVELOPER TRACK 08 · FOR DEVELOPERS, DEVOPS AND MAINTAINERS · INTERMEDIATE</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Securing Dependencies and CI/CD">Securing Dependencies and CI/CD</span></h1>
+      <p class="lede">Most of the code you ship isn't yours, and the machine that builds it holds the keys to production. How packages and pipelines get attacked, and the defaults that make you a hard target.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/dependencies-and-ci/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>terminal</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ install "<input id="hero-in" value="reqeusts" spellcheck="false" autocomplete="off">"</label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 90 minutes with three checkpoints, for anyone who installs packages or runs a build pipeline. Everything in the demos is a simulation in this page: the packages, the registry, the CI system and the attacks are invented, and nothing is downloaded, installed or run.</span></li><li><b class="show">Show</b><span>The terminal compares whatever you type with a short list of very well-known package names and says what kind of "almost the same" it is: two letters swapped, a stray hyphen, a reassuring suffix. Package managers do exactly what you tell them, so one wrong letter in a command is a different package. That is the first of many places where trust is a string.</span></li><li><b class="tip">Eggs</b><span>On the title slide, try left-pad, requests, lodash, colors, package-lock.json, or an empty input; type curl | sudo bash into any text box in the deck; in the dependency tree, click left-pad and try every fix; in the spotter, score 6 of 6 or 0 of 6; in the lock-file demo, drag to day 12 with no lock file; in the registry demo, let the highest version win; in the token demo, grant all four write permissions; in the pinning demo, move the tag and run it by tag; in the injection demo, use the nasty title; in the signing demo, flip a byte; in the provenance demo, try the last scenario; and tick all twelve boxes of the checklist. There's also a console message.</span></li><li><b class="show">Check</b><span>The colors egg refers to January 2022, when the maintainer of the colors package deliberately published broken versions (reported by BleepingComputer, Snyk and others; sources differ on the exact version numbers, so the page gives none). The left-pad egg gives the March 2016 story from npm's own post (about two and a half hours of disruption); the often-quoted "eleven lines" is not in npm's post, so the page doesn't say it.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#tree"><small>PART 1 · 21 MIN</small><b>Your dependency tree</b></a><span>Direct and transitive</span><span>Known vulnerabilities</span><span>Malicious packages</span><span>Choosing packages</span></li>
+      <li><a href="#lock"><small>PART 2 · 15 MIN</small><b>Keeping it under control</b></a><span>Lock files and cooldowns</span><span>Reviewing updates</span><span>Private registries</span><span>SBOMs</span></li>
+      <li><a href="#pipeline"><small>PART 3 · 21 MIN</small><b>The pipeline</b></a><span>Why CI is a target</span><span>Tokens and pinned actions</span><span>Short-lived credentials</span><span>Untrusted input</span></li>
+      <li><a href="#signing"><small>PART 4 · 15 MIN</small><b>Proving what you built</b></a><span>Signing and logs</span><span>Provenance and SLSA</span><span>Verify before you deploy</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1 and 3, and at the end: 4 to 5 minutes each to discuss with a neighbour.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Two halves of one problem. First the code you pull in: what's in the tree, how it goes wrong, how to keep it boring. Then the pipeline that builds and ships it, which holds more power than almost anything else you run. The last part is how to prove what came out of that pipeline.</span></li><li><b class="next">Next</b><span>"Why this talk?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="0" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// WHY THIS TALK</p><h2>The code you didn't write, and the machine that ships it</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="stat-row stat-row-3">
+        <div class="stat"><b>98%</b><span>of audited commercial codebases contained open-source components (Black Duck, 2026).</span></div>
+        <div class="stat"><b>1,180</b><span>open-source components in the average application in that report.</span></div>
+        <div class="stat"><b>500+</b><span>npm packages hit by the self-spreading Shai-Hulud worm in September 2025 (CISA).</span></div>
+      </div>
+      <ul class="rules">
+        <li>Every dependency is <b>a stranger's code running with your permissions</b>, and every update is a new delivery from them.</li>
+        <li>The build pipeline is the <b>one place that can write to production</b>, so it's the place worth attacking.</li>
+        <li>The goal isn't "trust nothing". It's <b>fewer, pinned, reviewed, verified</b>, with small blast radius when one fails.</li>
+      </ul>
+      <p class="src">Sources: <a href="https://www.blackduck.com/resources/analyst-reports/open-source-security-risk-analysis.html" target="_blank" rel="noopener">Black Duck OSSRA 2026</a> · <a href="https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem" target="_blank" rel="noopener">CISA on npm</a> · <a href="https://www.cisa.gov/news-events/alerts/2025/03/18/supply-chain-compromise-third-party-github-action-cve-2025-30066" target="_blank" rel="noopener">CISA on tj-actions</a> · <a href="https://tanstack.com/blog/npm-supply-chain-compromise-postmortem" target="_blank" rel="noopener">TanStack postmortem</a></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>tj-actions/changed-files, March 2025 · a build step that leaked secrets</b><span>CISA: a popular GitHub Action was modified between 12 and 15 March, and secrets from workflow runs, such as access keys and tokens, could be exposed (CVE-2025-30066). Fixed in 46.0.1.</span></div>
+      <div class="card"><b>Shai-Hulud, September 2025 · a worm made of maintainers</b><span>Malware stole developers' credentials, then used them to log in to npm as those developers and publish tainted versions of their other packages. CISA counted over 500.</span></div>
+      <div class="card"><b>TanStack, May 2026 · the pipeline was the way in</b><span>On 11 May, 84 malicious versions of 42 packages were published in six minutes. TanStack's postmortem traces it to a pull-request workflow running fork code, a poisoned build cache, and a publishing token taken from the runner's memory.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Three incidents, one shape: the attacker didn't break your code, they got into something you trust, or something that builds what you ship. Two of the three involved the CI system, not the package itself. Hold that thought for part 3.</span></li><li><b class="tip">Tip</b><span>Black Duck's 2026 Open Source Security and Risk Analysis (947 commercial codebases, audited November 2024 to October 2025): 98% contained open source; the average application had 1,180 components, up from 911; the average codebase had 581 known open-source vulnerabilities. CISA's alert of 23 September 2025: Shai-Hulud compromised over 500 npm packages, searching environments for credentials and spreading by logging in to npm as the compromised developer. CISA's tj-actions alert (18 March 2025, revised 26 March): affected tj-actions/changed-files versions from 12 March 00:00 to 15 March 12:00 UTC; a related compromise of reviewdog/action-setup@v1 (CVE-2025-30154) may have enabled it; both were added to the Known Exploited Vulnerabilities catalogue on 26 March. TanStack's postmortem: 11 May 2026, 19:20 to 19:26 UTC, 42 packages and 84 versions, from a pull_request_target workflow, a poisoned Actions cache restored by the release workflow, and an OIDC token extracted from runner memory.</span></li><li><b class="show">Check</b><span>The Black Duck's figures (98%, 911 to 1,180, 581; 947 codebases) were confirmed against the OSSRA 2026 report page on 11 November 2026. TanStack's postmortem was read for the timeline and the token path.</span></li><li><b class="next">Next</b><span>"Let's start by looking at a tree."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 1 -->
+<section class="slide" id="tree" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// YOUR DEPENDENCY TREE 01</p><h2>You chose six. You got eighteen.</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m" id="tr-stats"></p>
+      <ul class="tr-list" id="tr-list" aria-label="Dependency tree of a sample project"></ul>
+      <div class="controls" id="tr-fixes"></div>
+      <p class="tr-hint">Click a package to see every chain that pulls it in. The advisory is invented.</p>
+    </div>
+    <div class="stack">
+      <div class="tr-detail" id="tr-detail"></div>
+      <ul class="tr-paths" id="tr-paths"></ul>
+      <p class="verdict" id="tr-verdict"></p>
+      <p class="comment" id="tr-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>The tree is a made-up web app. Six dependencies sit in its manifest (five that ship, one for development); the other twelve came along because those depend on them. Click <b>url-parse-lite</b>: four different chains end there, one of them in a build-only tool. Then press the update buttons. Updating a direct dependency fixes only the chain that runs through it, and <b>fast-router</b> has no release that fixes it yet, so a vulnerable copy stays. The last button adds an override (npm calls it overrides, Yarn resolutions, pnpm overrides, and pip uses constraints files), which forces one version everywhere and needs testing.</span></li><li><b class="say">Say</b><span>You can't audit what you can't see. Most of a project's attack surface is the part nobody chose on purpose. The number that surprises people is the ratio: real projects often have hundreds or thousands of packages in the lock file, and the ones in the manifest are a small fraction.</span></li><li><b class="ask">Ask</b><span>How many of the packages your main project ships do you know by name? <em>Then ask who can see the whole list in under a minute.</em></span></li><li><b class="tip">Tip</b><span>GitHub's dependency graph reads lock files, and where the ecosystem supports it you can use "Show paths" to see what pulled a dependency in; <code>npm ls &lt;name&gt;</code>, <code>pnpm why</code> and <code>pipdeptree</code> do the same from the command line. Dev-only tools matter too: they run on developer laptops and build machines, which hold credentials.</span></li><li><b class="show">Check</b><span>Every package name and the advisory here are invented for the demo, except left-pad, which is real and appears as an easter egg (see its slide notes). The Black Duck average of 1,180 components is a different measure from this tree's 18 packages: this is a toy.</span></li><li><b class="next">Next</b><span>"Known vulnerabilities, and the bots that find them."</span></li></ul></div>
+</section>
+
+<section class="slide" id="vulns" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// YOUR DEPENDENCY TREE 02</p><h2>Known vulnerabilities: find, triage, fix</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>Finding them</h3>
+      <ul class="rules">
+        <li><b>Let the platform watch.</b> GitHub's Dependabot alerts, GitLab and others compare your lock files with advisory databases. OSV-Scanner and <code>npm audit</code> or <code>pip-audit</code> do it on demand.</li>
+        <li><b>Check pull requests</b> before merge: GitHub's dependency review shows which vulnerabilities a change would add.</li>
+        <li><b>Let a bot open the updates,</b> so fixes arrive as small pull requests, not a yearly project.</li>
+      </ul>
+      <h3>Triage in four questions</h3>
+      <ol class="tr-q">
+        <li>Is the vulnerable code <b>actually used</b> by us, and is it reachable?</li>
+        <li>Is it <b>known to be exploited</b>? (CISA's KEV catalogue; the EPSS score)</li>
+        <li>Is there a <b>fixed version</b>, and what does the update break?</li>
+        <li>If we can't fix today: <b>what do we do instead</b>? (Override, disable the feature, add a filter, tell people.)</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <div class="card"><b>A useful default</b><span>Security updates should go through your normal fast lane and be exempt from any waiting period. Routine version bumps can wait a few days. Dependabot's cooldown, for example, applies to version updates and not to security updates.</span></div>
+      <div class="card"><b>The dependency you can't update</b><span>Sometimes the fix needs a major upgrade, or the project is abandoned. Write down the decision and a date to revisit: an exception with no expiry is a permanent hole.</span></div>
+      <div class="card"><b>Updates are a habit, not a project</b><span>Small, frequent, reviewed updates are easier to read and roll back than a year's worth at once.</span></div>
+      <p class="comment" id="vl-note"># a vulnerability in a package you don't use is noise. A vulnerability in one you can't see is the problem.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Finding known vulnerabilities is the solved part: databases and tools exist, and most are free. The hard part is deciding and then doing. Four questions get you through most alerts. Link this to the vulnerability management talk for ranking by exploitation and exposure.</span></li><li><b class="tip">Tip</b><span>Dependabot's reference says the cooldown option "is only available for version updates, not security updates", and that its default cooldown doesn't apply to security updates. The reference also lists a default of 3 days when <code>default-days</code> is left out; check it before you describe a default. Renovate has an equivalent <code>minimumReleaseAge</code> option (not read in detail). Tools to name: Dependabot, Renovate, OSV-Scanner, pip-audit, <code>npm audit</code>, GitHub dependency review.</span></li><li><b class="show">Check</b><span>This slide is practices and tool names, not statistics. The 3-day Dependabot default ("If not specified, Dependabot applies a default cooldown of 3 days") and the pnpm default of 1440 minutes were confirmed against the current docs on 11 November 2026.</span></li><li><b class="next">Next</b><span>"Now the harder problem: packages that are bad on purpose."</span></li></ul></div>
+</section>
+
+<section class="slide" id="malicious" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// YOUR DEPENDENCY TREE 03</p><h2>Packages that are bad on purpose: six ways in</h2></header>
+  <div class="slide-body">
+    <div class="cards-3 ml-grid">
+      <div class="card"><b>1 · Look-alike names</b><span>A package whose name is one slip away from a popular one, waiting for a typo or a copied command. <i>Defence: copy names from the project's own page; use a lock file.</i></span></div>
+      <div class="card"><b>2 · Dependency confusion</b><span>A public package with the same name as your private one, and a higher version number. In 2021 Alex Birsan reached more than 35 companies this way, with permission. <i>Defence: scoped names, one trusted registry, locked hashes.</i></span></div>
+      <div class="card"><b>3 · Hijacked accounts</b><span>A maintainer's credentials are stolen and a bad version is published under their name, as Shai-Hulud did at scale in 2025. <i>Defence: wait a few days, use provenance, ask maintainers for phishing-resistant MFA.</i></span></div>
+      <div class="card"><b>4 · Install-time scripts</b><span>Code that runs the moment a package is installed, before you've imported anything. npm 12 (July 2026) turned dependency install scripts off by default. <i>Defence: allow-list the few that need one.</i></span></div>
+      <div class="card"><b>5 · The build is the way in</b><span>The release pipeline is tricked into publishing, as in the TanStack case. <i>Defence: harden the pipeline (part 3), and scope publishing trust to one workflow and branch.</i></span></div>
+      <div class="card"><b>6 · A patient insider</b><span>A new maintainer earns trust over time, then adds something hidden, as with xz Utils in 2024. <i>Defence: no single control; diversity, review and monitoring, and humility.</i></span></div>
+    </div>
+    <p class="comment" id="ml-note"># different doors, same idea: you ran something nobody on your team read.</p>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Walk the six quickly; each has a one-line defence and the rest of the talk fills them in. Be clear that these are not rare: registries remove malicious packages every day. Two of the six (5 and 6) are not about the package you installed at all.</span></li><li><b class="tip">Tip</b><span>Dependency confusion: Alex Birsan's February 2021 research reached the internal builds of more than 35 companies by publishing public packages with the names of internal ones and higher version numbers, with permission through bug bounty programs and agreements; coverage reported bounties above $130,000. npm 12: GitHub's July 2026 changelog says <code>allowScripts</code> defaults to off, so preinstall, install and postinstall scripts and implicit node-gyp builds don't run for dependencies unless allowed, and git and remote-URL dependencies are off by default too (<code>--allow-git</code> and <code>--allow-remote</code> default to none); you prepare with <code>npm approve-scripts --allow-scripts-pending</code>. pnpm gates dependency build scripts in its own way (unlisted packages are unreviewed and, by default, installation fails). xz Utils: Andres Freund's 29 March 2024 post on oss-security (CVE-2024-3094, versions 5.6.0 and 5.6.1), where part of the backdoor existed only in release tarballs and not in the git source.</span></li><li><b class="show">Check</b><span>Birsan's own write-up returned a 403 here, so the 35-company and $130,000 figures rest on secondary coverage of it. The npm 12 details were confirmed on 11 November 2026 against GitHub's 8 July 2026 changelog and the npm v12 config reference (allow-git and allow-remote "none" as of npm 12; allow-scripts empty by default). The phrase "a patient insider" describes xz Utils as widely reported; the maintainer's identity and motives were never established in the sources I read, so don't speculate.</span></li><li><b class="next">Next</b><span>"Can you spot the fake? Let's play."</span></li></ul></div>
+</section>
+
+<section class="slide" id="spotter" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// YOUR DEPENDENCY TREE 04</p><h2>Typosquat spotter</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="sp-need" id="sp-need"></p>
+      <div class="sp-opts" id="sp-opts" role="group" aria-label="Which one is real?"></div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="sp-next" hidden>Next round</button><button type="button" class="btn btn-ghost btn-sm" id="sp-reset">Start again</button><span class="note" id="sp-score"></span></div>
+    </div>
+    <div class="stack">
+      <p class="verdict" id="sp-verdict"></p>
+      <p class="sp-why" id="sp-why"></p>
+      <ul class="rules">
+        <li><b>Copy the name from the project's own page,</b> not from a search result, a chat message or memory.</li>
+        <li><b>The install name isn't always the import name.</b> Check the docs.</li>
+        <li><b>Scopes and namespaces matter:</b> <code>@types/node</code> and <code>@type/node</code> are different publishers.</li>
+        <li><b>A lock file turns a one-off slip into a diff</b> someone can see.</li>
+      </ul>
+      <p class="comment" id="sp-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Six rounds; in each, exactly one name is the real one and the rest are invented look-alikes. After you pick, the page says what the tell was. Let the room shout the answer before you click.</span></li><li><b class="say">Say</b><span>Most of the time you will not spot these by eye, and that is the point: the defence is the process (copy from the source, review the diff when a new name appears in a lock file, use a registry that scans), not eyesight.</span></li><li><b class="ask">Ask</b><span>Where does your team copy install commands from? <em>Blog posts, chat and AI assistants all count.</em></span></li><li><b class="tip">Tip</b><span>An AI assistant can suggest a package name that doesn't exist, or one that has since been registered by someone else, so check any suggested name exists and is the one the project documents. (This general point is widely made; no figure is claimed here.) Registries also normalise names in their own ways (PyPI treats hyphens, underscores and dots as the same), which is why the separator trick matters in some ecosystems and not others.</span></li><li><b class="show">Check</b><span>All the look-alike names in this game are made up for teaching. I did not check whether any of them exist on a real registry; they are not shown as real packages.</span></li><li><b class="next">Next</b><span>"How do you choose what to depend on?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="choosing" data-part="1" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// YOUR DEPENDENCY TREE 05</p><h2>Choosing what to depend on</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Tick what's true for a package you're considering:</p>
+      <div class="rv-list ch-list" id="ch-list">
+        <label><input type="checkbox" data-k="need"> We need it: the standard library or a few lines won't do</label>
+        <label><input type="checkbox" data-k="maint"> It's maintained: recent releases and answered issues</label>
+        <label><input type="checkbox" data-k="people"> More than one maintainer, and a security policy</label>
+        <label><input type="checkbox" data-k="small"> Few dependencies of its own</label>
+        <label><input type="checkbox" data-k="scripts"> No install-time scripts, or only ones we can read</label>
+        <label><input type="checkbox" data-k="review"> Its changes are reviewed, and releases are signed or have provenance</label>
+        <label><input type="checkbox" data-k="perm"> It asks for no more than it needs (network, files, tokens)</label>
+        <label><input type="checkbox" data-k="exit"> We could replace it in a week if we had to</label>
+      </div>
+      <p class="verdict" id="ch-verdict"></p>
+    </div>
+    <div class="stack">
+      <p class="mini-label">OpenSSF Scorecard checks, a free automated version of the same questions</p>
+      <div class="table-wrap"><table class="grid-table ch-table"><thead><tr><th>Check</th><th>What it looks at</th></tr></thead><tbody>
+        <tr><td><code>Maintained</code></td><td>Recent activity; not archived</td></tr>
+        <tr><td><code>Code-Review</code></td><td>Changes reviewed by a human</td></tr>
+        <tr><td><code>Branch-Protection</code></td><td>No force-pushes or unreviewed merges</td></tr>
+        <tr><td><code>Pinned-Dependencies</code></td><td>Build inputs pinned to hashes</td></tr>
+        <tr><td><code>Token-Permissions</code></td><td>CI tokens use least privilege</td></tr>
+        <tr><td><code>Signed-Releases</code></td><td>Release artifacts carry signatures</td></tr>
+        <tr><td><code>Dangerous-Workflow</code></td><td>No risky CI patterns</td></tr>
+      </tbody></table></div>
+      <p class="comment" id="ch-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Popularity is not safety, but it does mean more eyes, and an abandoned project can't ship a fix. The most valuable question is the first one: do we need this at all? A small function you copy and credit has no future updates to compromise, a trade-off against code you now maintain. The last question, about replacing it, keeps you from being trapped by a project that goes bad.</span></li><li><b class="show">Show</b><span>Tick boxes and the page responds. It is a conversation starter, not a score to publish. Scorecard is an automated checker: scorecard.dev has results for many public projects, and <code>scorecard --repo=github.com/org/repo</code> runs it yourself.</span></li><li><b class="tip">Tip</b><span>From the Scorecard checks documentation (names and one-line meanings): Maintained, Code-Review, Branch-Protection, Pinned-Dependencies, Token-Permissions, Signed-Releases and Dangerous-Workflow, plus others such as Vulnerabilities, Dependency-Update-Tool, Binary-Artifacts and Security-Policy. A high score is evidence, not a guarantee.</span></li><li><b class="show">Check</b><span>I read the documentation's list of checks; I did not check any particular project's score. If you show a live Scorecard result, say which project and when.</span></li><li><b class="next">Next</b><span>"Checkpoint 1."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 4 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="4-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>04:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A popular package's maintainer account is hijacked and a bad version is published at 09:00. How could that reach your production app by tonight?</p><details><summary>Hint</summary><p>Which of your tools install the newest version that matches a range, and which one merges updates automatically?</p></details><details class="answer"><summary>Answer</summary><p>Any build without a lock file, or with a bot that merges new versions straight away, pulls it in on its next run, and the image or artifact keeps it after the package is removed. A lock file, a waiting period for routine updates, reviewing update pull requests, and turning off dependency install scripts each cut a link in that chain.</p></details></li>
+      <li><p>Your internal package is called <code>acme-billing</code>. What could go wrong if the public registry has one by the same name?</p><details><summary>Hint</summary><p>What does your package manager do when two registries both have the name?</p></details><details class="answer"><summary>Answer</summary><p>If the tool searches both and picks the highest version, an outsider's version 99.0.0 wins. Use a scope you own, route internal names to your registry only, and install from a lock file with hashes.</p></details></li>
+      <li><p>The scanner reports a High vulnerability in a package three levels down. Name two ways to deal with it that don't involve waiting for the maintainer.</p><details><summary>Hint</summary><p>You can change what version everything uses, or change how it's used.</p></details><details class="answer"><summary>Answer</summary><p>Force a fixed version with an override or resolution (and test it), update the direct dependency that brings it in, replace the package, or disable or filter the vulnerable feature. Record the decision with an expiry.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">4 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 2 -->
+<section class="slide" id="lock" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// KEEPING IT UNDER CONTROL 01</p><h2>Lock files, and the value of waiting a few days</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">Your manifest says <code>date-fmt ^1.2.0</code>. Day 12: a bad <b>1.3.1</b> is published. Day 14: the registry removes it. Move the day:</p>
+      <label class="lk-slider">Day <input type="range" id="lk-day" min="0" max="20" value="12" aria-label="Day"><output id="lk-day-out">12</output></label>
+      <div class="lk-rows" id="lk-rows"></div>
+      <p class="verdict" id="lk-verdict"></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What the lock file checks</small>
+      <pre class="term lk-lock" id="lk-lock"></pre>
+      <div class="controls"><button type="button" class="btn btn-sm" id="lk-tamper">Change one byte of the download</button><button type="button" class="btn btn-ghost btn-sm" id="lk-fix">Undo</button></div>
+      <ul class="rules">
+        <li><b>Commit the lock file</b> and install from it in CI (<code>npm ci</code>, <code>uv sync --locked</code>).</li>
+        <li>It doesn't decide what's good: it makes builds <b>repeatable</b> and changes <b>visible</b>.</li>
+        <li>A <b>short wait</b> on routine updates skips the days a bad release is freshest.</li>
+      </ul>
+      <p class="comment" id="lk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="show">Show</b><span>Each row is a different way of installing, over 21 days; red cells are days when it would hand you the bad version. Start at day 12. "No lock file" takes whatever is newest, so for two days it's bad, and anything built on those days keeps it after the registry removes it. "Lock file" never moves. "Update bot (no waiting)" updates to 1.3.1 on day 12 and stays on it until the fix on day 16. "Update bot with a 3-day wait" only proposes versions that are three days old and still there, so it never saw 1.3.1. Then press the integrity button: the lock file records a hash of the file, and a changed byte is refused. (The demo uses SHA-256; npm records SHA-512 and the idea is the same.)</span></li><li><b class="say">Say</b><span>Two separate protections. Locking makes builds reproducible and changes visible. Waiting gives the community and the registry time to find and pull a bad release; in this toy the registry takes two days, which is optimistic for some cases and pessimistic for others. It isn't a guarantee, and it should never delay a security fix.</span></li><li><b class="ask">Ask</b><span>If a lock file is committed but your CI runs <code>npm install</code> instead of <code>npm ci</code>, what do you actually have? <em>Answer: a lock file that can be rewritten during the build; use the command that installs exactly what's locked and fails if it disagrees with the manifest.</em></span></li><li><b class="tip">Tip</b><span>Release-age settings that exist today, from their docs: npm <code>min-release-age</code> (a number of days; the CLI docs for v11 list it with a default of none), pnpm <code>minimumReleaseAge</code> (minutes; the docs list a default of 1440, one day, with <code>minimumReleaseAgeExclude</code> for exceptions), and Dependabot's <code>cooldown</code>. Socket's February 2026 write-up also lists Yarn (<code>npmMinimalAgeGate</code>) and Bun (<code>minimumReleaseAge</code>). The registry timeline in the demo is invented.</span></li><li><b class="show">Check</b><span>Defaults and names change often; check the current docs for the tool your audience uses. The pnpm default of 1440 comes from the current docs page, which I could read; I did not confirm which version introduced it. Whether npm's <code>min-release-age</code> applies the same way to security fixes is not something I verified.</span></li><li><b class="next">Next</b><span>"A bot opened a pull request. What do you look at?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="updates" data-part="2" data-num="11">
+  <header class="slide-head"><p class="eyebrow">// KEEPING IT UNDER CONTROL 02</p><h2>Reviewing an update pull request</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick" role="group" aria-label="Which update" id="up-pick">
+        <button type="button" data-u="patch" aria-pressed="true">A routine patch</button>
+        <button type="button" data-u="odd">A patch that changes more than it says</button>
+        <button type="button" data-u="major">A new major version</button>
+      </div>
+      <small class="lr-label">forms-kit, 3.2.0 to the new version (invented)</small>
+      <pre class="term up-diff" id="up-diff"></pre>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What to notice</small>
+      <ul class="up-flags" id="up-flags"></ul>
+      <ul class="rules">
+        <li><b>Read the diff of the lock file,</b> not only the manifest: new packages are listed there.</li>
+        <li>Look for <b>new scripts, new publishers, new dependencies and lost provenance.</b></li>
+        <li><b>Group routine updates,</b> but don't auto-merge everything.</li>
+      </ul>
+      <p class="comment" id="up-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start with the routine patch: nothing to flag. Move to "changes more than it says". The version number is a patch, but the metadata shows an install script, a new maintainer, a new two-day-old dependency, a package twenty times bigger, and no provenance. Any one of these has an innocent explanation; together they are a reason to stop and ask. The third option is an ordinary major: nothing suspicious, but it deserves a read of the changelog.</span></li><li><b class="say">Say</b><span>Nobody can read every line of every update. Reviewing the <em>shape</em> of the change (new scripts, new people, new dependencies, lost guarantees) is quick and catches a lot. Automation can do much of this: dependency review and some scanners flag these things in the pull request.</span></li><li><b class="ask">Ask</b><span>Who on your team merges bot pull requests, and what do they look at before pressing the button?</span></li><li><b class="tip">Tip</b><span>Where to look: the lock file diff, the registry page for the new version (publishers, provenance badge on npm), the project's release notes and the repository's diff between tags. Compare what's in the published package with what's in git, because they can differ (xz Utils' build-time part existed only in release tarballs).</span></li><li><b class="show">Check</b><span>Everything on this slide is invented, including the package, its maintainers and its metadata. The flags are heuristics, not proof of anything.</span></li><li><b class="next">Next</b><span>"Where does your package manager look?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="confusion" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// KEEPING IT UNDER CONTROL 03</p><h2>Private registries and the name that isn't yours</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="cf-registries">
+        <div class="card"><b>Internal registry</b><span><code>acme-billing</code> <b>1.4.0</b> (ours)</span></div>
+        <div class="card card-bad"><b>Public registry</b><span><code>acme-billing</code> <b>99.0.0</b> (published by someone else, because the name was free)</span></div>
+      </div>
+      <p class="m">How does the build look the name up?</p>
+      <div class="seg-pick cf-pick" role="group" aria-label="How the build looks up the name" id="cf-pick"></div>
+    </div>
+    <div class="stack">
+      <div class="cf-out" id="cf-out"></div>
+      <p class="verdict" id="cf-verdict"></p>
+      <ul class="rules">
+        <li><b>Own your namespace:</b> use a scope or organisation prefix, and register it on public registries.</li>
+        <li><b>One resolver, explicit routing:</b> internal names only ever come from the internal registry.</li>
+        <li><b>Install from the lock file</b> with hashes, so a surprise is a failure.</li>
+      </ul>
+      <p class="comment" id="cf-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>Start with the default row: when the tool searches both registries and prefers the higher version, the public 99.0.0 wins. Nobody was hacked in the usual sense; the tool did what it was told. Then click each fix and read why it works: scoping, routing, a placeholder name, and a lock file with hashes.</span></li><li><b class="say">Say</b><span>This is the quietest supply-chain attack because it needs no access at all. It works because internal package names leak (in public JavaScript bundles, manifests, error messages) and because some setups treat every registry as equal. The fix is configuration, not vigilance.</span></li><li><b class="ask">Ask</b><span>Which of your internal package names are visible to the public today?</span></li><li><b class="tip">Tip</b><span>Alex Birsan's 2021 research (Apple, Microsoft, PayPal and others, with permission); Microsoft issued CVE-2021-24105 for Azure Artifacts' handling. Ecosystem details: npm scopes are mapped to a registry in <code>.npmrc</code>; pip with <code>--extra-index-url</code> treats all indexes as equal candidates, which is why pip's guidance and most registry managers prefer a single index or explicit routing; registry managers like Artifactory and Nexus support routing and exclusion rules.</span></li><li><b class="show">Check</b><span>The package names and versions here are invented. Birsan's post returned 403 and was read through coverage (The Hacker News, BleepingComputer, Sonatype, Gridinsoft). I did not read pip's or a registry manager's current documentation on this, so confirm the exact behaviour and flag names for the tools your audience uses.</span></li><li><b class="next">Next</b><span>"Knowing what you shipped."</span></li></ul></div>
+</section>
+
+<section class="slide" id="sbom" data-part="2" data-num="13">
+  <header class="slide-head"><p class="eyebrow">// KEEPING IT UNDER CONTROL 04</p><h2>SBOMs: knowing what you shipped</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">A software bill of materials for one app (CycloneDX-style, shortened)</small>
+      <pre class="term sb-json" id="sb-json"></pre>
+    </div>
+    <div class="stack">
+      <p class="m">A new advisory lands for <code>url-parse-lite</code>, fixed in 2.2.0. Which of our four apps need attention?</p>
+      <div class="controls"><button type="button" class="btn btn-sm" id="sb-ask">Ask the inventory</button></div>
+      <ul class="sb-out" id="sb-out"></ul>
+      <ul class="rules">
+        <li>An SBOM is <b>a list of what's inside</b>: names, versions, where from.</li>
+        <li>Its value is <b>speed and certainty</b> on the day an advisory lands.</li>
+        <li>Two common formats: <b>CycloneDX</b> and <b>SPDX</b>. Generate one per build, and keep it with the release.</li>
+      </ul>
+      <p class="comment" id="sb-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="show">Show</b><span>The left pane is a trimmed SBOM of the sample app, made from its tree: each component has a name, version and a package URL (purl). Press "Ask the inventory": a query over four apps' SBOMs says which ship a vulnerable version, which are already fixed, and which don't use the package at all, in an instant.</span></li><li><b class="say">Say</b><span>The point isn't the file, it's the question you can answer. "Are we affected?" on the day of a big advisory takes minutes with an inventory and days without. An SBOM also doesn't say whether the vulnerable function is reachable or exploited: pair it with the triage questions from earlier and with the vulnerability management talk.</span></li><li><b class="ask">Ask</b><span>If a critical advisory landed on a library today, how would you find out which of your products ship it?</span></li><li><b class="tip">Tip</b><span>Formats: CycloneDX is an Ecma standard (ECMA-424; the Ecma page lists a 2nd edition from December 2025) and SPDX is an ISO/IEC standard (5962:2021). GitHub's dependency graph can export an SBOM for a repository; most build tools and scanners can generate one for an image or a build. Keep them where you can search them.</span></li><li><b class="show">Check</b><span>The demo document is illustrative: the <code>specVersion</code> in it is a plausible value, not checked against the current schema, and real SBOMs carry much more (hashes, licences, supplier, relationships). I didn't check CISA's current "minimum elements" for SBOMs; the search returned nothing on it. GitHub's page I read describes SBOM export but doesn't name the format.</span></li><li><b class="next">Next</b><span>"Now the other half: the pipeline."</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 3 -->
+<section class="slide" id="pipeline" data-part="3" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// THE PIPELINE 01</p><h2>Why CI is a prime target</h2></header>
+  <div class="slide-body">
+    <div class="chain pl-chain">
+      <span>pull request<em>untrusted text and code</em></span><i></i><span>build and test<em>runs third-party actions</em></span><i></i><span class="hot">release<em>write access, signing, publishing</em></span><i></i><span class="hot">deploy<em>keys to production</em></span>
+    </div>
+    <div class="cards-3 pl-cards">
+      <div class="card"><b>It holds secrets</b><span>Cloud keys, registry tokens, signing keys and deploy credentials are all in one place.</span></div>
+      <div class="card"><b>It runs other people's code</b><span>Third-party actions and plugins, dependency install steps, and (carefully) code from pull requests.</span></div>
+      <div class="card"><b>It can write</b><span>It pushes tags, publishes packages and images, and deploys. A bad artifact from here is <em>trusted</em> by everything downstream.</span></div>
+    </div>
+    <ul class="rules">
+      <li>Treat the pipeline like <b>production</b>: least privilege, reviewed changes, logs, and rotation.</li>
+      <li>The rest of this part is four moves: <b>smaller tokens, pinned steps, short-lived credentials, and never trusting input.</b></li>
+    </ul>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Left to right, trust grows. The pull request is untrusted text from anyone; deploy is the keys to production. Every attack in the intro (tj-actions, TanStack, CircleCI in the secrets talk) went somewhere along this line and moved right. Your job is to make each step able to do only its own job.</span></li><li><b class="ask">Ask</b><span>Who can change your workflow files, and does a change to them get a review?</span></li><li><b class="tip">Tip</b><span>Platform-agnostic: the same principles apply to GitLab CI, Jenkins, CircleCI and the rest. Examples in this part use GitHub Actions because they're easy to show and because GitHub's documentation is explicit on each point.</span></li><li><b class="next">Next</b><span>"Smaller tokens."</span></li></ul></div>
+</section>
+
+<section class="slide" id="tokens" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// THE PIPELINE 02</p><h2>Least privilege: what could one bad step do?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">The test job's permissions (anything not ticked is read-only or none)</small>
+      <div class="tk-perms" id="tk-perms" role="group" aria-label="Granted permissions"></div>
+      <small class="lr-label">Where the deploy secret lives</small>
+      <div class="seg-pick" role="group" aria-label="Secret location" id="tk-sec">
+        <button type="button" data-s="repo" aria-pressed="true">Repository secret</button>
+        <button type="button" data-s="env">Environment secret, with required reviewer</button>
+      </div>
+      <div class="controls"><button type="button" class="btn btn-sm" id="tk-min">Set the minimum</button><button type="button" class="btn btn-ghost btn-sm" id="tk-max">Grant everything</button></div>
+      <pre class="term tk-yaml" id="tk-yaml"></pre>
+    </div>
+    <div class="stack">
+      <small class="lr-label">If one step in the test job turned out to be malicious, it could…</small>
+      <ul class="tk-out" id="tk-out"></ul>
+      <p class="verdict" id="tk-verdict"></p>
+      <p class="comment" id="tk-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Start with everything granted and the secret in the repository: the test job could do all six things. Press "Set the minimum": only reading code remains. In between, tick one permission at a time and move the secret into an environment with a required reviewer: that secret then only reaches the deploy job, after approval. The YAML on the left is what the settings correspond to.</span></li><li><b class="say">Say</b><span>You can't prevent every bad step, but you can decide what it could do when it happens. Three moves: set the default token to read-only, add a <code>permissions:</code> block that grants more only to the job that needs it, and put deploy secrets behind an environment with required reviewers so they exist only in the job that deploys.</span></li><li><b class="ask">Ask</b><span>Which of your pipelines grants write access to a job that only runs tests?</span></li><li><b class="tip">Tip</b><span>From GitHub's secure-use reference: make sure the GITHUB_TOKEN has the minimum required permissions; set the default permission for the token to read access only for repository contents, and raise it for individual jobs where needed; "You can use required reviewers to protect environment secrets", and a job can't access environment secrets until a reviewer approves. Scorecard's Token-Permissions check looks at the same thing. The model in the demo is simplified: real token permissions are finer-grained, and a caveat from the TanStack case is that a cache can be written without the GITHUB_TOKEN, so a read-only token doesn't remove every risk.</span></li><li><b class="show">Check</b><span>I didn't confirm what the default token permission is for new repositories today (the page I read only recommends read-only). Look at your own settings rather than asserting a default.</span></li><li><b class="next">Next</b><span>"Pin third-party steps."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pin" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// THE PIPELINE 03</p><h2>A tag can move. A commit hash can't.</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">Your workflow says…</small>
+      <div class="seg-pick" role="group" aria-label="How the action is referenced" id="pn-ref">
+        <button type="button" data-r="tag" aria-pressed="true">uses: acme/setup-tool@v1</button>
+        <button type="button" data-r="main">uses: acme/setup-tool@main</button>
+        <button type="button" data-r="sha">uses: acme/setup-tool@&lt;full commit hash&gt;</button>
+      </div>
+      <small class="lr-label">The action's repository (someone else's)</small>
+      <pre class="term pn-repo" id="pn-repo"></pre>
+      <div class="controls">
+        <button type="button" class="btn btn-sm" id="pn-legit">Maintainer ships a fix</button>
+        <button type="button" class="btn btn-sm" id="pn-evil">Someone with push access repoints the tag</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="pn-reset">Reset</button>
+      </div>
+    </div>
+    <div class="stack">
+      <p class="m">Tonight's build runs:</p>
+      <pre class="term pn-run" id="pn-run"></pre>
+      <p class="verdict" id="pn-verdict"></p>
+      <ul class="rules">
+        <li><b>Pin third-party actions to a full commit hash,</b> with a comment for the version.</li>
+        <li><b>Let a bot update the pin</b> in a pull request you can read.</li>
+        <li>You can <b>require pinning</b> in the repository or organisation policy.</li>
+      </ul>
+      <p class="comment" id="pn-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>With the tag selected, press "Maintainer ships a fix": the tag moves to a newer commit and your build runs it, which is the convenient, intended behaviour. Reset, then press "Someone with push access repoints the tag": same mechanism, but now the build runs a commit that sends the environment to a made-up address. The tag moved and nobody was asked. Switch the workflow to the full hash and repeat: the build still runs the commit you reviewed, and the update arrives as a pull request. <code>@main</code> is the same problem, faster.</span></li><li><b class="say">Say</b><span>A version tag is a label that whoever controls the repository can move. A full 40-character commit hash names exact content, and changing it is not feasible. That's why GitHub's secure-use reference says pinning to a full-length commit SHA is the way to use an action as an immutable release (and mentions that an attacker would need a SHA-1 collision to get around it). The price is that you now own updating: let Dependabot or Renovate propose the new hash and read it.</span></li><li><b class="ask">Ask</b><span>If your pipeline uses a third-party action by tag, who decides when your build changes?</span></li><li><b class="tip">Tip</b><span>Since 15 August 2025 an organisation or repository admin can require actions to be pinned to a full-length commit SHA in the Actions policy, and a workflow that uses an unpinned action fails; the same policy supports blocking specific actions with a <code>!</code> prefix (GitHub changelog). The tj-actions case (CISA: affected versions 12 to 15 March 2025): workflows that referenced the action by version picked up malicious code. Short hashes are rejected by the policy (per a third-party test); use all 40 characters. Pins don't cover what an action itself downloads, so also prefer actions you can read and that are small.</span></li><li><b class="show">Check</b><span>The commits and their hashes in the demo are generated here. I didn't confirm, from StepSecurity or GitHub, the exact mechanism by which tj-actions' version tags were changed, so the slide only says what CISA says. Per third-party tests, a reusable workflow may be called by tag but the actions inside it still need a full SHA; local actions and docker:// steps are out of scope.</span></li><li><b class="next">Next</b><span>"Don't store cloud keys at all."</span></li></ul></div>
+</section>
+
+<section class="slide" id="oidc" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// THE PIPELINE 04</p><h2>Short-lived credentials instead of stored keys</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="props props-2">
+        <div><b>A stored key</b><span>Created once, copied into CI settings, valid until someone remembers to rotate it. Any step that can read it can take it.</span></div>
+        <div><b>An identity token</b><span>The job proves who it is, the cloud checks the claims against a trust policy, and issues a credential that lasts about an hour.</span></div>
+      </div>
+      <pre class="term oi-yaml" id="oi-yaml"># a deploy job asks for an identity, only here
+deploy:
+  permissions:
+    id-token: write
+    contents: read
+  environment: production</pre>
+      <ul class="rules">
+        <li><b>Give only the deploy job</b> the right to request an identity.</li>
+        <li><b>The trust policy is the lock.</b> Name the repository and the branch, tag or environment, not just the organisation.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card card-bad"><b>When the trust is narrow, but the run isn't clean</b><span>In the TanStack case the binding was already scoped to one repository, one workflow file and one branch. The malware ran inside a genuine release run on <code>main</code> (via a poisoned cache), so it could mint a valid publishing token anyway. Narrow trust limits what a stolen run can do; it doesn't make the run itself safe.</span></div>
+      <div class="card"><b>Publishing packages the same way</b><span>npm's trusted publishing (OIDC) replaces long-lived publish tokens, and it generates provenance for you. npm is also retiring 2FA-bypass tokens: early August 2026 for sensitive account actions, around January 2027 for direct publishing.</span></div>
+      <p class="comment" id="oi-note"># fewer secrets to steal beats better places to keep them. The token demo is in the secrets management talk.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>This is a short slide on purpose: the full mechanism, with a signed token and a trust policy you can break, is in the secrets management talk's short-lived credentials demo. Here the point is where to apply it in a pipeline: cloud deploys, registry publishing, and anything else that currently reads a long-lived key from CI settings. Two sharp edges: a trust policy that names only the repository trusts every workflow in it; and even a narrow one trusts every step of that workflow's run, as TanStack found.</span></li><li><b class="tip">Tip</b><span>GitHub's secure-use reference: OIDC lets workflows authenticate to cloud providers so you can stop storing credentials as long-lived secrets, and recommends short-lived, well-scoped tokens; the cloud checks conditions you set on the token's claims. TanStack's own postmortem: the publishes were "authenticated via OIDC trusted-publisher binding for TanStack/router release.yml@refs/heads/main"; both malicious publishes came from runs of release.yml on main (a re-run, then a push), where malware restored from the poisoned Actions cache minted a token via id-token: write and POSTed to the registry directly; lesson learned: "once configured, any code path in the workflow can mint a publish-capable token". Endor Labs' write-up says the trust was granted at repository level rather than a branch and workflow file, which contradicts the postmortem, so the slide follows the postmortem. npm's July 2026 changelog: 2FA-bypass granular tokens stop skipping 2FA for sensitive account actions in early August 2026, and lose direct publishing around January 2027; move automated publishing to trusted publishing or to staged publishing with human approval. Also from October 2026, npm expires unvalidated trusted-publishing configurations 48 hours after creation (GitHub changelog "Unvalidated npm trusted publishing configurations now expire", 2 October 2026; the 48-hour figure is from secondary coverage, as the changelog body didn't load).</span></li><li><b class="show">Check</b><span>The 48-hour expiry figure is from secondary coverage of the changelog, so it is only in these notes. Dates for the 2FA-bypass change are approximate in GitHub's own wording ("early August", "around January").</span></li><li><b class="next">Next</b><span>"The last pipeline move: don't trust the input."</span></li></ul></div>
+</section>
+
+<section class="slide" id="inject" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// THE PIPELINE 05</p><h2>Untrusted text in a pipeline step</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="m">A workflow greets each new issue. Anyone can open an issue, so the title is untrusted.</p>
+      <div class="seg-pick" role="group" aria-label="How the title reaches the step" id="in-kind">
+        <button type="button" data-k="unsafe" aria-pressed="true">Pasted into the script</button>
+        <button type="button" data-k="safe">Passed as an environment variable</button>
+      </div>
+      <pre class="term in-yaml" id="in-yaml"></pre>
+      <div class="controls">
+        <label class="grow">Issue title<input id="in-title" class="mono" value="Fix typo in README" spellcheck="false" autocomplete="off" maxlength="80"></label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Sample titles" id="in-presets">
+        <button type="button" data-t="Fix typo in README">A normal title</button>
+        <button type="button" data-t='x"; echo INJECTED; echo "'>A title with a quote and a semicolon</button>
+        <button type="button" data-t="$(echo hi)">A title with a command inside</button>
+      </div>
+    </div>
+    <div class="stack">
+      <small class="lr-label">The script the runner builds</small>
+      <pre class="term in-script" id="in-script"></pre>
+      <small class="lr-label">Commands the shell would start (nothing here is run)</small>
+      <ul class="in-cmds" id="in-cmds"></ul>
+      <p class="verdict" id="in-verdict"></p>
+      <p class="comment" id="in-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>With "Pasted into the script", a normal title starts one command. Press the second sample (a quote, a semicolon, an echo): the quote closes the greeting early, and the shell sees a second command that the workflow's author never wrote. The third sample shows a command substitution doing the same. Switch to "Passed as an environment variable" with the same titles: still one command, because the text is data in a variable and never becomes part of the script. Nothing here runs anything; the page only splits text into commands to show what a shell would do.</span></li><li><b class="say">Say</b><span>This is injection again, in a new place: template expressions are replaced with their values before the shell ever sees the script. A harmless echo in the demo could be anything in real life, running with the job's token and secrets. The fix is the same as for SQL: keep data out of code. The same applies to branch names, commit messages, pull request titles and bodies, and anything from a fork.</span></li><li><b class="ask">Ask</b><span>Where else does text from outside your team end up in something that gets executed?</span></li><li><b class="tip">Tip</b><span>GitHub's secure-use reference gives the intermediate-environment-variable approach as the preferred way to handle untrusted input in inline scripts (its example uses a pull request title), and also suggests a JavaScript action that receives the context value as an argument. The same page says to avoid <code>pull_request_target</code> unless it's needed, to use <code>workflow_run</code> for privilege separation, and not to explicitly check out untrusted fork code in those workflows. Since 18 June 2026, <code>actions/checkout</code> v7 refuses by default to check out fork pull request code in <code>pull_request_target</code> workflows (opt-out input: <code>allow-unsafe-pr-checkout</code>); backports to older supported major versions (not v1) were enforced from 20 July 2026, but SHA or patch pins don't get it automatically. GitHub's 2 November 2026 changelog says that from 2 December 2026 <code>pull_request_target</code> is blocked by default for public repositories on Free, Team and Enterprise Cloud unless an Actions event policy allows it (brownouts: 9 and 16 November, 16:00 to 18:00 UTC; private and internal repositories aren't affected). Scorecard's <code>Dangerous-Workflow</code> check looks for these patterns.</span></li><li><b class="show">Check</b><span>The December date and brownouts are from GitHub's own changelog but are moving: earlier coverage said 2 November before it was moved, and a later search summary mentioned the same dates. Re-read before you present. The checkout v7 changelog does not block shell steps that fetch fork code with git or gh, or other events such as issue_comment, so the protection isn't complete.</span></li><li><b class="next">Next</b><span>"Checkpoint 2."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why pin a third-party CI action to a commit hash instead of a version tag?</p><details><summary>Hint</summary><p>Who can move a tag, and what happens to your next build when they do?</p></details><details class="answer"><summary>Answer</summary><p>A tag is a movable label controlled by the action's owner (or anyone who takes over that account), so your next build silently runs whatever it points to. A full commit hash names exact content. Let a bot propose updates so you read each change.</p></details></li>
+      <li><p>A workflow runs tests on pull requests from forks and also has the cloud deploy key in a repository secret. What would you change first?</p><details><summary>Hint</summary><p>Think about which job needs the secret, and who can trigger the workflow.</p></details><details class="answer"><summary>Answer</summary><p>Move the deploy credential out of reach: use an environment with required reviewers (or short-lived identity for the deploy job only), set the default token to read-only, and make sure fork-triggered workflows never run with secrets or check out untrusted code in a privileged workflow.</p></details></li>
+      <li><p>A workflow step contains <code>echo "${{ github.event.pull_request.title }}"</code>. What's wrong, and what's the fix?</p><details><summary>Hint</summary><p>When is the expression replaced, and by what?</p></details><details class="answer"><summary>Answer</summary><p>The title is pasted into the script text before the shell runs it, so a crafted title can add commands. Pass it through an environment variable and read it as <code>"$TITLE"</code>, so it stays data.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<!-- ======================================================================= PART 4 -->
+<section class="slide" id="signing" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// PROVING WHAT YOU BUILT 01</p><h2>Signing a release, and a log that remembers</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <small class="lr-label">The release</small>
+      <pre class="term sg-file" id="sg-file"></pre>
+      <div class="seg-pick" role="group" aria-label="What happens" id="sg-pick">
+        <button type="button" data-s="ok" aria-pressed="true">Untouched</button>
+        <button type="button" data-s="flip">One byte changed on the mirror</button>
+        <button type="button" data-s="other">Signed by a different key</button>
+        <button type="button" data-s="nolog">Signed, but never logged</button>
+      </div>
+      <small class="lr-label">The toy transparency log (a hash chain; real logs use Merkle trees)</small>
+      <pre class="term sg-log" id="sg-log"></pre>
+    </div>
+    <div class="stack">
+      <small class="lr-label">What a consumer checks before trusting it</small>
+      <ul class="sg-checks" id="sg-checks"></ul>
+      <p class="verdict" id="sg-verdict"></p>
+      <ul class="rules">
+        <li>A signature proves <b>this signer approved these exact bytes.</b></li>
+        <li>It does <b>not</b> prove the code is safe, or that the signer is who you think, unless you check the identity.</li>
+        <li>With keyless signing the identity is a <b>workflow or a person</b>, and the log lets owners notice misuse.</li>
+      </ul>
+      <p class="comment" id="sg-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>The release is a small text file signed with this page's own ECDSA P-256, and logged in a toy append-only chain. "Untouched" passes all three checks. "One byte changed" fails the hash check: the file is no longer what was signed. "Signed by a different key" fails the signature check: the right file, but not signed by the signer we expect. "Never logged" fails the log check: a signature nobody can see isn't something the owner could ever notice being misused.</span></li><li><b class="say">Say</b><span>Sigstore is the common way to do this without managing keys: cosign signs with a short-lived certificate tied to an identity, Fulcio is the certificate authority that issues it after checking an OIDC identity, and Rekor is a public append-only log of what was signed. Verification checks the signature, that the identity is the one you expect, the certificate chain, and proof the entry is in the log. The consumer's job is the second one: you must decide whose identity you expect.</span></li><li><b class="ask">Ask</b><span>What does a signature on a release prove, and what doesn't it prove? <em>Answer: it ties exact bytes to a signer's identity; it doesn't say the code is good, or that the signer's account wasn't taken over.</em></span></li><li><b class="tip">Tip</b><span>From Sigstore's overview: signatures use ephemeral keys, so there's no long-lived key to manage; the log stores the artifact's digest, signature and certificate; verification performs four checks (signature, expected identity, certificate against the root of trust, inclusion in Rekor). npm packages can carry provenance: publish with <code>--provenance</code> from a supported cloud CI with <code>id-token: write</code> (or with trusted publishing, which does it automatically) and verify installed packages with <code>npm audit signatures</code>. npm's docs say provenance "does not guarantee the package has no malicious code".</span></li><li><b class="show">Check</b><span>The log in the demo is a hash chain, not Rekor's real structure, and the keys are made up for the demo and generated in the page. I summarised Sigstore's overview page and npm's provenance docs; I didn't check other ecosystems' signing (for example PyPI's attestations).</span></li><li><b class="next">Next</b><span>"Provenance: how it was built."</span></li></ul></div>
+</section>
+
+<section class="slide" id="provenance" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// PROVING WHAT YOU BUILT 02</p><h2>Provenance and SLSA: where did this come from?</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="seg-pick pv-pick" role="group" aria-label="Scenario" id="pv-pick"></div>
+      <small class="lr-label">The signed statement from the build</small>
+      <pre class="term pv-stmt" id="pv-stmt"></pre>
+      <p class="pv-policy" id="pv-policy"></p>
+    </div>
+    <div class="stack">
+      <small class="lr-label">Our deploy policy checks</small>
+      <ul class="sg-checks" id="pv-checks"></ul>
+      <p class="verdict" id="pv-verdict"></p>
+      <p class="pv-why" id="pv-why"></p>
+      <div class="table-wrap"><table class="grid-table pv-table"><thead><tr><th>SLSA build level</th><th>What it adds</th></tr></thead><tbody>
+        <tr><td>L1</td><td>Provenance exists</td></tr>
+        <tr><td>L2</td><td>Hosted platform signs it</td></tr>
+        <tr><td>L3</td><td>Hardened, isolated builds</td></tr>
+      </tbody></table></div>
+      <p class="comment" id="pv-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="show">Show</b><span>Provenance is a signed statement from the build system: which file, which builder, which repository, which ref. Pick scenarios and watch the policy checks. "A normal release" passes. A swapped file fails on the hash; an edited statement fails on the signature; one signed with another key fails because we don't trust that signer; a build in someone else's repository, or from a pull request branch, passes the signature but fails our policy. The last scenario passes <em>everything</em>: a malicious change that was merged and then built correctly.</span></li><li><b class="say">Say</b><span>Provenance answers "how and where was this built", which lets you reject anything built somewhere else. It doesn't answer "is the code any good". Reported analyses of the May 2026 TanStack compromise found the malicious packages carried valid SLSA Build Level 3 provenance (StepSecurity, as reported), because they really were published by the project's own pipeline. That is not a failure of provenance; it's what it does and doesn't promise.</span></li><li><b class="ask">Ask</b><span>What does your policy verify when you deploy: a signature, a hash, a source, or nothing?</span></li><li><b class="tip">Tip</b><span>SLSA's Build track (spec v1.2, build-track-basics): L0 no guarantees; L1 provenance exists; L2 a hosted platform generates and signs it, and consumers validate it; L3 a hardened platform keeps runs from influencing each other and keeps signing secrets away from user-defined build steps. GitHub's artifact attestations: "Artifact attestations alone provide SLSA v1.0 Build Level 2"; Level 3 needs a reusable workflow; and "Generating attestations alone doesn't provide any security benefit": consumers verify them (<code>gh attestation verify</code>). Attestations "are not a guarantee that an artifact is secure".</span></li><li><b class="show">Check</b><span>Endor Labs' write-up confirms the malicious versions carried valid SLSA provenance attestations from the legitimate tanstack/router repository; the "Build Level 3" wording is from The Hacker News' report of StepSecurity, and counts differ between vendors (84 versions of 42 packages in the first wave; 160+ across the wider campaign). The level summaries match SLSA v1.2's build-track-basics page (read 11 November 2026). The scenarios, repository names and build output in the demo are invented.</span></li><li><b class="next">Next</b><span>"So what do you check before you deploy?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="verify" data-part="4" data-num="22">
+  <header class="slide-head"><p class="eyebrow">// PROVING WHAT YOU BUILT 03</p><h2>Verify before you deploy</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <ol class="vf-steps">
+        <li><b>Pin by digest.</b><span>Refer to an image or file by its hash, not a tag that can move.</span></li>
+        <li><b>Verify the signature and the identity.</b><span>Not just "a valid signature": <em>whose</em>, and for which workflow.</span></li>
+        <li><b>Check the provenance against policy.</b><span>Right repository, right ref, right builder.</span></li>
+        <li><b>Scan and keep the SBOM.</b><span>So the next advisory is a query, not a hunt.</span></li>
+        <li><b>Enforce it where it matters.</b><span>An admission rule or a deploy gate, not a wiki page.</span></li>
+      </ol>
+    </div>
+    <div class="stack">
+      <pre class="term vf-cmds" id="vf-cmds"># GitHub artifact attestations
+gh attestation verify ./app.tgz --repo example-org/shop
+
+# an npm install: check signatures and attestations
+npm audit signatures
+
+# a signed container image (Sigstore's cosign)
+cosign verify registry.example/shop@sha256:… \
+  --certificate-identity-regexp '…' \
+  --certificate-oidc-issuer '…'</pre>
+      <div class="card"><b>Start small</b><span>You don't need all five on day one. Pin by digest, verify what your own pipeline produces, then widen the policy as the tooling gets easier.</span></div>
+      <p class="comment" id="vf-note"># the signature is only as good as the question you ask it.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Everything in this part only helps if something checks it. A signature nobody verifies is decoration. Make verification automatic, and make the policy specific: which repository, which ref, which builder. Start by verifying your own pipeline's output, because that's the policy you can write today.</span></li><li><b class="tip">Tip</b><span>The commands are the documented forms: <code>gh attestation verify</code> (GitHub CLI), <code>npm audit signatures</code> (npm docs), and <code>cosign verify</code> with certificate identity and issuer constraints (Sigstore). The placeholders are deliberate: the exact identity patterns depend on how you sign. Kubernetes admission controllers and registry policies can enforce the same checks at deploy time.</span></li><li><b class="show">Check</b><span>Flags and exact syntax change between versions: run each command against a test artifact before presenting rather than copying from the slide. I did not run cosign or gh here.</span></li><li><b class="next">Next</b><span>"Checkpoint 3."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="4" data-num="23">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 4 MIN</p><h2>Pause and discuss</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="4-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>04:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>What does a signature on a release prove, and what doesn't it prove?</p><details><summary>Hint</summary><p>Think about what was signed, and who signed it.</p></details><details class="answer"><summary>Answer</summary><p>It proves that this signer approved these exact bytes. It doesn't prove the code is safe, that the signer's account wasn't taken over, or that the signer is who you expect unless you check the identity against your own policy.</p></details></li>
+      <li><p>An attacker publishes a malicious version through your project's own pipeline, and it has valid provenance. Which controls still help?</p><details><summary>Hint</summary><p>Provenance says how it was built, not what's in it. What comes before the build, and after the release?</p></details><details class="answer"><summary>Answer</summary><p>Controls before the build: reviewed changes, protected branches, a pipeline that can't be tricked into running untrusted code, narrowly scoped publishing trust. After the release: a waiting period before consumers adopt it, scanning and monitoring, and an SBOM to find out quickly who has it.</p></details></li>
+      <li><p>Which one change from today's talk would you make first, and why?</p><details><summary>Hint</summary><p>Pick the cheapest one that removes the most risk.</p></details><details class="answer"><summary>Answer</summary><p>Common first picks: commit the lock file and install from it in CI; set the default token to read-only; pin third-party actions by hash with a bot to update them; turn on a waiting period for routine updates; and move the deploy credential to a short-lived identity.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">4 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="habits" data-part="4" data-num="24">
+  <header class="slide-head"><p class="eyebrow">// PROVING WHAT YOU BUILT 04</p><h2>Everyday habits, beyond the incidents</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <h3>For your dependencies</h3>
+      <ul class="rules">
+        <li><b>Add fewer dependencies.</b> Before you add one, ask what it costs to keep.</li>
+        <li><b>Commit the lock file</b> and install from it in CI.</li>
+        <li><b>Wait a few days</b> on routine updates, never on security fixes.</li>
+        <li><b>Read the update's shape:</b> new scripts, new publishers, new dependencies.</li>
+        <li><b>Copy install commands from the project's own page.</b></li>
+        <li><b>Own your names,</b> and route internal names to your own registry.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>For your pipeline</h3>
+      <ul class="rules">
+        <li><b>Default tokens read-only;</b> grant more to the one job that needs it.</li>
+        <li><b>Pin third-party steps by hash,</b> and let a bot propose updates.</li>
+        <li><b>Use short-lived identities</b> instead of stored keys, scoped to repo and branch.</li>
+        <li><b>Treat input as data,</b> never as script.</li>
+        <li><b>Review workflow-file changes</b> like production code.</li>
+        <li><b>Keep an SBOM and verify what you deploy.</b></li>
+      </ul>
+      <p class="comment" id="hb-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>None of these is dramatic, which is why they work. They are the same habits that would have blunted most of the incidents in the intro, and they hold up for incidents nobody has had yet. If you only do three, commit the lock file, make the default token read-only, and pin your third-party steps.</span></li><li><b class="tip">Tip</b><span>These are widely recommended practices rather than claims from one source: see GitHub's secure-use reference, the OpenSSF Scorecard checks, and CISA's September 2025 npm alert for the matching advice (pin to known-good versions, rotate credentials, require phishing-resistant MFA, protect branches, turn on secret scanning and Dependabot security updates).</span></li><li><b class="next">Next</b><span>"A checklist to take home."</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="25">
+  <header class="slide-head"><p class="eyebrow">// PROVING WHAT YOU BUILT 05</p><h2>A dependencies and CI checklist to take home</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="inv"> We can list what our main projects depend on, including indirect packages, in under a minute</label>
+      <label><input type="checkbox" data-k="lock"> Lock files are committed, and CI installs exactly what they say</label>
+      <label><input type="checkbox" data-k="bot"> A bot proposes updates, with a short wait for routine ones and none for security fixes</label>
+      <label><input type="checkbox" data-k="scripts"> Dependency install scripts are off unless allowed</label>
+      <label><input type="checkbox" data-k="names"> Internal package names are scoped or routed so a public look-alike can't win</label>
+      <label><input type="checkbox" data-k="sbom"> Every release has an SBOM we can search</label>
+      <label><input type="checkbox" data-k="token"> The default CI token is read-only, and write access is per job</label>
+      <label><input type="checkbox" data-k="pin"> Third-party actions and plugins are pinned to a commit hash</label>
+      <label><input type="checkbox" data-k="oidc"> Cloud and registry access uses short-lived identity scoped to repo and branch</label>
+      <label><input type="checkbox" data-k="input"> Untrusted text never becomes script, and fork code never runs with secrets</label>
+      <label><input type="checkbox" data-k="sign"> Releases are signed or carry provenance, and we verify them before deploying</label>
+      <label><input type="checkbox" data-k="review"> Workflow-file changes get the same review as production code</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~2 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what your team does today and treat every unticked box as a ticket, not a failure. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box would have shortened your last incident the most?</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="26">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">Anything from today, or a pipeline or dependency problem you're facing. (Describe it, don't paste any secrets.)</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The demos and the checklist stay live.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="https://docs.github.com/en/actions/reference/security/secure-use" target="_blank" rel="noopener">GitHub: secure use reference for Actions</a><span>Pinning, tokens, injection and OIDC, from the platform itself.</span></li>
+        <li><a href="https://github.com/ossf/scorecard/blob/main/docs/checks.md" target="_blank" rel="noopener">OpenSSF Scorecard checks</a><span>A free, automated check of many of today's habits.</span></li>
+        <li><a href="https://docs.sigstore.dev/about/overview/" target="_blank" rel="noopener">Sigstore overview</a><span>Keyless signing, the certificate authority and the log.</span></li>
+        <li><a href="../secrets-management/">Secrets Management</a><span>Short-lived credentials, scanning and rotation.</span></li>
+        <li><a href="../git-github-security/">Git and GitHub Security</a><span>Branch protection, signed commits and safer Actions.</span></li>
+        <li><a href="../vulnerability-management/">Vulnerability Management</a><span>Which of the advisories to fix first.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only. Every demo is a simulation in your browser: no registry, no CI system, no real packages or keys, and nothing you type is sent anywhere. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Open the floor. Invite people to describe a pipeline or dependency from their own world, and walk it through the chain: what's pinned, what token does it hold, what would a bad step be able to do?</span></li><li><b class="show">Check</b><span>The GitHub, Scorecard and Sigstore links were read for this talk. SLSA's current spec lives at slsa.dev (I read the retired v1.1 page, which said v1.2 is current), so no deep link is given. The Secrets Management, Git and GitHub Security and Vulnerability Management talks are linked rather than repeated. Several facts here are moving (GitHub's pull_request_target change, npm's token changes): re-read the changelogs on the day.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="deps.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
