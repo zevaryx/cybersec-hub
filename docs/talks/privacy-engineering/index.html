@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy Engineering</title>
+<meta name="description" content="Collect less, protect what you keep, and make deletion real: re-identification, minimisation, crypto-shredding, redaction, retention and LINDDUN, with demos that run in your browser.">
+<meta name="theme-color" content="#07060f">
+<link rel="canonical" href="https://zevaryx.github.io/cybersec-hub/talks/privacy-engineering/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="zevaryx · cybersec hub">
+<meta property="og:title" content="Privacy Engineering">
+<meta property="og:url" content="https://zevaryx.github.io/cybersec-hub/talks/privacy-engineering/">
+<meta property="og:image" content="https://zevaryx.github.io/cybersec-hub/talks/privacy-engineering/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="../../shared/fonts/chakra-petch-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../shared/fonts/jetbrains-mono-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../shared/deck.css">
+<link rel="stylesheet" href="talk.css">
+<script type="application/json" id="deck-config">
+{ "id": "privacy-engineering", "title": "Privacy Engineering", "footer": "PRIVACY ENG", "subtitle": "DEVELOPER TRACK · 18",
+  "parts": [{ "name": "Collect less", "minutes": 26 }, { "name": "Protect what you keep", "minutes": 33 }, { "name": "Let it go", "minutes": 27 }, { "name": "Wrap-up", "minutes": 7 }] }
+</script>
+<script>
+  /* pick the layout before first paint: slides on a big screen, scrolling on a phone */
+  (function () {
+    var m = null;
+    try { m = localStorage.getItem("deck-mode"); } catch (e) {}
+    var v = /[?&]view=(slides|scroll)/.exec(location.search);
+    if (v) m = v[1];
+    if (location.search.indexOf("presenter") >= 0) m = "presenter";
+    if (!m) m = innerWidth >= 900 && innerHeight >= 500 ? "slides" : "scroll";
+    document.documentElement.className = "mode-" + m;
+  })();
+</script>
+</head>
+<body>
+
+<nav class="scroll-nav" aria-label="Parts of the talk">
+  <a href="../../" class="brand hub-back" title="All talks">‹ HUB</a>
+  <a href="#title" class="brand">Privacy Engineering</a>
+  <div class="scroll-parts">
+    <a href="#why" data-part="1"><b>01</b>Collect less</a>
+    <a href="#datamap" data-part="2"><b>02</b>Protect</a>
+    <a href="#retention" data-part="3"><b>03</b>Let it go</a>
+    <a href="#checklist" data-part="4"><b>04</b>Wrap-up</a>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm to-slides" data-mode="slides">Slides view</button>
+</nav>
+
+<main class="deck">
+<div class="stage" id="stage">
+
+<section class="slide slide-title" id="title" data-part="0" data-num="01">
+  <div class="slide-body title-grid">
+    <div class="title-copy">
+      <p class="eyebrow">// ZEVARYX · CYBERSEC HUB · DEVELOPER 18</p>
+      <h1><span class="pre">A talk on</span> <span class="glitch" data-text="Privacy Engineering">Privacy Engineering</span></h1>
+      <p class="lede">The safest personal data is the data you never collected. How to collect less, protect what you keep, and delete it for real, with demos built on invented people.</p>
+      <p class="keys-hint"><kbd>→</kbd> next <kbd>N</kbd> notes <kbd>P</kbd> presenter <kbd>O</kbd> overview <kbd>F</kbd> full screen</p>
+      <div class="follow"><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="96" height="96"><p>Follow along on your phone:<br><a href="https://zevaryx.github.io/cybersec-hub/talks/privacy-engineering/">zevaryx.github.io/cybersec-hub</a><br><span class="credit">Made by <a href="https://github.com/zevaryx">zevaryx</a></span></p></div>
+    </div>
+    <div class="frame hero-term">
+      <div class="term-bar"><span>personal-data spotter</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <label class="prompt" for="hero-in">$ spot <textarea id="hero-in" rows="3" spellcheck="false" autocomplete="off" aria-label="Text to scan for personal data">Order for Dana Wren, dana.wren@example.com, +44 20 7946 0958. Delivery: 12 Fictional Row.</textarea></label>
+      <output class="hashout" id="hero-out"></output>
+      <p class="comment" id="hero-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Welcome. About 95 minutes with three checkpoints, or about 85 if you skip the two slides marked skippable. This is the developer's half of privacy: the design choices that decide how much personal data you hold, how well it is protected and whether you can really delete it. Every person, record and log line in the demos is invented, and nothing leaves your browser. I'm an engineer, not a lawyer: where I mention laws, it's to show what the engineering has to support, and none of it is legal advice.</span></li><li><b class="show">Show</b><span>The spotter finds email addresses, phone numbers, card numbers (it checks the Luhn digit, so a made-up 16 digits is not flagged), dates, IP addresses and health words in whatever you type. It's a handful of patterns, so it will miss things and flag false alarms: that's the point of the redaction slide later.</span></li><li><b class="tip">Eggs</b><span>On the title slide, type "Rumpelstiltskin", "hunter2" or an empty box. In the re-identification demo, search for Rumpelstiltskin, or generalise everything until nobody is distinct. In the minimisation demo, uncheck every field. In the crypto-shredding demo, restore a backup that kept the keys. In the pseudonym demo, leak the key. In the privacy-noise demo, push epsilon to either end. In the redactor, paste the AWS documentation example key. In the audit demo, browse too many records. In the retention demo, set every period to zero. In the deadline demo, pick the 31st of a month. In the LINDDUN demo, cover all seven letters. Tick all ten checklist boxes, and open the console.</span></li></ul></div>
+</section>
+
+<section class="slide" id="roadmap" data-part="0" data-num="02">
+  <header class="slide-head"><p class="eyebrow">// THE PLAN</p><h2>Roadmap</h2></header>
+  <div class="slide-body">
+    <ol class="roadmap roadmap-4">
+      <li><a href="#why"><small>PART 1 · 26 MIN</small><b>Collect less</b></a><span>"Anonymised" often isn't</span><span>Minimise: every field needs a reason</span><span>Purpose and consent in code</span></li>
+      <li><a href="#datamap"><small>PART 2 · 33 MIN</small><b>Protect what you keep</b></a><span>Data maps, per-user keys</span><span>Pseudonyms, noise, redaction</span><span>Access you can audit</span></li>
+      <li><a href="#retention"><small>PART 3 · 27 MIN</small><b>Let it go</b></a><span>Retention enforced by code</span><span>Deletion that reaches every copy</span><span>Requests and LINDDUN</span></li>
+      <li><a href="#checklist"><small>PART 4 · 7 MIN</small><b>Wrap-up</b></a><span>A pull-request checklist</span><span>Questions</span></li>
+    </ol>
+    <p class="callout"><b>CHECKPOINTS</b> after parts 1, 2 and 3: 5 minutes to discuss with a neighbour. Two slides (privacy noise, audit trails) are marked <b>skippable</b> if time is short. Every dataset is <b>invented</b>, and this is not legal advice.</p>
+  </div>
+  <div class="notes"><p class="time">~1 min</p><ul><li><b class="say">Say</b><span>Part one is about not collecting: most privacy problems are solved at the form, not the firewall. Part two is protecting what's left, including the logs and analytics tools that quietly collect their own copies. Part three is the end of the lifecycle: retention, deletion that really reaches backups and vendors, requests from people, and a privacy threat model. Then a checklist for pull requests.</span></li><li><b class="next">Next</b><span>"Start with the comfortable myth: that removing names makes data anonymous."</span></li></ul></div>
+</section>
+
+<section class="slide" id="why" data-part="1" data-num="03">
+  <header class="slide-head"><p class="eyebrow">// COLLECT LESS 01</p><h2>"We removed the names" is not anonymisation</h2></header>
+  <div class="slide-body stack">
+    <div class="inc-grid">
+      <div class="card inc"><small>RE-IDENTIFICATION · 2000</small><b>87%</b><span>Sweeney's estimate, from 1990 US census data, that ZIP code + gender + full birth date is unique. A later re-count (Golle, 2006) found 61 to 63%. Either way: most people.</span></div>
+      <div class="card inc"><small>RE-IDENTIFICATION · 2008</small><b>Netflix Prize ratings</b><span>About 500,000 subscribers' "anonymous" ratings linked back to named people using a little outside knowledge, such as public IMDb reviews (Narayanan and Shmatikov).</span></div>
+      <div class="card inc"><small>PURPOSE · 2022</small><b>$150 million</b><span>The FTC's penalty against Twitter for using phone numbers and emails collected for account security to target ads. More than 140 million users' details.</span></div>
+    </div>
+    <ul class="rules rules-tight">
+      <li><b>Personal data</b> is anything about an identifiable person: names, emails, device IDs, IP addresses, and combinations that point to one person. <b>Sensitive</b> categories (health, beliefs, biometrics, children's data) carry stricter rules and higher harm.</li>
+      <li><b>Pseudonymised</b> data is still personal data. <b>Anonymous</b> data is data nobody can reasonably link back to a person, using "all the means reasonably likely to be used". That's a high bar and it moves over time.</li>
+    </ul>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Three stories, three lessons. The first two are about combining harmless-looking fields. Sweeney's 87% came from 1990 census data and was later re-estimated at 61 to 63%: still a majority, and uniqueness is not the same as being identified, but it shows the shape of the risk. The Netflix paper showed the same on sparse data: a few ratings plus public reviews were enough. The Twitter case is the third lesson: data collected for one purpose (securing an account) was used for another (ad targeting). That's a design failure as much as a legal one.</span></li><li><b class="ask">Ask</b><span>Which of your own datasets have had names removed and then been treated as "safe to share"? <em>Answer: there usually are some: analytics exports, test data copied from production, data shared with vendors.</em></span></li><li><b class="tip">Tip</b><span>Sources: Sweeney, "Simple Demographics Often Identify People Uniquely" (2000); Golle, "Revisiting the Uniqueness of Simple Demographics in the US Population" (2006: 61% on 1990 data, 63% on 2000); Narayanan and Shmatikov, "Robust De-anonymization of Large Sparse Datasets" (IEEE S&amp;P 2008); FTC press release, 25 May 2022 (a proposed order, $150 million, more than 140 million users, data provided 2014 to 2019 after Twitter began asking in 2013, violating the 2011 order; re-read 11 November 2026). The GDPR test for anonymity is Recital 26, "all the means reasonably likely to be used"; it also says pseudonymised data is personal data.</span></li><li><b class="show">Check</b><span>Golle's 61 to 63% and the later critiques are secondary summaries for the "unique is not the same as identified" point. Not legal advice: your lawyer decides what is "anonymous" for your law.</span></li><li><b class="next">Next</b><span>"Let's try it ourselves, on 60 invented people."</span></li></ul></div>
+</section>
+
+<section class="slide" id="reid" data-part="1" data-num="04">
+  <header class="slide-head"><p class="eyebrow">// COLLECT LESS 02</p><h2>Re-identify the "anonymous" release</h2></header>
+  <div class="slide-body cols-2 cols-wide-right">
+    <div class="stack">
+      <div class="controls">
+        <label>ZIP code <output id="rd-zip-out"></output><input type="range" id="rd-zip" min="0" max="3" value="0"></label>
+        <label>Birth date <output id="rd-birth-out"></output><input type="range" id="rd-birth" min="0" max="4" value="0"></label>
+        <label class="chk"><input type="checkbox" id="rd-gender" checked> Keep gender</label>
+      </div>
+      <div class="seg-pick" role="group" aria-label="Presets" id="rd-presets"><button type="button" data-p="full">Release as is</button><button type="button" data-p="some">A bit blurrier</button><button type="button" data-p="k5">Aim for k of 5</button></div>
+      <div class="stats" id="rd-stats"></div>
+      <p class="comment" id="rd-note"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>The attacker's step</b><span class="fine">The register of 60 invented people is public (name, ZIP, birth date, gender). Search it against the "anonymous" medical release.</span>
+        <div class="rd-search"><input type="text" id="rd-name" class="mono" value="Avery Ashdown" spellcheck="false" autocomplete="off" aria-label="A name from the register"><button type="button" class="btn btn-sm" id="rd-go">Look up</button></div>
+        <p class="fine" id="rd-names">Names look like: Avery Ashdown, Blake Brookfield, Casey Calloway …</p>
+        <p class="verdict" id="rd-result" aria-live="polite"></p></div>
+      <div class="table-wrap"><table class="grid-table rd-table" id="rd-table"></table></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~8 min</p><ul><li><b class="say">Say</b><span>This is a fully synthetic hospital release of 60 people: ZIP, birth date, gender and a diagnosis, with the names removed. Start with the release as is: every record is unique, because ZIP, date and gender together are a fingerprint. Look up any name from the public register and the diagnosis is right there. Now generalise. Dropping the day, then the month, helps very little. Only when ZIP is cut to two digits, birth date to a decade and gender is dropped do you reach k of 6: every record looks like at least five others. That's k-anonymity: each combination of quasi-identifiers appears at least k times. Then ask what you've lost: the data is now nearly useless for analysis, which is the real trade-off.</span></li><li><b class="ask">Ask</b><span>k-anonymity has a known weakness: if everyone in a group has the same diagnosis, the attacker learns it without finding the person. Where can you see that here? <em>Answer: the "homogeneous" count in the stats, groups where all records share a diagnosis. That's why l-diversity and other measures exist, and why "just make k bigger" is not the whole answer.</em></span></li><li><b class="tip">Tip</b><span>k-anonymity is from Sweeney, 2002. It only protects against the kinds of attack it models: more columns, outside datasets or repeated releases make it weaker. For many uses, the safer choices are not releasing record-level data at all, or adding noise to aggregates (see the privacy-noise slide). Names come from 10 first names times 6 surnames; any resemblance to real people is coincidence.</span></li><li><b class="show">Check</b><span>The dataset is invented and tiny, so the exact numbers are an illustration, not a statistic about real populations.</span></li><li><b class="next">Next</b><span>"The best fix for any of this is not having the fields at all."</span></li></ul></div>
+</section>
+
+<section class="slide" id="minimise" data-part="1" data-num="05">
+  <header class="slide-head"><p class="eyebrow">// COLLECT LESS 03</p><h2>Minimise: every field needs a reason and an owner</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lr-label">A delivery-app sign-up form: tick what you collect</p>
+      <div class="mn-list" id="mn-list"></div>
+      <div class="seg-pick" role="group" aria-label="Presets" id="mn-presets"><button type="button" data-p="all">Everything (today)</button><button type="button" data-p="lean">Only what delivery needs</button></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="mn-stats"></div>
+      <p class="verdict" id="mn-verdict" aria-live="polite"></p>
+      <p class="comment" id="mn-note"></p>
+      <div class="card"><b>The rule</b><span>A field earns its place with a <b>purpose</b>, an <b>owner</b> who'll defend it, and a <b>way to delete it</b>. No owner, no field. GDPR Art. 25(2) calls this protection "by default": only what's necessary, for the time it's necessary, seen by those who need it.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>A real sign-up form grows by accretion: marketing wanted gender, someone ran a growth experiment that uploaded the phone contacts, nobody remembers why we have a date of birth. Tick and untick fields. Every field has a purpose and an owner; three of them have no owner at all. Each field also has a rough "harm if it leaks" score, so the risk total falls as you collect less. The "only what delivery needs" preset keeps three fields and still delivers parcels. The phone number is optional: ask for it when it's needed, at the order, not at sign-up.</span></li><li><b class="ask">Ask</b><span>If you unticked a field and the product broke, what does that tell you? <em>Answer: that the field is needed and its purpose is real. The test isn't "can we do without it" in the abstract: it's "can we say what it's for, who owns it, and when it goes away".</em></span></li><li><b class="tip">Tip</b><span>Minimisation also covers how much you derive and keep (precise location versus city, exact age versus over-18), how long you keep it, and who inside the company can see it. GDPR Art. 5(1)(c) says data must be "adequate, relevant and limited to what is necessary in relation to the purposes"; Art. 25(2) is the "by default" rule. Many privacy bugs are just fields nobody removed.</span></li><li><b class="show">Check</b><span>The fields, owners and risk scores are invented. Not legal advice: the "needed" label depends on your product and your law.</span></li><li><b class="next">Next</b><span>"And the data you do collect shouldn't be reusable for anything you like."</span></li></ul></div>
+</section>
+
+<section class="slide" id="purpose" data-part="1" data-num="06">
+  <header class="slide-head"><p class="eyebrow">// COLLECT LESS 04</p><h2>Purpose and consent belong in code, not just in the policy</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lr-label">A service asks for data. For which purpose?</p>
+      <div class="seg-pick" role="group" aria-label="Purpose" id="pu-purpose"></div>
+      <div class="pu-consent"><label class="chk"><input type="checkbox" id="pu-marketing"> User consented to marketing</label><label class="chk"><input type="checkbox" id="pu-analytics"> User consented to analytics</label></div>
+      <ul class="pu-list" id="pu-list"></ul>
+      <p class="comment" id="pu-note"></p>
+    </div>
+    <div class="stack">
+      <ol class="rules rules-tight">
+        <li>Tag each field with the <b>purposes</b> it was collected for, in the schema.</li>
+        <li>Make services <b>declare the purpose</b> when they read it, and log that.</li>
+        <li>Treat <b>consent as data</b>: stored per purpose, checked at read time, revocable.</li>
+        <li>New purpose? That's a <b>design review</b>, and maybe a new notice or a new consent.</li>
+      </ol>
+      <div class="card"><b>What goes wrong</b><span>In the 2022 Twitter case, details given to secure accounts were used for ad targeting. The fix isn't a better policy: it's that the ad system should not be able to read the "security" phone numbers at all.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Purpose limitation (GDPR Art. 5(1)(b)) says data is collected for specified, explicit and legitimate purposes and not used in ways incompatible with them. In code that means the data store knows the purposes. Pick "delivery": the address is allowed. Pick "analytics": the address is blocked, and the order history only works if the user consented. Pick "marketing" with no consent: even the email is refused. A policy page can say all this and the system can still do the opposite. The check has to live where the data is read.</span></li><li><b class="ask">Ask</b><span>Where would this check live in your system: in the database layer, an API gateway, each service? <em>Answer: closer to the data is safer. A shared access layer or a view per purpose beats trusting every service to remember.</em></span></li><li><b class="tip">Tip</b><span>Consent is not the only legal basis (GDPR lists several: contract, legal obligation, legitimate interests and others), and the right one depends on your case; that's for your privacy lead. The engineering job is to make purpose and consent state machine-readable and enforced. The FTC's 25 May 2022 announcement is the source for the Twitter case: phone numbers and emails given for account security, used to target ads, 2014 to 2019, over 140 million users, a $150 million penalty for violating a 2011 order.</span></li><li><b class="show">Check</b><span>The purposes, fields and consent rules in the demo are invented and simplified. Real regimes differ on what needs consent.</span></li><li><b class="next">Next</b><span>"Time to pause."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-1" data-part="1" data-num="07">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 1 · 5 MIN</p><h2>Collect less</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Which field in your current project could you stop collecting, and who would you need to ask?</p><details><summary>Hint</summary><p>Start with fields nobody can give a purpose or an owner for.</p></details><details class="answer"><summary>Answer</summary><p>There's no single answer, which is the point. Common finds: date of birth, gender, employer, "just in case" free-text fields, and raw location where a city would do.</p></details></li>
+      <li><p>You release a table with names removed but ZIP, birth date and gender kept. Why isn't it anonymous?</p><details><summary>Hint</summary><p>What does the attacker already have?</p></details><details class="answer"><summary>Answer</summary><p>Those three fields together make most people unique, and public registers or other datasets contain the same three. Linking them re-attaches the name.</p></details></li>
+      <li><p>Where in code would you stop an analytics job reading phone numbers collected for delivery?</p><details><summary>Hint</summary><p>Think about where the data is read.</p></details><details class="answer"><summary>Answer</summary><p>In the access layer or schema: tag fields with purposes, make readers declare a purpose, and refuse the rest, and log the refusals.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="datamap" data-part="2" data-num="08">
+  <header class="slide-head"><p class="eyebrow">// PROTECT WHAT YOU KEEP 01</p><h2>Draw the data map, including the places nobody drew</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lr-label">Pick a kind of personal data</p>
+      <div class="seg-pick" role="group" aria-label="Data kind" id="dm-fields"></div>
+      <ul class="dm-list" id="dm-list"></ul>
+    </div>
+    <div class="stack">
+      <div class="stats" id="dm-stats"></div>
+      <p class="comment" id="dm-note"></p>
+      <div class="card"><b>A data map answers</b><span>Which systems hold it? Who owns each? How long does it stay? Which vendors are processors? Start from the user journey and follow the field into logs, caches, exports and tools.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>Pick "Email" and count the places: the database, its replica, the cache, the logs, the error tracker, the support desk, the warehouse, the backups. Nine stores in this invented system, and the app only "has" one. Many of the rest have no owner, or no expiry. A data map is the first privacy control because everything later (encryption, redaction, deletion) needs to know where the data is. The ones that hurt are the side effects: logs, analytics, error reports and support tools, because they're added by developers for convenience and rarely reviewed.</span></li><li><b class="ask">Ask</b><span>Which store on this list would surprise your legal team? <em>Answer: usually the logs or the error tracker.</em></span></li><li><b class="tip">Tip</b><span>Keep the map as code or a table in the repo, next to the schema, so a pull request that adds a new store or field also updates it. Vendors that process data for you are "processors": each one needs a contract and a deletion path.</span></li><li><b class="show">Check</b><span>The system and its stores are invented.</span></li><li><b class="next">Next</b><span>"Once you know where it lives, you can protect it, starting with encryption that makes deletion easy."</span></li></ul></div>
+</section>
+
+<section class="slide" id="shred" data-part="2" data-num="09">
+  <header class="slide-head"><p class="eyebrow">// PROTECT WHAT YOU KEEP 02</p><h2>One key per person: encryption that makes deletion real</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table sh-table" id="sh-table"></table></div>
+      <div class="seg-pick" role="group" aria-label="Actions" id="sh-actions">
+        <button type="button" id="sh-backup-keys">Back up (ciphertext + keys)</button>
+        <button type="button" id="sh-backup-nokeys">Back up (ciphertext only)</button>
+        <button type="button" id="sh-shred">Delete Dana's key</button>
+        <button type="button" id="sh-restore">Restore from backup</button>
+        <button type="button" id="sh-reset">Reset</button>
+      </div>
+      <p class="verdict" id="sh-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <div class="card"><b>Envelope encryption</b><span>A master key (the <b>KEK</b>, held in a key service or HSM) wraps a data key (<b>DEK</b>) for each customer. The field is encrypted with the DEK (AES-GCM, with the user ID bound in). Rotate the master key by re-wrapping keys, not re-encrypting every row.</span></div>
+      <div class="card"><b>Crypto-shredding</b><span>Delete the customer's wrapped key and every copy of their ciphertext, in the database, replicas and backups, becomes unreadable. The catch: <b>the key must not live in the backup too</b>.</span></div>
+      <p class="comment" id="sh-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>This runs real AES-GCM in your browser using the Web Crypto API. Each customer's email is encrypted with its own data key, and the data key is wrapped by a master key the "database" doesn't hold in the clear. Take a backup with ciphertext only. Now delete Dana's key. Dana's row is unreadable everywhere, including the backup. That's crypto-shredding: a deletion you can do in seconds across copies you can't easily reach. Now the mistake. Take a backup that includes the wrapped keys, delete Dana's key, and restore the backup: the keys come back, and so does Dana. A key backup needs its own retention, and deleting a user must delete their key from it too, or the key store should be the one thing that is deliberately not backed up with the data.</span></li><li><b class="ask">Ask</b><span>What does crypto-shredding not fix? <em>Answer: plaintext copies. Anything decrypted into a cache, a log, an export or a vendor's system is outside the key. And it only protects the encrypted fields, so the data map still matters.</em></span></li><li><b class="tip">Tip</b><span>See the Secrets management talk for envelope encryption and key services in depth. The master key here is a non-extractable Web Crypto key in this page: a real system uses a KMS or HSM, with access policies and logging. Field-level encryption also limits which services and which staff can read a field at all.</span></li><li><b class="show">Check</b><span>It's a teaching model of the key hierarchy, not a production design. Regulators' views on whether crypto-shredding counts as erasure vary, so ask your privacy lead before relying on it as your only deletion.</span></li><li><b class="next">Next</b><span>"Sometimes you need to join data without storing identities. That's pseudonyms."</span></li></ul></div>
+</section>
+
+<section class="slide" id="pseudo" data-part="2" data-num="10">
+  <header class="slide-head"><p class="eyebrow">// PROTECT WHAT YOU KEEP 03</p><h2>Pseudonyms: a hashed email is not anonymous</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table ps-table" id="ps-table"></table></div>
+      <div class="seg-pick" role="group" aria-label="Attacker options" id="ps-actions"><button type="button" id="ps-attack">Attacker tries 12 likely emails</button><button type="button" id="ps-leak">The pseudonym key leaks</button><button type="button" id="ps-reset">Reset</button></div>
+      <p class="verdict" id="ps-verdict" aria-live="polite"></p>
+    </div>
+    <div class="stack">
+      <label class="lr-label" for="ps-email">Try your own (made-up) email</label>
+      <input type="text" id="ps-email" class="mono" value="sam.lee@example.com" spellcheck="false" autocomplete="off">
+      <p class="term ps-one" id="ps-one"></p>
+      <div class="card"><b>The rules</b><span><b>Plain SHA-256</b> of an email can be reversed by hashing guesses. <b>HMAC with a secret key</b> can't, until the key leaks. Normalise first (trim, lowercase), keep the key apart from the data, and remember: <b>pseudonymised data is still personal data</b>.</span></div>
+      <p class="comment" id="ps-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>We want to count or join users in analytics without carrying their emails around. The tempting answer is SHA-256 of the email. The attacker already has a list of likely emails; they hash each and compare. The table shows three of four rows given away, because the input space is small and guessable. With HMAC-SHA-256 and a secret key, the same guesses match nothing. Leak the key and it's back to a lookup. So the key lives in a separate system with its own access control and rotation plan. Pseudonymisation lowers risk, and GDPR encourages it, but Recital 26 is clear that it's still personal data: you haven't left scope.</span></li><li><b class="ask">Ask</b><span>Checkpoint question for later: why is a plain SHA-256 of an email not anonymous? <em>Answer: because the space of plausible emails is small and guessable; anyone with a candidate list can hash and compare.</em></span></li><li><b class="tip">Tip</b><span>Uses the page's own SHA-256 and HMAC-SHA-256 (from the shared Crypto 101 lab code). For lookups ("find this user's pseudonym"), HMAC is also a deterministic index: the same email always gives the same value. If you need stronger separation, use tokenisation: a vault that hands out random tokens. GDPR Art. 4(5) defines pseudonymisation: data that can't be attributed to a person without additional information kept separately and protected. The EDPB adopted Guidelines 01/2025 on pseudonymisation on 16 January 2025.</span></li><li><b class="show">Check</b><span>On 11 November 2026 I still couldn't confirm a final version of the EDPB's guidelines after the public consultation (the EDPB's page lists comments due 14 March 2025; some summaries say 28 February): check the EDPB site. The "candidate list" is invented and tiny.</span></li><li><b class="next">Next</b><span>"What if you want to publish numbers, not records?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="noise" data-part="2" data-num="11" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// PROTECT WHAT YOU KEEP 04 · SKIPPABLE</p><h2>Publishing numbers safely: add noise</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="lr-label">"How many people visited the clinic page?" The true answer is 42.</p>
+      <label class="grow">Privacy budget per answer, ε <span class="range"><input type="range" id="dp-eps" min="-1" max="1.7" step="0.05" value="0"><output id="dp-eps-out"></output></span></label>
+      <div class="seg-pick" role="group" aria-label="Ask" id="dp-actions"><button type="button" id="dp-ask">Ask once</button><button type="button" id="dp-100">Ask 200 times</button><button type="button" id="dp-reset">Reset</button></div>
+      <div class="stats" id="dp-stats"></div>
+      <p class="comment" id="dp-note"></p>
+    </div>
+    <div class="stack">
+      <pre class="term dp-hist" id="dp-hist" aria-label="Histogram of noisy answers"></pre>
+      <div class="card"><b>The idea</b><span>Add random noise sized to how much one person can change the answer (1 for a count) divided by ε. Small ε: strong privacy, noisy answers. And every question spends budget: ask the same thing again and again and the noise averages away.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Differential privacy is the principled alternative to "remove names and hope". The answer is the true count plus Laplace noise whose scale is 1/ε, because adding or removing one person changes a count by at most one. At ε of 1 the typical error is about 1: useful, and no single person's presence is detectable. Drag ε down and the answers become mostly noise. Push it up and you're publishing the true number with extra steps. Then ask 200 times: the average lands on 42. That's why the budget is spent per question, and why a real system tracks the total.</span></li><li><b class="ask">Ask</b><span>Why can't you answer the same query a thousand times, each with fresh noise? <em>Answer: the average converges on the true value. Repeated releases add up their ε costs (composition).</em></span></li><li><b class="tip">Tip</b><span>The US Census Bureau used differential privacy for the 2020 Census; its Data Stewardship Executive Policy Committee set the total privacy-loss budget for the redistricting data at ε = 19.61 (Census Bureau, 9 June 2021), which critics called too high to give much protection: a good example that choosing ε is a policy decision, not just maths. Local DP (noise added on the user's device) and libraries from Google, OpenDP and others exist; use a vetted library, not this demo.</span></li><li><b class="show">Check</b><span>This demo draws Laplace noise with Math.random in your browser: fine for a lesson, not for real use (real systems use secure randomness and floating-point-safe mechanisms). The 19.61 figure is from the Census press release; another paper cites a different value for a different product.</span></li><li><b class="next">Next</b><span>"Back to storage: the leak nobody planned is in the logs."</span></li></ul></div>
+</section>
+
+<section class="slide" id="redact" data-part="2" data-num="12">
+  <header class="slide-head"><p class="eyebrow">// PROTECT WHAT YOU KEEP 05</p><h2>Redact logs and error reports before they're written</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <label class="lr-label" for="rx-in">Raw log (invented lines, edit freely)</label>
+      <textarea id="rx-in" rows="9" spellcheck="false" aria-label="Raw log text"></textarea>
+      <div class="seg-pick" role="group" aria-label="Mode" id="rx-mode"><button type="button" data-m="mask" aria-pressed="true">Mask everything</button><button type="button" data-m="pseudonym" aria-pressed="false">Keep emails joinable (keyed token)</button></div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">What gets written</p>
+      <pre class="term rx-out" id="rx-out" aria-live="polite"></pre>
+      <p class="fine" id="rx-stats"></p>
+      <p class="comment" id="rx-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Look at the raw lines: an email, a bearer token, a card number, a password inside a JSON body, a phone number, a cloud key, a postal address. Debug logging and error reporters are how personal data and secrets end up in places with no access control and a long retention. Meta was fined €91 million by Ireland's Data Protection Commission in September 2024 after passwords were stored unprotected on internal systems: the lesson isn't one company, it's that the log pipeline is part of your data store. The redactor masks each pattern before the line is written. In pseudonym mode, the same email always becomes the same keyed token, so you can still count and join. And look at what it misses: the free-text postal address. Patterns catch the shapes they know. The stronger defence is to stop logging objects wholesale: log IDs and event names, not request bodies.</span></li><li><b class="ask">Ask</b><span>Where should redaction happen: in the logging library, a sidecar or the log pipeline? <em>Answer: as early as possible, in the logger, so the sensitive value never leaves the process; pipeline redaction is a second layer.</em></span></li><li><b class="tip">Tip</b><span>Sources: the Irish DPC's decision announced 27 September 2024: €91 million, passwords stored in plaintext on internal systems (Arts. 33(5), 5(1)(f), 32(1) GDPR); the number of affected users is reported inconsistently, so the slide doesn't use one. Allow-lists beat deny-lists: define which fields may be logged. Treat tokens like secrets: rotate any that were logged.</span></li><li><b class="show">Check</b><span>I haven't re-read the DPC's own decision text, only press reports of it; keep to the amount and the reason. The AWS key in the sample is the documentation example.</span></li><li><b class="next">Next</b><span>"And who inside the company can look?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="access" data-part="2" data-num="13" data-skip="1">
+  <header class="slide-head"><p class="eyebrow">// PROTECT WHAT YOU KEEP 06 · SKIPPABLE</p><h2>Access controls and an audit trail that someone reads</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls"><label>You are <select id="ac-agent"><option>pat</option><option>lee</option></select></label>
+      <label>Reason <select id="ac-reason"></select></label></div>
+      <ul class="ac-list" id="ac-list"></ul>
+      <div class="seg-pick" role="group" aria-label="Simulate" id="ac-actions"><button type="button" id="ac-browse">Simulate a nosy afternoon</button><button type="button" id="ac-reset">Reset</button></div>
+    </div>
+    <div class="stack">
+      <p class="lr-label">Audit log and alerts</p>
+      <div class="mo-wrap"><table class="grid-table ac-log" id="ac-log"></table></div>
+      <ul class="ac-alerts" id="ac-alerts" aria-live="polite"></ul>
+      <p class="comment" id="ac-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Support staff need to see customers' details sometimes, not all the time. The design: details are masked by default, revealing one needs a reason, and every reveal is logged with who, what and why. Then someone has to look: alert on volume, vague reasons and visits to high-profile accounts. Click "reveal" a few times as pat, with the reason "Other", and watch the alerts fire. This is the same idea as break-glass access in the Identity talk, applied to personal data: you can't prevent every misuse, but you can make it visible and slow.</span></li><li><b class="ask">Ask</b><span>Who reads the audit log in your company? <em>Answer: if the answer is "nobody", the log is a liability: it proves who could have seen the data and that you never checked.</em></span></li><li><b class="tip">Tip</b><span>Log the access, not the data: the audit trail itself shouldn't copy the personal data it protects. Keep it append-only, and give it its own retention. Thresholds in the demo (5 reveals per session) are invented.</span></li><li><b class="show">Check</b><span>The records and rules are invented.</span></li><li><b class="next">Next</b><span>"Time to pause."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-2" data-part="2" data-num="14">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 2 · 5 MIN</p><h2>Protect what you keep</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>Why is a plain SHA-256 of an email address not anonymous?</p><details><summary>Hint</summary><p>Who has a list of likely emails?</p></details><details class="answer"><summary>Answer</summary><p>The input space is small and guessable, so anyone can hash a list of candidate emails and match them. A keyed HMAC resists that, but the result is still pseudonymised, not anonymous.</p></details></li>
+      <li><p>You delete a user's encryption key but a restored backup brings their data back. What went wrong?</p><details><summary>Hint</summary><p>Where was the key backed up?</p></details><details class="answer"><summary>Answer</summary><p>The wrapped key was in the same backup as the ciphertext. Keys need their own lifecycle: deletion has to reach every copy of the key, or the key store shouldn't be restored from the same backup.</p></details></li>
+      <li><p>Name three places a debug log might leak personal data, and one way to stop each.</p><details><summary>Hint</summary><p>Request bodies, headers, exceptions.</p></details><details class="answer"><summary>Answer</summary><p>Request bodies (log IDs, not bodies), auth headers (strip them before logging), error reports that include user objects (allow-list fields). Redact at the logger, and keep a second layer in the pipeline.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="retention" data-part="3" data-num="15">
+  <header class="slide-head"><p class="eyebrow">// LET IT GO 01</p><h2>Retention that code enforces</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <div class="table-wrap"><table class="grid-table rt-table" id="rt-table"></table></div>
+      <div class="seg-pick" role="group" aria-label="Retention actions" id="rt-actions"><button type="button" id="rt-run">Run the purge job</button><button type="button" id="rt-off">The job isn't running</button><button type="button" id="rt-zero">Keep nothing</button><button type="button" id="rt-reset">Reset</button></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="rt-stats"></div>
+      <p class="verdict" id="rt-verdict" aria-live="polite"></p>
+      <p class="comment" id="rt-note"></p>
+      <div class="card"><b>Make it a job, not a promise</b><span>Retention periods are written next to the schema, enforced by a scheduled job, and <b>tested</b>. A legal hold pauses deletion for the records in a dispute, and nothing else.</span></div>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Five classes of records, ten or so of each, aged from new to old. Press "run the purge job": anything older than its retention is deleted, and the table shows how many of each class remain. Tick "legal hold" on invoices and they stay, as they would under a tax rule, which varies by country. Edit a period and re-run. Without the job, the numbers show records kept long past their purpose. Retention is a design decision with three parts: how long you need it, how long the law makes you keep it (accounting and tax rules often require years), and how you'll prove it was deleted. GDPR Art. 5(1)(e) is storage limitation: data kept in identifiable form no longer than necessary.</span></li><li><b class="ask">Ask</b><span>Whose job is it to delete a record when its time is up? <em>Answer: a scheduled job with an owner and an alert if it fails: a retention policy that depends on someone remembering is not a policy.</em></span></li><li><b class="tip">Tip</b><span>The periods are invented defaults, except that invoices are long because accounting laws commonly require it: check your own country's rule. Store a "delete after" date on each record, or derive it from the created date and class, so the job is a simple query.</span></li><li><b class="show">Check</b><span>All periods and counts are invented. The legal retention for invoices varies by country and I did not check any specific law. Not legal advice.</span></li><li><b class="next">Next</b><span>"Deleting from the main database is the easy part."</span></li></ul></div>
+</section>
+
+<section class="slide" id="deletion" data-part="3" data-num="16">
+  <header class="slide-head"><p class="eyebrow">// LET IT GO 02</p><h2>Deletion that reaches every copy</h2></header>
+  <div class="slide-body cols-2 cols-wide-left">
+    <div class="stack">
+      <p class="lr-label">A user asks to be deleted. Pick how each store handles it.</p>
+      <div class="dl-list" id="dl-list"></div>
+    </div>
+    <div class="stack">
+      <div class="stats" id="dl-stats"></div>
+      <pre class="term dl-bars" id="dl-bars" aria-label="Days until each copy is gone"></pre>
+      <p class="verdict" id="dl-verdict" aria-live="polite"></p>
+      <p class="comment" id="dl-note"></p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~7 min</p><ul><li><b class="say">Say</b><span>The demo starts in the state of a typical system: some stores delete quickly, the warehouse has no deletion path at all, and the vendors and the backups clear on their own schedules. The verdict says there's a copy that nothing will ever remove. Change the choices: join the warehouse to the delete job, call the vendors' deletion APIs, redact logs at write so there's nothing to delete, and crypto-shred the backups. Now the longest copy is a few days. A regulator isn't asking for instant magic: the ICO's guidance says that for backups, where data can't be overwritten immediately, you put it "beyond use" and let it age out on a known schedule, and are clear with the person about it. But "we have no way to delete it" is not a plan.</span></li><li><b class="ask">Ask</b><span>Checkpoint question: a user asks to be deleted. List every place their data might still live. <em>Answer: primary DB, replicas, caches, search indexes, the warehouse and exports, logs, error tracker, analytics, support desk, email provider, backups, and any vendors' copies.</em></span></li><li><b class="tip">Tip</b><span>GDPR Art. 17(2) also says that where you made the data public, you should take reasonable steps to tell other controllers. The ICO's erasure guidance (on its site, flagged "under review" after the Data (Use and Access) Act) is the source for the backup "beyond use" approach and is UK-specific; EU authorities have not all said the same. Build deletion as an event that every store subscribes to, with a "deleted" receipt you can check.</span></li><li><b class="show">Check</b><span>The delays are invented. Whether "beyond use" or crypto-shredding counts as erasure is for your privacy lead and your regulator. Not legal advice.</span></li><li><b class="next">Next</b><span>"Who asks, and by when?"</span></li></ul></div>
+</section>
+
+<section class="slide" id="dsr" data-part="3" data-num="17">
+  <header class="slide-head"><p class="eyebrow">// LET IT GO 03</p><h2>Requests from people: the clock, and the export</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <div class="controls">
+        <label>Law <select id="ds-regime"><option value="gdpr">GDPR (EU and UK-style)</option><option value="ccpa">CCPA/CPRA (California)</option></select></label>
+        <label>Request received <input type="date" id="ds-date" value="2026-11-11" class="mono"></label>
+      </div>
+      <div class="stats" id="ds-stats"></div>
+      <p class="comment" id="ds-note"></p>
+      <ol class="rules rules-tight">
+        <li><b>Verify</b> it's really them, with what you already hold. Don't collect more data to verify.</li>
+        <li><b>Find</b> every store (the data map).</li>
+        <li><b>Respond</b> in time: export, delete, or explain why not (some exceptions apply).</li>
+        <li><b>Record</b> what you did.</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <p class="lr-label">An export: structured, machine-readable, only this person</p>
+      <pre class="term ds-json" id="ds-json"></pre>
+      <p class="fine">Access (a copy of everything you hold) and portability (data they provided, in a reusable format) are different rights. This export sketches the second.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~5 min</p><ul><li><b class="say">Say</b><span>Requests are an engineering feature: someone has to build the export and the delete button, and the clock starts when the request arrives. Under the GDPR the controller must respond without undue delay and in any event within one month, extendable by two further months where necessary, and only if you tell the person within the first month (Art. 12(3)). Under the CCPA a business generally has 45 calendar days, extendable by another 45 if it notifies the person. Pick the 31st of a month and see how "one month" behaves: the demo clamps to the end of a shorter month. Then the export: structured, machine-readable, and limited to this person. Internal risk scores and other people's data stay out of it.</span></li><li><b class="ask">Ask</b><span>What would you need to build to answer 100 export requests in a month without 100 engineer-hours? <em>Answer: a self-serve export and delete flow, fed by the data map.</em></span></li><li><b class="tip">Tip</b><span>Sources: GDPR Art. 12(3), Art. 17 and Art. 20 (portability covers data the person provided, where processing is based on consent or a contract and done by automated means); California AG's CCPA page (45 calendar days, plus 45 with notice). The month-clamping rule is a common reading, not a legal rule: counting rules differ, so ask counsel before you automate deadlines. California also runs a data-broker deletion platform (DROP); I haven't covered it here.</span></li><li><b class="show">Check</b><span>The deadline calculator is a rule of thumb, not legal advice, and other laws have different periods. The sample user is invented.</span></li><li><b class="next">Next</b><span>"How do you find privacy problems at design time? A threat model for people."</span></li></ul></div>
+</section>
+
+<section class="slide" id="linddun" data-part="3" data-num="18">
+  <header class="slide-head"><p class="eyebrow">// LET IT GO 04</p><h2>Privacy threat modelling with LINDDUN</h2></header>
+  <div class="slide-body stack">
+    <div class="controls"><label>Feature to review <select id="ld-feature"></select></label></div>
+    <div class="table-wrap"><table class="grid-table ld-table" id="ld-table"></table></div>
+    <div class="stats ld-stats" id="ld-stats"></div>
+    <p class="comment" id="ld-note"></p>
+  </div>
+  <div class="notes"><p class="time">~6 min</p><ul><li><b class="say">Say</b><span>LINDDUN is to privacy what STRIDE is to security: a set of seven threat types you walk through for each part of a data-flow diagram. Linking, Identifying, Non-repudiation, Detecting, Data disclosure, Unawareness and unintervenability, and Non-compliance. Pick a feature. For each letter there's a worked threat for that feature. For each, choose: not considered, accept with an owner and a review date, or reduce it in the design. You cover all seven and, as with security, the "accept" box needs a name and a date. Do it alongside your security threat model: same diagram, extra questions about people.</span></li><li><b class="ask">Ask</b><span>Which of the seven does STRIDE miss entirely? <em>Answer: mostly Detecting, Unawareness and Non-compliance. Security asks "can an attacker break it"; privacy also asks "should we be doing this, and do people know".</em></span></li><li><b class="tip">Tip</b><span>The names are as on linddun.org's threat-types page (read 11 November 2026), which shows no version number I could find; it writes the sixth one "Unawareness &amp; unintervenability" in its detailed section (its home page shortens it to "Unawareness"). The Threat modeling in practice talk covers STRIDE, data-flow diagrams and the workshop format. Threats here are examples written for this deck, not taken from the LINDDUN catalogue.</span></li><li><b class="show">Check</b><span>The three features and their threats are invented.</span></li><li><b class="next">Next</b><span>"Time to pause."</span></li></ul></div>
+</section>
+
+<section class="slide slide-checkpoint" id="checkpoint-3" data-part="3" data-num="19">
+  <header class="slide-head"><p class="eyebrow">// CHECKPOINT 3 · 5 MIN</p><h2>Let it go</h2><button type="button" class="cp-timer" title="Click to pause or resume" aria-label="5-minute discussion timer. Click to pause or resume."><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="bar" cx="60" cy="60" r="54"/></svg><output>05:00</output><small>discussion</small></button></header>
+  <div class="slide-body stack">
+    <p class="note">Talk with a neighbour for a couple of minutes, then we share answers.</p>
+    <ol class="checkpoint">
+      <li><p>A user asks to be deleted. List every place their data might still live.</p><details><summary>Hint</summary><p>Think beyond the main database.</p></details><details class="answer"><summary>Answer</summary><p>Primary database, replicas, caches, search index, warehouse and exports, logs, error tracker, analytics and support vendors, email provider, backups. The data map is how you find them.</p></details></li>
+      <li><p>Your retention policy says 90 days, but nothing deletes old rows. What's missing?</p><details><summary>Hint</summary><p>A policy is not a mechanism.</p></details><details class="answer"><summary>Answer</summary><p>A scheduled job with an owner, a test, an alert on failure, and a "delete after" date on each record. Plus an exception path for legal holds.</p></details></li>
+      <li><p>Which LINDDUN letter would catch "support staff can open any customer's live camera view"?</p><details><summary>Hint</summary><p>Think about who sees what.</p></details><details class="answer"><summary>Answer</summary><p>Data disclosure (more data to more people than the purpose needs), with access control and audit as the fixes. It may also raise Non-compliance if the notice says otherwise.</p></details></li>
+    </ol>
+  </div>
+  <div class="notes"><p class="time">5 min</p><ul><li><b class="show">Show</b><span>Pairs talk for 2 minutes, then share. The timer starts by itself.</span></li></ul></div>
+</section>
+
+<section class="slide" id="checklist" data-part="4" data-num="20">
+  <header class="slide-head"><p class="eyebrow">// WRAP-UP 01</p><h2>A privacy review checklist for pull requests</h2></header>
+  <div class="slide-body stack">
+    <div class="rv-list" id="rv-list">
+      <label><input type="checkbox" data-k="reason"> Every new field has a purpose, an owner and a way to delete it</label>
+      <label><input type="checkbox" data-k="minimal"> We collect the least precise version that works (city, not coordinates; over-18, not birth date)</label>
+      <label><input type="checkbox" data-k="purpose"> The purposes are tagged in the schema and checked where the data is read</label>
+      <label><input type="checkbox" data-k="map"> The data map is updated: new stores, vendors, logs and exports are listed</label>
+      <label><input type="checkbox" data-k="encrypt"> Sensitive fields are encrypted per user or per tenant, and the keys have their own lifecycle</label>
+      <label><input type="checkbox" data-k="logs"> Logs and error reports log IDs, not objects, and redact at the logger</label>
+      <label><input type="checkbox" data-k="access"> Staff access is least-privilege, reasons are recorded and the audit log is read</label>
+      <label><input type="checkbox" data-k="retention"> Retention periods are enforced by a tested job, with legal holds as the only exception</label>
+      <label><input type="checkbox" data-k="delete"> Deletion reaches replicas, caches, search, the warehouse, vendors and backups</label>
+      <label><input type="checkbox" data-k="requests"> Export and delete requests have a flow, an owner and a deadline we can meet</label>
+    </div>
+    <p class="comment" id="rv-note"></p>
+  </div>
+  <div class="notes"><p class="time">~3 min</p><ul><li><b class="say">Say</b><span>This is the talk on one page. Tick what's true for the feature in front of you and treat each unticked box as a ticket. The ticks are saved in this browser only, and the PDF button prints the list.</span></li><li><b class="ask">Ask</b><span>Which unticked box is cheapest to fix this week? <em>Answer: usually "logs log IDs, not objects" or "the data map is updated".</em></span></li><li><b class="tip">Tip</b><span>Frameworks to read next: the NIST Privacy Framework (version 1.0 is current; the 1.1 initial public draft appeared on 14 April 2025 with comments closed 13 June 2025, and on 11 November 2026 NIST's page still described the final as coming in 2026), GDPR Art. 25 "data protection by design and by default", and the ICO's anonymisation and pseudonymisation guidance (its "About this guidance" page gives 28 March 2025). Not legal advice.</span></li><li><b class="next">Next</b><span>"Questions."</span></li></ul></div>
+</section>
+
+<section class="slide slide-end" id="questions" data-part="4" data-num="21">
+  <header class="slide-head"><p class="eyebrow">// QUESTIONS</p><h2>Questions and discussion</h2></header>
+  <div class="slide-body cols-2">
+    <div class="stack">
+      <p class="glitch big-q" data-text="Questions?">Questions?</p>
+      <p class="lede">What's the field in your system that nobody can explain? Bring it, and we'll work out whether it can go.</p>
+      <div class="qr-pair">
+        <figure><img src="qr.svg" alt="QR code linking to this deck at zevaryx.github.io/cybersec-hub" width="150" height="150"><figcaption><b>Keep the deck</b>The slides and demos stay live; nothing you type leaves your browser.<br><a href="https://zevaryx.github.io/cybersec-hub/">zevaryx.github.io/cybersec-hub</a></figcaption></figure>
+        <figure class="ask"><img src="qr-discussions.svg" alt="QR code linking to the cybersec-hub GitHub Discussions page" width="150" height="150"><figcaption><b>Questions or corrections?</b>Ask in the open on GitHub.<br><a href="https://github.com/zevaryx/cybersec-hub/discussions" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub/discussions</a></figcaption></figure>
+      </div>
+      <p class="contact">Or email <a href="mailto:zevaryx@protonmail.com">zevaryx@protonmail.com</a></p>
+    </div>
+    <div class="stack">
+      <h3>Keep going</h3>
+      <ul class="links">
+        <li><a href="../threat-modeling/">Threat modeling in practice</a><span>STRIDE and data-flow diagrams: the security twin of LINDDUN.</span></li>
+        <li><a href="../secrets-management/">Secrets management</a><span>Envelope encryption, key services and rotation in depth.</span></li>
+        <li><a href="../privacy-tools/">Privacy Tools Explained</a><span>The user's side: VPNs, Tor, encrypted messages and backups.</span></li>
+        <li><a href="../hashing-beyond-passwords/">Hashing beyond passwords</a><span>What a hash can and can't do, including for identifiers.</span></li>
+      </ul>
+      <p class="credit-big">Made by <a href="https://github.com/zevaryx" target="_blank" rel="noopener">zevaryx</a>. Free to reuse for your own talk: <a href="https://github.com/zevaryx/cybersec-hub" target="_blank" rel="noopener">github.com/zevaryx/cybersec-hub</a> (MIT licence).</p>
+      <p class="fine">Educational only, and not legal advice. Every person and record in the demos is invented. Facts checked 11 November 2026.</p>
+    </div>
+  </div>
+  <div class="notes"><p class="time">~4 min</p><ul><li><b class="say">Say</b><span>Open the floor. If it's quiet: ask which field in their system nobody can explain, and how they'd find out whether it can go.</span></li><li><b class="show">Check</b><span>Facts checked 11 November 2026. Verified from primary pages: GDPR Arts. 5, 12, 17, 20, 25 and Recital 26 (gdpr-info.eu), the FTC's Twitter announcement, the ICO's erasure guidance, the California AG's CCPA page, the NIST Privacy Framework page and the Census Bureau's 2021 key-parameters release. Also checked on 11 November 2026: Golle's abstract (61% for 1990 data, 63% for 2000), the Census Bureau's 9 June 2021 release (ε = 19.61 for the redistricting product), LINDDUN's threat-types page and the ICO anonymisation guidance's publication date. Not read in full or only via secondary sources: Sweeney's paper, Narayanan and Shmatikov, the Irish DPC's decision, EDPB Guidelines 01/2025's final status, and the legal retention periods for invoices. Not legal advice.</span></li></ul></div>
+</section>
+
+</div>
+</main>
+
+<div class="progress" aria-hidden="true"><i id="progress-bar"></i></div>
+<nav class="deck-ui" aria-label="Slide controls">
+  <button type="button" id="ui-prev" aria-label="Previous slide">‹</button>
+  <span id="ui-count" aria-live="polite">1 / 1</span>
+  <button type="button" id="ui-next" aria-label="Next slide">›</button>
+  <span class="sep"></span>
+  <button type="button" id="ui-overview" title="All slides (O)">Slides</button>
+  <button type="button" id="ui-notes" title="Speaker notes (N)">Notes</button>
+  <button type="button" id="ui-presenter" title="Presenter window (P)">Presenter</button>
+  <button type="button" id="ui-full" title="Full screen (F)">Full screen</button>
+  <button type="button" id="ui-print" title="Print or save as PDF, one slide per page">PDF</button>
+  <button type="button" data-mode="scroll" title="Read as one long page">Scroll view</button>
+  <a href="../../" class="hub-link" title="All talks on the hub">All talks</a>
+</nav>
+<aside class="notes-panel" id="notes-panel" hidden aria-label="Speaker notes"><b id="notes-title"></b><div id="notes-text" class="cue"></div></aside>
+<div class="overview" id="overview" hidden role="dialog" aria-label="All slides"><div class="overview-in"><header><b>All slides</b><button type="button" id="overview-close" class="btn btn-ghost btn-sm">Close</button></header><ol id="overview-list"></ol></div></div>
+<div class="presenter" id="presenter" hidden></div>
+
+<script src="../../shared/crypto.js"></script>
+<script src="privacy.js"></script>
+<script src="app.js"></script>
+<script src="../../shared/deck.js"></script>
+</body>
+</html>
